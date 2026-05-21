@@ -36,7 +36,11 @@ class StatuslineLyricsTest(unittest.TestCase):
         ):
             rendered = statusline.render(term_width=120)
 
-        call_tool.assert_called_once_with("now_playing_snapshot", {"known_lyrics_key": ""})
+        call_tool.assert_called_once_with(
+            "now_playing_snapshot",
+            {"known_lyrics_key": ""},
+            timeout=statusline._STATUSLINE_MCP_TIMEOUT_DEFAULT,
+        )
         self.assertIn("snapshot lyric", rendered)
         self.assertEqual(st.track.lyrics_key, "apple_music\0Artist\0Album\0Song")
         self.assertIn("snapshot lyric", st.track.lyrics_text)
@@ -95,8 +99,50 @@ class StatuslineLyricsTest(unittest.TestCase):
         call_tool.assert_called_once_with(
             "now_playing_snapshot",
             {"known_lyrics_key": "apple_music\0Artist\0Album\0Song"},
+            timeout=statusline._STATUSLINE_MCP_TIMEOUT_DEFAULT,
         )
         self.assertIn("first line", rendered)
+
+    def test_no_track_state_uses_recent_source_sample_to_skip_mcp_refresh(self):
+        st = state.JukeboxState()
+        st.track.position_sampled_at = time.time()
+
+        with (
+            mock.patch.object(statusline.state, "load", return_value=st),
+            mock.patch.object(statusline.focus, "status", return_value=self._focus_off()),
+            mock.patch.object(statusline, "call_tool") as call_tool,
+        ):
+            statusline.render(term_width=120)
+
+        call_tool.assert_not_called()
+
+    def test_no_track_state_does_not_treat_hook_save_as_source_sample(self):
+        st = state.JukeboxState()
+        st.updated_at = time.time()
+        payload = {
+            "source": "apple_music",
+            "title": "",
+            "artist": "",
+            "album": "",
+            "duration": 0.0,
+            "position": 0.0,
+            "playing": False,
+            "artwork_path": "",
+            "lyrics_key": "",
+            "lyrics_text": "",
+            "lyrics_pending": False,
+            "unsupported_reason": "",
+        }
+
+        with (
+            mock.patch.object(statusline.state, "load", return_value=st),
+            mock.patch.object(statusline.state, "save"),
+            mock.patch.object(statusline.focus, "status", return_value=self._focus_off()),
+            mock.patch.object(statusline, "call_tool", return_value=json.dumps(payload)) as call_tool,
+        ):
+            statusline.render(term_width=120)
+
+        call_tool.assert_called_once()
 
 
 if __name__ == "__main__":

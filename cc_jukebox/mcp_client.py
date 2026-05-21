@@ -30,10 +30,16 @@ def configured_url() -> str:
     return saved_url or DEFAULT_MCP_URL
 
 
-def call_tool(name: str, kwargs: dict[str, Any] | None = None, *, url: str | None = None) -> str:
+def call_tool(
+    name: str,
+    kwargs: dict[str, Any] | None = None,
+    *,
+    url: str | None = None,
+    timeout: float = 30,
+) -> str:
     target = url or configured_url()
     try:
-        return anyio.run(_call_tool_async, target, name, kwargs or {})
+        return anyio.run(_call_tool_async, target, name, kwargs or {}, timeout)
     except MCPClientError:
         raise
     except Exception as e:
@@ -43,8 +49,12 @@ def call_tool(name: str, kwargs: dict[str, Any] | None = None, *, url: str | Non
         ) from e
 
 
-async def _call_tool_async(url: str, name: str, kwargs: dict[str, Any]) -> str:
-    async with streamablehttp_client(url, timeout=30) as (read, write, _get_session_id):
+async def _call_tool_async(url: str, name: str, kwargs: dict[str, Any], timeout: float) -> str:
+    async with streamablehttp_client(
+        url,
+        timeout=timeout,
+        sse_read_timeout=timeout,
+    ) as (read, write, _get_session_id):
         async with ClientSession(read, write) as session:
             await session.initialize()
             result = await session.call_tool(name, kwargs)

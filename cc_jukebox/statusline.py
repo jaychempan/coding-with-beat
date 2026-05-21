@@ -10,6 +10,7 @@ and renders the program's stdout as the bottom bar. We must:
 from __future__ import annotations
 
 import json
+import os
 import re
 import sys
 import time
@@ -23,6 +24,8 @@ from .ui.progress import render_progress
 # If our cached position sample is older than this, do a fast re-poll
 # of the source before rendering. ~50–150ms for AppleScript; acceptable.
 _STALE_AFTER = 2.5
+_STATUSLINE_MCP_TIMEOUT_ENV = "CC_JUKEBOX_STATUSLINE_MCP_TIMEOUT"
+_STATUSLINE_MCP_TIMEOUT_DEFAULT = 1.5
 _ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
 
 
@@ -36,14 +39,31 @@ def _mmss(seconds: float) -> str:
     return f"{s // 60:02d}:{s % 60:02d}"
 
 
+def _statusline_mcp_timeout() -> float:
+    raw = os.environ.get(_STATUSLINE_MCP_TIMEOUT_ENV, "")
+    if not raw:
+        return _STATUSLINE_MCP_TIMEOUT_DEFAULT
+    try:
+        return max(0.1, float(raw))
+    except ValueError:
+        return _STATUSLINE_MCP_TIMEOUT_DEFAULT
+
+
 def _maybe_refresh(st):
     """Refresh track state through the configured HTTP MCP endpoint."""
-    base = st.track.position_sampled_at or st.updated_at
-    if st.track.title and base and (time.time() - base) < _STALE_AFTER:
+    # For no-track/unsupported states, only a real source/MCP sample should
+    # throttle refreshes. Hook saves update st.updated_at and must not mask a
+    # newly started track.
+    base = st.track.position_sampled_at or (st.updated_at if st.track.title else 0)
+    if base and (time.time() - base) < _STALE_AFTER:
         return st, ""
     try:
         known_lyrics_key = st.track.lyrics_key if st.track.lyrics_text else ""
-        data = json.loads(call_tool("now_playing_snapshot", {"known_lyrics_key": known_lyrics_key}))
+        data = json.loads(call_tool(
+            "now_playing_snapshot",
+            {"known_lyrics_key": known_lyrics_key},
+            timeout=_statusline_mcp_timeout(),
+        ))
     except MCPClientError as e:
         return st, f"MCP offline: {str(e).splitlines()[0]}"
     except Exception as e:

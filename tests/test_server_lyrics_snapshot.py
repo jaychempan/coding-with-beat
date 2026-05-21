@@ -7,6 +7,10 @@ from cc_jukebox import server
 
 
 class ServerLyricsSnapshotTest(unittest.TestCase):
+    def tearDown(self):
+        lyrics_snapshot._PREFETCHING.clear()
+        lyrics_snapshot._ATTEMPTED_AT.clear()
+
     def _state(self):
         return SimpleNamespace(source="apple_music")
 
@@ -55,6 +59,26 @@ class ServerLyricsSnapshotTest(unittest.TestCase):
         text = "[00:00.00]one\n[00:09.50]two\n"
 
         self.assertEqual(lyrics_snapshot.line_from_text(text, position=10.0, duration=20.0), "two")
+
+    def test_failed_prefetch_retries_after_ttl(self):
+        class ImmediateThread:
+            def __init__(self, target, **_kwargs):
+                self.target = target
+
+            def start(self):
+                self.target()
+
+        source = SimpleNamespace(lyrics=lambda: None)
+        with (
+            mock.patch.object(lyrics_snapshot.threading, "Thread", ImmediateThread),
+            mock.patch("cc_jukebox.sources.get_source", return_value=source),
+            mock.patch.object(lyrics_snapshot, "_read_cached", return_value=""),
+        ):
+            self.assertTrue(lyrics_snapshot._prefetch_once("apple_music", "Artist", "Album", "Song"))
+            self.assertFalse(lyrics_snapshot._prefetch_once("apple_music", "Artist", "Album", "Song"))
+
+            with mock.patch.object(lyrics_snapshot, "_PREFETCH_RETRY_AFTER", 0):
+                self.assertTrue(lyrics_snapshot._prefetch_once("apple_music", "Artist", "Album", "Song"))
 
 
 if __name__ == "__main__":

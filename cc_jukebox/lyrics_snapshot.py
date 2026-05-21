@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import re
 import threading
+import time
 from pathlib import Path
 from typing import Optional
 
@@ -17,9 +18,10 @@ from .ui.lyrics import parse_lrc, _index_for_position
 
 _KEY_RE = re.compile(r"[^a-zA-Z0-9一-鿿]+")
 _SOURCE_PREFIX = {"apple_music": "am", "local": "local", "qq_music": "qq"}
+_PREFETCH_RETRY_AFTER = 600.0
 _LOCK = threading.Lock()
 _PREFETCHING: set[str] = set()
-_ATTEMPTED: set[str] = set()
+_ATTEMPTED_AT: dict[str, float] = {}
 
 
 def current_text(
@@ -83,14 +85,17 @@ def _prefetch_once(source: str, artist: str, album: str, title: str) -> bool:
     key = track_key(source, artist, album, title)
     if not key:
         return False
+    now = time.time()
     with _LOCK:
         if key in _PREFETCHING:
             return True
-        if key in _ATTEMPTED:
+        attempted_at = _ATTEMPTED_AT.get(key)
+        if attempted_at is not None and (now - attempted_at) < _PREFETCH_RETRY_AFTER:
             return False
         _PREFETCHING.add(key)
 
     def worker() -> None:
+        cached = False
         try:
             from .sources import get_source
 
@@ -98,10 +103,14 @@ def _prefetch_once(source: str, artist: str, album: str, title: str) -> bool:
             fn = getattr(src, "lyrics", None)
             if callable(fn):
                 fn()
+            cached = bool(_read_cached(source, artist, album, title).strip())
         finally:
             with _LOCK:
                 _PREFETCHING.discard(key)
-                _ATTEMPTED.add(key)
+                if cached:
+                    _ATTEMPTED_AT.pop(key, None)
+                else:
+                    _ATTEMPTED_AT[key] = time.time()
 
     threading.Thread(target=worker, name="cc-jukebox-lyrics-prefetch", daemon=True).start()
     return True
