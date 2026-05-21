@@ -15,6 +15,11 @@ Commands:
     lyrics       — render a karaoke window for the current track
     player       — render the full live player (cover + progress + lyrics + buddy)
     watch        — real-time ticking player in an alt-screen TUI (Ctrl-C to exit)
+    play [query] — resume current track, or search & play if a query is given
+    pause        — pause playback
+    next         — skip to next track
+    prev         — go to previous track
+    np           — print current track (title — artist)
 """
 from __future__ import annotations
 
@@ -187,6 +192,58 @@ def cmd_watch() -> int:
     return run(width=width)
 
 
+def _print_np(np) -> int:
+    if np and getattr(np, "title", None):
+        print(f"{np.title} — {np.artist or '?'}")
+        return 0
+    print("(no track)")
+    return 1
+
+
+def cmd_play() -> int:
+    """play [query] — resume if no query, otherwise search and play."""
+    from . import state
+    from .sources import get_source
+    src = get_source(state.load().source)
+    query = " ".join(sys.argv[2:]).strip()
+    np = src.play_query(query) if query else src.play()
+    return _print_np(np)
+
+
+def cmd_pause() -> int:
+    from . import state
+    from .sources import get_source
+    src = get_source(state.load().source)
+    return _print_np(src.pause())
+
+
+def cmd_next() -> int:
+    from . import state
+    from .sources import get_source
+    import time
+    src = get_source(state.load().source)
+    src.next()
+    time.sleep(0.4)  # Apple Music needs a tick before now_playing reflects the new track
+    return _print_np(src.now_playing())
+
+
+def cmd_prev() -> int:
+    from . import state
+    from .sources import get_source
+    import time
+    src = get_source(state.load().source)
+    src.prev()
+    time.sleep(0.4)
+    return _print_np(src.now_playing())
+
+
+def cmd_np() -> int:
+    from . import state
+    from .sources import get_source
+    src = get_source(state.load().source)
+    return _print_np(src.now_playing())
+
+
 def cmd_server() -> int:
     from .server import main
     main()
@@ -215,6 +272,11 @@ COMMANDS = {
     "lyrics": cmd_lyrics,
     "player": cmd_player,
     "watch": cmd_watch,
+    "play": cmd_play,
+    "pause": cmd_pause,
+    "next": cmd_next,
+    "prev": cmd_prev,
+    "np": cmd_np,
 }
 
 
