@@ -34,6 +34,14 @@ import sys
 from pathlib import Path
 
 
+def _unsupported(source: str, feature: str, reason: str) -> str:
+    return f"(unsupported — source={source}, feature={feature})\n{reason}"
+
+
+def _unsupported_reason(obj) -> str:
+    return getattr(obj, "unsupported_reason", None) or ""
+
+
 def cmd_init() -> int:
     target = Path.cwd() / ".cc-jukebox.toml"
     if target.exists():
@@ -69,12 +77,20 @@ md = "review"
 
 def cmd_status() -> int:
     from . import state, focus
+    from .sources import get_source
     st = state.load()
     f = focus.status()
     print(f"source : {st.source}")
     print(f"vibe   : {st.vibe}  (mood={st.dj_mood})")
     print(f"focus  : {f.phase if f.active else 'off'}"
           + (f" — {f.remaining}s left" if f.active else ""))
+    try:
+        np = get_source(st.source).now_playing()
+    except Exception:
+        np = None
+    if np is not None and _unsupported_reason(np):
+        print(f"track  : {_unsupported(np.source or st.source, 'now_playing', _unsupported_reason(np))}")
+        return 2
     if st.track.title:
         print(f"track  : {st.track.title} — {st.track.artist}")
         print(f"         {int(st.track.position)}s / {int(st.track.duration)}s "
@@ -146,6 +162,9 @@ def cmd_lyrics() -> int:
         print(f"(source {st.source!r} does not support lyrics)")
         return 1
     np = src.now_playing()
+    if _unsupported_reason(np):
+        print(_unsupported(np.source or st.source, "lyrics", _unsupported_reason(np)))
+        return 2
     text = fn()
     if not text:
         print(f"(no lyrics for: {np.title or '(unknown)'} — {np.artist or '?'})")
@@ -168,6 +187,9 @@ def cmd_player() -> int:
     st = state.load()
     src = get_source(st.source)
     np = src.now_playing()
+    if _unsupported_reason(np):
+        print(_unsupported(np.source or st.source, "player", _unsupported_reason(np)))
+        return 2
 
     width = 40
     cover = render_cover(np.artwork_path, width=width, height=int(width * 0.45))
@@ -229,11 +251,21 @@ def cmd_karaoke() -> int:
 
 
 def _print_np(np) -> int:
+    if np and _unsupported_reason(np):
+        print(_unsupported(getattr(np, "source", "") or "unknown", "now_playing", _unsupported_reason(np)))
+        return 2
     if np and getattr(np, "title", None):
         print(f"{np.title} — {np.artist or '?'}")
         return 0
     print("(no track)")
     return 1
+
+
+def _print_control_result(action: str, source_name: str, np) -> int:
+    if np and _unsupported_reason(np):
+        print(f"{action} sent  source={source_name}  (now-playing unsupported)")
+        return 0
+    return _print_np(np)
 
 
 def cmd_play() -> int:
@@ -245,10 +277,14 @@ def cmd_play() -> int:
     query = " ".join(sys.argv[2:]).strip()
     if query:
         np = src.play_query(query)
+        if np and _unsupported_reason(np):
+            print(_unsupported(np.source or src.name, "play", _unsupported_reason(np)))
+            return 2
     else:
         src.play()
         time.sleep(0.4)
         np = src.now_playing()
+        return _print_control_result("play", src.name, np)
     return _print_np(np)
 
 
@@ -258,7 +294,7 @@ def cmd_pause() -> int:
     src = get_source(state.load().source)
     src.pause()
     np = src.now_playing()
-    return _print_np(np)
+    return _print_control_result("pause", src.name, np)
 
 
 def cmd_next() -> int:
@@ -268,7 +304,7 @@ def cmd_next() -> int:
     src = get_source(state.load().source)
     src.next()
     time.sleep(0.4)  # Apple Music needs a tick before now_playing reflects the new track
-    return _print_np(src.now_playing())
+    return _print_control_result("next", src.name, src.now_playing())
 
 
 def cmd_prev() -> int:
@@ -278,7 +314,7 @@ def cmd_prev() -> int:
     src = get_source(state.load().source)
     src.prev()
     time.sleep(0.4)
-    return _print_np(src.now_playing())
+    return _print_control_result("prev", src.name, src.now_playing())
 
 
 def cmd_np() -> int:

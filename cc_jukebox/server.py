@@ -25,6 +25,14 @@ from .ui import (
 mcp = FastMCP("cc-jukebox")
 
 
+def _unsupported(source: str, feature: str, reason: str) -> str:
+    return f"(unsupported — source={source}, feature={feature})\n{reason}"
+
+
+def _unsupported_reason(obj) -> str:
+    return getattr(obj, "unsupported_reason", None) or ""
+
+
 def _refresh_now_playing():
     st = state.load()
     src = get_source(st.source)
@@ -49,6 +57,8 @@ def now_playing() -> str:
     Use this whenever the user asks 'what's playing' or before deciding to
     skip/replay."""
     st, np = _refresh_now_playing()
+    if _unsupported_reason(np):
+        return _unsupported(np.source or st.source, "now_playing", _unsupported_reason(np))
     if not np.title:
         return f"(nothing playing — source: {st.source})"
     return (
@@ -165,6 +175,10 @@ def play_song(query: str) -> str:
     np = src.play_query(query)
     if not np:
         return f"(no match for '{query}' in source={st.source})"
+    if _unsupported_reason(np):
+        return _unsupported(np.source or st.source, "play_song", _unsupported_reason(np))
+    if not np.title:
+        return _unsupported(st.source, "play_song", "The source returned no playable track.")
     _refresh_now_playing()
     return f"▶ now playing: {np.title} — {np.artist or '—'}  source={np.source}"
 
@@ -187,6 +201,8 @@ def show_cover(style: str = "rgb", width: int = 32, height: int = 16) -> str:
     """Render the current track's album cover as pixel ASCII.
     style: 'rgb' (true-color photo) or 'gameboy' (4-color retro)."""
     st, np = _refresh_now_playing()
+    if _unsupported_reason(np):
+        return _unsupported(np.source or st.source, "show_cover", _unsupported_reason(np))
     if style == "gameboy":
         art = render_cover_gameboy(np.artwork_path, width=width, height=height)
     else:
@@ -212,6 +228,8 @@ def show_player(width: int = 36, with_lyrics: bool = True) -> str:
     """Render the full retro player: pixel cover + title + progress + spectrum +
     DJ Buddy sprite + (optionally) live lyrics. The 'whole experience' in one call."""
     st, np = _refresh_now_playing()
+    if _unsupported_reason(np):
+        return _unsupported(np.source or st.source, "show_player", _unsupported_reason(np))
     cover = render_cover(np.artwork_path, width=width, height=int(width * 0.45))
     title = np.title or "(no track)"
     artist = np.artist or "—"
@@ -246,6 +264,8 @@ def show_lyrics(window: int = 7) -> str:
     NetEase's public lyric API when AppleScript can't read catalog lyrics).
     Active line is picked by current playback position."""
     st, np = _refresh_now_playing()
+    if _unsupported_reason(np):
+        return _unsupported(np.source or st.source, "show_lyrics", _unsupported_reason(np))
     if not np.title:
         return "(no track playing)"
     lrc = _current_lyrics()

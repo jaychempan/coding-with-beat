@@ -27,7 +27,7 @@ import httpx
 from ..config import COVER_CACHE, DATA_DIR, LOG_FILE, LYRICS_CACHE, ensure_dirs
 from .apple_music import _netease_lyrics
 from .local import LocalFiles, _write, _read, _pid_alive
-from .base import NowPlaying
+from .base import NowPlaying, unsupported_now_playing
 
 
 SEARCH_URL = "https://c.y.qq.com/soso/fcgi-bin/client_search_cp"
@@ -37,6 +37,15 @@ PREVIEW_FILE = DATA_DIR / "qq_preview.m4a"
 QQ_BUNDLE_ID = "com.tencent.QQMusicMac"
 QQ_PROCESS = "QQMusic"
 QQ_PLAY_MENU = "播放控制"
+UNSUPPORTED_NOW_PLAYING = (
+    "qq_music cannot read the QQMusic desktop client's current track/state. "
+    "Only cc-jukebox QQ preview playback can report now-playing."
+)
+UNSUPPORTED_FULL_PLAYBACK = (
+    "qq_music can search QQ Music metadata, but cannot ask the QQMusic desktop "
+    "client to play an arbitrary query or stream the full catalog. No playable "
+    "preview was available for this result."
+)
 HEADERS = {
     "Referer": "https://y.qq.com/",
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
@@ -162,6 +171,9 @@ class QQMusic(LocalFiles):
     def _current_track(self) -> dict:
         return (_read_qq_state().get("track") or {})
 
+    def _state_mode(self) -> str:
+        return str(_read_qq_state().get("mode") or "")
+
     def _normalize_hit(self, it: dict) -> dict:
         album = it.get("album") or {}
         singers = ", ".join(s.get("name", "") for s in it.get("singer", []) if s.get("name"))
@@ -245,7 +257,7 @@ class QQMusic(LocalFiles):
             np.album = track.get("album") or np.album
             np.duration = np.duration or track.get("duration") or 0.0
             np.artwork_path = track.get("artwork") or np.artwork_path
-        elif track:
+        elif track and self._state_mode() == "preview":
             np = NowPlaying(
                 title=track.get("title", ""),
                 artist=track.get("artist", ""),
@@ -256,6 +268,8 @@ class QQMusic(LocalFiles):
                 artwork_path=track.get("artwork"),
                 source=self.name,
             )
+        else:
+            return unsupported_now_playing(self.name, UNSUPPORTED_NOW_PLAYING)
         np.source = self.name
         return np
 
@@ -295,22 +309,21 @@ class QQMusic(LocalFiles):
             np.artwork_path = artwork
             np.source = self.name
             return np
-        # No playable audio — return metadata-only "ghost" now-playing
+        # No playable audio: cache metadata for lyrics/artwork lookup, but do
+        # not surface it as now-playing. QQMusic desktop state is not readable.
         self._save_track(h, artwork, mode="metadata_only")
-        return NowPlaying(
-            title=h["title"], artist=h["artist"], album=h["album"],
-            duration=h.get("duration") or 0, position=0, playing=False,
-            artwork_path=artwork, source=self.name,
-        )
+        return unsupported_now_playing(self.name, UNSUPPORTED_FULL_PLAYBACK)
 
     def lyrics(self) -> Optional[str]:
-        np = self.now_playing()
-        if not np.title:
-            return None
         track = self._current_track()
+        title = track.get("title", "")
+        artist = track.get("artist", "")
+        album = track.get("album", "")
+        if not title:
+            return None
         key = re.sub(
             r"[^a-zA-Z0-9一-鿿]+", "_",
-            track.get("mid") or f"{np.artist}_{np.album}_{np.title}",
+            track.get("mid") or f"{artist}_{album}_{title}",
         ).strip("_")[:160]
         cache = LYRICS_CACHE / f"qq_{key}.txt"
         if cache.exists():
@@ -341,7 +354,7 @@ class QQMusic(LocalFiles):
             except Exception:
                 text = ""
         if not text:
-            text = _netease_lyrics(np.title, np.artist) or ""
+            text = _netease_lyrics(title, artist) or ""
         if not text.strip():
             return None
         cache.write_text(text, encoding="utf-8")

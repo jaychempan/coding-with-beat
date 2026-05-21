@@ -39,18 +39,35 @@ def _mmss(seconds: float) -> str:
 
 
 def _maybe_refresh(st):
-    """If the position sample is stale, re-poll the active source. Returns the
-    (possibly updated) state. Failures fall back to cached state silently."""
+    """If the position sample is stale, re-poll the active source.
+    Returns (possibly updated state, unsupported reason). Failures fall back to
+    cached state silently."""
     base = st.track.position_sampled_at or st.updated_at
     if base and (time.time() - base) < _STALE_AFTER:
-        return st
+        return st, ""
     try:
         src = get_source(st.source)
         np = src.now_playing()
     except Exception:
-        return st
+        return st, ""
+    unsupported_reason = getattr(np, "unsupported_reason", None) or ""
+    if unsupported_reason:
+        st.track.title = ""
+        st.track.artist = ""
+        st.track.album = ""
+        st.track.duration = 0.0
+        st.track.position = 0.0
+        st.track.position_sampled_at = time.time()
+        st.track.artwork_path = None
+        st.track.source = np.source
+        st.playing = False
+        try:
+            state.save(st)
+        except Exception:
+            pass
+        return st, unsupported_reason
     if not np.title:
-        return st
+        return st, ""
     st.track.title = np.title
     st.track.artist = np.artist
     st.track.album = np.album
@@ -64,7 +81,7 @@ def _maybe_refresh(st):
         state.save(st)
     except Exception:
         pass
-    return st
+    return st, ""
 
 
 def _live_position(st) -> float:
@@ -154,7 +171,7 @@ _QUIP_TTL   = 4.0  # seconds to show DJ quip before falling back to lyric
 
 def render(term_width: int = 0) -> str:
     st = state.load()
-    st = _maybe_refresh(st)
+    st, unsupported_reason = _maybe_refresh(st)
     f = focus.status()
 
     ar, ag, ab = _VIBE_ACCENT.get(st.vibe or "build", (155, 188, 15))
@@ -184,6 +201,8 @@ def render(term_width: int = 0) -> str:
         else:
             icon_seq = "\x1b[1;38;2;120;130;130m❚❚\x1b[0m"
         track = f"{icon_seq} \x1b[38;2;200;200;230m{title}\x1b[0m \x1b[38;2;120;130;130m— {artist}\x1b[0m {bar}"
+    elif unsupported_reason or st.source == "qq_music":
+        track = "\x1b[38;2;120;130;130mqq_music now-playing unsupported\x1b[0m"
     else:
         track = "\x1b[38;2;120;130;130mno track loaded — try /juke play 周杰伦\x1b[0m"
 

@@ -149,8 +149,9 @@ class QQMusicTest(unittest.TestCase):
 
         np = source.play_query("稻香 周杰伦")
 
-        self.assertEqual(np.title, "稻香")
+        self.assertEqual(np.title, "")
         self.assertFalse(np.playing)
+        self.assertIn("cannot ask the QQMusic desktop", np.unsupported_reason)
         saved = json.loads(qm.QQ_STATE.read_text())
         self.assertEqual(saved["mode"], "metadata_only")
         self.assertEqual(saved["track"]["artist"], "周杰伦")
@@ -199,7 +200,8 @@ class QQMusicTest(unittest.TestCase):
                 "album": "魔杰座",
                 "duration": 223.0,
                 "artwork": "/tmp/cover.jpg",
-            }
+            },
+            "mode": "metadata_only",
         })
 
         source = qm.QQMusic()
@@ -211,10 +213,11 @@ class QQMusicTest(unittest.TestCase):
         }), mock.patch.object(qm, "_pid_alive", return_value=True):
             np = source.now_playing()
 
-        self.assertEqual(np.title, "稻香")
-        self.assertEqual(np.artist, "周杰伦")
+        self.assertEqual(np.title, "")
+        self.assertEqual(np.artist, "")
         self.assertFalse(np.playing)
         self.assertEqual(np.position, 0.0)
+        self.assertIn("cannot read the QQMusic desktop", np.unsupported_reason)
 
     def test_now_playing_overlays_metadata_on_active_qq_preview(self):
         self.isolated_paths()
@@ -225,7 +228,8 @@ class QQMusicTest(unittest.TestCase):
                 "album": "魔杰座",
                 "duration": 223.0,
                 "artwork": "/tmp/cover.jpg",
-            }
+            },
+            "mode": "preview",
         })
 
         source = qm.QQMusic()

@@ -12,6 +12,11 @@ class NowPlaying:
     playing: bool = False
     artwork_path: Optional[str] = None
     source: str = ""
+    unsupported_reason: Optional[str] = None
+
+
+def unsupported_now_playing(source: str, reason: str) -> NowPlaying:
+    return NowPlaying(source=source, unsupported_reason=reason)
 
 
 class MusicSource(Protocol):
