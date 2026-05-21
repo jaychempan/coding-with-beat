@@ -77,6 +77,7 @@ def merge(settings: dict, python: str, repo: str) -> dict:
         settings["statusLine"] = {
             "type": "command",
             "command": f"{python} -m cc_jukebox statusline",
+            "refreshInterval": 1,
             "_owner": TAG,
         }
 
