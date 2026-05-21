@@ -1,0 +1,4 @@
+/.venv
+/cc_jukebox/__pycache__
+/cc_jukebox/ui/__pycache__
+/cc_jukebox/sources/__pycache__

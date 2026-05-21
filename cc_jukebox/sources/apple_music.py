@@ -1,0 +1,272 @@
+"""Apple Music backend via AppleScript on macOS.
+
+Does NOT require Music.app to be foregrounded; osascript launches it headless
+if needed. Subscribed library + local library both work.
+"""
+from __future__ import annotations
+
+import base64
+import re
+import subprocess
+import urllib.parse
+from pathlib import Path
+from typing import List, Optional
+
+from ..config import COVER_CACHE, LYRICS_CACHE
+from .base import NowPlaying
+
+
+_NETEASE_HEADERS = {
+    "Referer": "https://music.163.com/",
+    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36",
+}
+
+
+def _netease_lyrics(title: str, artist: str) -> Optional[str]:
+    """Best-effort lookup against NetEase's public search+lyric endpoints.
+    Returns LRC text (with [mm:ss.xx] timestamps) when found, else None.
+    Used as a fallback because AppleScript can't read lyrics for Apple Music
+    catalog/streaming tracks."""
+    try:
+        import httpx
+    except ImportError:
+        return None
+    q = urllib.parse.quote(f"{title} {artist}".strip())
+    with httpx.Client(headers=_NETEASE_HEADERS, timeout=6.0) as c:
+        try:
+            r = c.get(
+                f"https://music.163.com/api/search/get/?s={q}&type=1&limit=5"
+            )
+            data = r.json()
+            songs = (data.get("result") or {}).get("songs") or []
+            if not songs:
+                return None
+            song_id = songs[0].get("id")
+            if not song_id:
+                return None
+            r2 = c.get(
+                f"https://music.163.com/api/song/lyric?id={song_id}&lv=-1&kv=-1&tv=-1"
+            )
+            d2 = r2.json()
+            lrc = (d2.get("lrc") or {}).get("lyric") or ""
+            return lrc or None
+        except Exception:
+            return None
+
+
+_SCRIPT_NOW = '''
+tell application "Music"
+    if it is running then
+        set SEP to (ASCII character 31)
+        set s to player state as string
+        if exists current track then
+            set t to current track
+            set tName to name of t as string
+            set tArtist to artist of t as string
+            set tAlbum to album of t as string
+            set tDur to (duration of t) as string
+            set tPos to (player position) as string
+            return tName & SEP & tArtist & SEP & tAlbum & SEP & tDur & SEP & tPos & SEP & s
+        else
+            return SEP & SEP & SEP & "0" & SEP & "0" & SEP & s
+        end if
+    else
+        return "__not_running__"
+    end if
+end tell
+'''
+
+_SCRIPT_ARTWORK = '''
+tell application "Music"
+    if exists current track then
+        set artData to (raw data of artwork 1 of current track) as «class PNG »
+        return artData
+    end if
+end tell
+'''
+
+
+def _osa(script: str) -> str:
+    p = subprocess.run(
+        ["osascript", "-e", script],
+        capture_output=True, text=True, timeout=8,
+    )
+    if p.returncode != 0:
+        raise RuntimeError(f"AppleScript failed: {p.stderr.strip()}")
+    return p.stdout.strip()
+
+
+def _osa_silent(script: str) -> None:
+    try:
+        subprocess.run(["osascript", "-e", script], capture_output=True, timeout=8)
+    except Exception:
+        pass
+
+
+class AppleMusic:
+    name = "apple_music"
+
+    def now_playing(self) -> NowPlaying:
+        try:
+            raw = _osa(_SCRIPT_NOW)
+        except Exception:
+            return NowPlaying(source=self.name)
+        if raw == "__not_running__" or not raw:
+            return NowPlaying(source=self.name)
+        parts = raw.split("\x1f")
+        if len(parts) < 6:
+            return NowPlaying(source=self.name)
+        title, artist, album, dur, pos, state = parts[:6]
+        playing = state.strip().lower() == "playing"
+        try:
+            duration = float(dur or 0)
+            position = float(pos or 0)
+        except ValueError:
+            duration, position = 0.0, 0.0
+        np = NowPlaying(
+            title=title, artist=artist, album=album,
+            duration=duration, position=position,
+            playing=playing, source=self.name,
+        )
+        np.artwork_path = self._fetch_artwork(title, artist, album)
+        return np
+
+    def _fetch_artwork(self, title: str, artist: str, album: str) -> Optional[str]:
+        if not (title or album):
+            return None
+        key = re.sub(r"[^a-zA-Z0-9]+", "_", f"{artist}_{album}_{title}").strip("_")[:120]
+        out = COVER_CACHE / f"am_{key}.png"
+        if out.exists():
+            return str(out)
+        # Apple Music returns artwork in « class PNG » format; osascript returns bytes.
+        # Easier path: shell out to use `osascript` to write the file directly.
+        script = f'''
+tell application "Music"
+    if exists current track then
+        try
+            set artData to raw data of artwork 1 of current track
+            set f to open for access POSIX file "{out}" with write permission
+            set eof of f to 0
+            write artData to f
+            close access f
+            return "ok"
+        on error
+            try
+                close access POSIX file "{out}"
+            end try
+            return "err"
+        end try
+    else
+        return "no_track"
+    end if
+end tell
+'''
+        try:
+            r = _osa(script)
+            if r == "ok" and out.exists() and out.stat().st_size > 0:
+                return str(out)
+        except Exception:
+            return None
+        return None
+
+    def play(self) -> None: _osa_silent('tell application "Music" to play')
+    def pause(self) -> None: _osa_silent('tell application "Music" to pause')
+    def toggle(self) -> None: _osa_silent('tell application "Music" to playpause')
+    def next(self) -> None: _osa_silent('tell application "Music" to next track')
+    def prev(self) -> None: _osa_silent('tell application "Music" to previous track')
+
+    def seek(self, seconds: float) -> None:
+        _osa_silent(f'tell application "Music" to set player position to {float(seconds)}')
+
+    def set_volume(self, percent: int) -> None:
+        p = max(0, min(100, int(percent)))
+        _osa_silent(f'tell application "Music" to set sound volume to {p}')
+
+    def search(self, query: str, limit: int = 8) -> List[dict]:
+        q = query.replace('"', '\\"')
+        script = f'''
+tell application "Music"
+    set SEP to (ASCII character 31)
+    set out to ""
+    set results to (every track of library playlist 1 whose name contains "{q}" or artist contains "{q}" or album contains "{q}")
+    set n to count of results
+    if n > {limit} then set n to {limit}
+    repeat with i from 1 to n
+        set t to item i of results
+        set out to out & (name of t as string) & SEP & (artist of t as string) & SEP & (album of t as string) & linefeed
+    end repeat
+    return out
+end tell
+'''
+        try:
+            raw = _osa(script)
+        except Exception:
+            return []
+        items = []
+        for line in raw.splitlines():
+            if not line.strip():
+                continue
+            parts = line.split("\x1f")
+            if len(parts) >= 3:
+                items.append({"title": parts[0], "artist": parts[1], "album": parts[2]})
+        return items
+
+    def lyrics(self) -> Optional[str]:
+        """Static lyrics for the current track via AppleScript. Synced timing
+        isn't reliably exposed, so callers should estimate the current line
+        from position/duration."""
+        script = '''
+tell application "Music"
+    if not (exists current track) then return "__no_track__"
+    try
+        set L to lyrics of current track
+        if L is missing value then return ""
+        return L as string
+    on error
+        return ""
+    end try
+end tell
+'''
+        np = self.now_playing()
+        if not np.title:
+            return None
+        key = re.sub(r"[^a-zA-Z0-9一-鿿]+", "_",
+                     f"{np.artist}_{np.album}_{np.title}").strip("_")[:160]
+        cache = LYRICS_CACHE / f"am_{key}.txt"
+        if cache.exists():
+            txt = cache.read_text(encoding="utf-8")
+            if txt.strip():
+                return txt
+        try:
+            raw = _osa(script)
+        except Exception:
+            raw = ""
+        if raw == "__no_track__":
+            return None
+        if not raw.strip():
+            raw = _netease_lyrics(np.title, np.artist) or ""
+        if not raw.strip():
+            return None
+        cache.write_text(raw, encoding="utf-8")
+        return raw
+
+    def play_query(self, query: str) -> Optional[NowPlaying]:
+        q = query.replace('"', '\\"')
+        script = f'''
+tell application "Music"
+    set candidates to (every track of library playlist 1 whose name contains "{q}" or artist contains "{q}")
+    if (count of candidates) > 0 then
+        play item 1 of candidates
+        return "ok"
+    else
+        return "none"
+    end if
+end tell
+'''
+        try:
+            r = _osa(script)
+        except Exception:
+            return None
+        if r == "ok":
+            return self.now_playing()
+        return None
