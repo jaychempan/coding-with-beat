@@ -22,6 +22,36 @@ _NETEASE_HEADERS = {
 }
 
 
+def _lrclib_lyrics(title: str, artist: str, album: str, duration: float) -> Optional[str]:
+    """Query lrclib.net for synced (LRC) or plain lyrics. Fully open public API."""
+    try:
+        import httpx
+    except ImportError:
+        return None
+    params: dict = {"track_name": title, "artist_name": artist}
+    if album:
+        params["album_name"] = album
+    if duration > 0:
+        params["duration"] = int(duration)
+    try:
+        with httpx.Client(timeout=6.0, trust_env=False) as c:
+            r = c.get(
+                "https://lrclib.net/api/get",
+                params=params,
+                headers={"Lrclib-Client": "cc-jukebox/1.0"},
+            )
+            if r.status_code != 200:
+                return None
+            data = r.json()
+            synced = (data.get("syncedLyrics") or "").strip()
+            if synced:
+                return synced
+            plain = (data.get("plainLyrics") or "").strip()
+            return plain or None
+    except Exception:
+        return None
+
+
 def _netease_lyrics(title: str, artist: str) -> Optional[str]:
     """Best-effort lookup against NetEase's public search+lyric endpoints.
     Returns LRC text (with [mm:ss.xx] timestamps) when found, else None.
@@ -434,6 +464,8 @@ end tell
             raw = ""
         if raw == "__no_track__":
             return None
+        if not raw.strip():
+            raw = _lrclib_lyrics(np.title, np.artist or "", np.album or "", np.duration) or ""
         if not raw.strip():
             raw = _netease_lyrics(np.title, np.artist) or ""
         if not raw.strip():

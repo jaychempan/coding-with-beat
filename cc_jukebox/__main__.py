@@ -9,6 +9,7 @@ Commands:
     hook         — receive a CC hook event JSON on stdin and update vibe
     init         — scaffold .cc-jukebox.toml in the current directory
     status       — print human-readable current state
+    welcome      — show the install welcome logo
     demo         — render a demo player frame (great for visual testing)
     banner       — print the retro banner
     cover        — render the current track's cover as pixel art
@@ -16,6 +17,7 @@ Commands:
     player       — render the full live player (cover + progress + lyrics + buddy)
     watch        — real-time ticking player in an alt-screen TUI (Ctrl-C to exit)
     source [name] — print or set source (apple_music | local | qq_music)
+    karaoke      — full-screen centred lyrics with wave animation (Ctrl-C to exit)
     play [query] — resume current track, or search & play if a query is given
     pause        — pause playback
     next         — skip to next track
@@ -112,6 +114,12 @@ def cmd_demo() -> int:
 def cmd_banner() -> int:
     from .ui import retro_banner
     print(retro_banner("a pixel companion for vibecoding"))
+    return 0
+
+
+def cmd_welcome() -> int:
+    from .ui.frame import welcome_screen
+    print(welcome_screen())
     return 0
 
 
@@ -214,6 +222,12 @@ def cmd_source() -> int:
     return 0
 
 
+def cmd_karaoke() -> int:
+    from .karaoke import run
+    width = int(sys.argv[2]) if len(sys.argv) > 2 else 0
+    return run(width=width)
+
+
 def _print_np(np) -> int:
     if np and getattr(np, "title", None):
         print(f"{np.title} — {np.artist or '?'}")
@@ -304,6 +318,31 @@ def cmd_mode() -> int:
     return 0 if ok else 1
 
 
+def cmd_prefetch() -> int:
+    """Internal: silently fetch and cache lyrics for the current track."""
+    from . import state
+    from .sources import get_source
+    from .config import DATA_DIR
+    import re
+    st = state.load()
+    src = get_source(st.source)
+    fn = getattr(src, "lyrics", None)
+    if callable(fn):
+        try:
+            fn()
+        except Exception:
+            pass
+    # Remove the lock file so statusline can trigger again on track change
+    t = st.track
+    if t.title:
+        key = re.sub(r"[^a-zA-Z0-9一-鿿]+", "_",
+                     f"{t.artist}_{t.album}_{t.title}").strip("_")[:160]
+        prefix = {"apple_music": "am", "local": "local", "qq_music": "qq"}.get(st.source, "am")
+        lock = DATA_DIR / f".lyfetch_{prefix}_{key}"
+        lock.unlink(missing_ok=True)
+    return 0
+
+
 def cmd_server() -> int:
     from .server import main
     main()
@@ -321,11 +360,13 @@ def cmd_hook() -> int:
 
 
 COMMANDS = {
+    "_prefetch": cmd_prefetch,
     "server": cmd_server,
     "statusline": cmd_statusline,
     "hook": cmd_hook,
     "init": cmd_init,
     "status": cmd_status,
+    "welcome": cmd_welcome,
     "demo": cmd_demo,
     "banner": cmd_banner,
     "cover": cmd_cover,
@@ -333,6 +374,7 @@ COMMANDS = {
     "player": cmd_player,
     "watch": cmd_watch,
     "source": cmd_source,
+    "karaoke": cmd_karaoke,
     "play": cmd_play,
     "pause": cmd_pause,
     "next": cmd_next,

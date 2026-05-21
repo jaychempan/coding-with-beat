@@ -1,7 +1,7 @@
 ---
 description: Control cc-jukebox (play / pause / skip / now-playing / source / like / mode). Use $ARGUMENTS as a free-form intent.
 allowed-tools: Bash
-argument-hint: "[source qq_music | play <query> | like | mode shuffle | pause | next | status]"
+argument-hint: "[source qq_music | play <query> | like | mode shuffle | karaoke | pause | next | status]"
 ---
 
 You are driving the local **cc-jukebox** music player via its globally-installed CLI. Do NOT call any MCP tools — they may not be loaded. Always shell out via Bash to the `cc-jukebox` command (installed by `install.sh` at `~/.local/bin/cc-jukebox`, backed by a venv at `~/.cc-jukebox/venv`).
@@ -26,6 +26,7 @@ Parse the intent and pick exactly ONE action. If empty or ambiguous, default to 
 | 在放什么/正在播放/什么歌/now playing/what | `cc-jukebox np` |
 | 显示/show player/player | `cc-jukebox player` |
 | 状态/status | `cc-jukebox status` |
+| 歌词/卡拉OK/lyrics/karaoke | `cc-jukebox karaoke` |
 
 For a play-by-query, the `<query>` is the rest of the text after the verb (artist name, song name, mood — pass it through verbatim, including Chinese). Quote it.
 

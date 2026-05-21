@@ -184,11 +184,11 @@ ok "Claude Code settings patched: $SETTINGS_FILE"
 ok "data dir ready: ~/.cc-jukebox/"
 
 echo
-bold "Done. From a new shell (or after 'source ~/.zshrc'):"
-echo "  cc-jukebox banner"
-echo "  cc-jukebox status"
-echo "  cc-jukebox player"
+"$VENV/bin/cc-jukebox" welcome 2>/dev/null || true
 echo
-echo "Inside Claude Code: try /juke status, /juke play 周杰伦, /juke next."
+bold "From a new shell (or after 'source ~/.zshrc'):"
+echo "  cc-jukebox player       — open the pixel player"
+echo "  cc-jukebox watch        — live TUI"
+echo "  /juke play 周杰伦        — drive it from Claude Code"
 echo
 warn "To remove: ./uninstall.sh   (add --purge to also delete ~/.cc-jukebox)"

@@ -8,6 +8,7 @@ Two input formats are supported:
 """
 from __future__ import annotations
 
+import math
 import re
 from typing import List, Optional, Tuple
 
@@ -103,6 +104,86 @@ def render_lyrics_window(
         line = lines[i] or "·"
         if i == current_index:
             out.append(f"{HIGHLIGHT}▶ {line}{RESET}")
+        elif i == current_index + 1:
+            out.append(f"{NEXT}  {line}{RESET}")
+        else:
+            out.append(f"{DIM}  {line}{RESET}")
+    return "\n".join(out)
+
+
+def _wave_line(line: str, t: float, flash: float = 0.0) -> str:
+    """Render each character of line with a sin-wave colour oscillation.
+
+    flash=1.0 → pure white (used on line-entry); flash=0.0 → animated gold wave.
+    """
+    out = []
+    for i, ch in enumerate(line):
+        v = (math.sin(t * 4.0 + i * 0.45) + 1) / 2  # 0..1
+        wv_r = 255
+        wv_g = int(230 + v * 25)
+        wv_b = int(100 + v * 130)
+        if flash > 0:
+            r = int(wv_r + flash * (255 - wv_r))
+            g = int(wv_g + flash * (255 - wv_g))
+            b = int(wv_b + flash * (255 - wv_b))
+        else:
+            r, g, b = wv_r, wv_g, wv_b
+        out.append(f"\x1b[1;38;2;{r};{g};{b}m{ch}")
+    return "".join(out) + RESET
+
+
+def render_lyrics_wave(
+    text_or_lines,
+    position: float = 0.0,
+    duration: float = 0.0,
+    window: int = 5,
+    t: float = 0.0,
+) -> str:
+    """Like render_lyrics_window but the active line has a per-character wave
+    animation driven by wall-clock time t, plus a brief white flash on entry."""
+    if isinstance(text_or_lines, list):
+        lines = [l for l in text_or_lines if l is not None]
+        cues: List[Tuple[float, str]] = []
+        is_lrc = False
+    else:
+        text = text_or_lines or ""
+        cues, is_lrc = parse_lrc(text)
+        if is_lrc:
+            cues = [(ts, b) for ts, b in cues if b.strip()]
+            lines = [c[1] for c in cues]
+        else:
+            lines = [l.strip() for l in text.splitlines() if l.strip()]
+
+    if not lines:
+        return f"{DIM}(no lyrics){RESET}"
+
+    if is_lrc:
+        current_index = _index_for_position(cues, position)
+    elif duration > 0:
+        ratio = max(0.0, min(1.0, position / duration))
+        current_index = int(ratio * (len(lines) - 1))
+    else:
+        current_index = 0
+    current_index = max(0, min(current_index, len(lines) - 1))
+
+    # Flash brightness: 1→0 in first 0.35 s after the cue starts
+    flash = 0.0
+    if is_lrc and current_index >= 0:
+        cue_time = cues[current_index][0]
+        elapsed = position - cue_time
+        if 0 <= elapsed < 0.35:
+            flash = 1.0 - elapsed / 0.35
+
+    half = window // 2
+    start = max(0, current_index - half)
+    end = min(len(lines), start + window)
+    start = max(0, end - window)
+
+    out = []
+    for i in range(start, end):
+        line = lines[i] or "·"
+        if i == current_index:
+            out.append(f"▶ {_wave_line(line, t, flash)}")
         elif i == current_index + 1:
             out.append(f"{NEXT}  {line}{RESET}")
         else:
