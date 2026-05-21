@@ -2,8 +2,8 @@ import contextlib
 import io
 import unittest
 
-from cc_jukebox import __main__ as cli
-from cc_jukebox.sources.base import unsupported_now_playing
+from coding_with_beat import __main__ as cli
+from coding_with_beat.sources.base import unsupported_now_playing
 
 
 class CliUnsupportedReadbackTest(unittest.TestCase):

@@ -144,7 +144,7 @@ def _bg_fetch_lyrics(st) -> None:
     try:
         lock.touch()
         subprocess.Popen(
-            [sys.executable, "-m", "cc_jukebox", "_prefetch"],
+            [sys.executable, "-m", "coding_with_beat", "_prefetch"],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             start_new_session=True,
@@ -204,7 +204,7 @@ def render(term_width: int = 0) -> str:
     elif unsupported_reason or st.source == "qq_music":
         track = "\x1b[38;2;120;130;130mqq_music now-playing unsupported\x1b[0m"
     else:
-        track = "\x1b[38;2;120;130;130mno track loaded — try /juke play 周杰伦\x1b[0m"
+        track = "\x1b[38;2;120;130;130mno track loaded — try /cwb play 周杰伦\x1b[0m"
 
     focus_chip = ""
     if f.active:

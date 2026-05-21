@@ -1,13 +1,13 @@
-"""cc-jukebox CLI.
+"""coding-with-beat CLI.
 
 Usage:
-    python -m cc_jukebox <command>
+    python -m coding_with_beat <command>
 
 Commands:
     server       — start the MCP server (used by CC)
     statusline   — emit one statusline frame (used by CC)
     hook         — receive a CC hook event JSON on stdin and update vibe
-    init         — scaffold .cc-jukebox.toml in the current directory
+    init         — scaffold .coding-with-beat.toml in the current directory
     status       — print human-readable current state
     welcome      — show the install welcome logo
     demo         — render a demo player frame (great for visual testing)
@@ -43,12 +43,12 @@ def _unsupported_reason(obj) -> str:
 
 
 def cmd_init() -> int:
-    target = Path.cwd() / ".cc-jukebox.toml"
+    target = Path.cwd() / ".coding-with-beat.toml"
     if target.exists():
         print(f"already exists: {target}")
         return 0
     project_name = Path.cwd().name
-    target.write_text(f'''# cc-jukebox project config — auto-loaded when CC runs in this directory.
+    target.write_text(f'''# coding-with-beat project config — auto-loaded when CC runs in this directory.
 project = "{project_name}"
 
 # default vibe for this project. Options:
@@ -58,7 +58,7 @@ default_vibe = "build"
 # preferred music source. apple_music | local | qq_music
 source = "apple_music"
 
-# starting playlist / query. When CC starts a session here, cc-jukebox will
+# starting playlist / query. When CC starts a session here, coding-with-beat will
 # attempt to play this on session start (only if `auto_play_on_session = true`).
 default_query = ""
 auto_play_on_session = false
@@ -123,7 +123,7 @@ def cmd_demo() -> int:
         f"\x1b[38;2;155;188;15m{dj.sprite(st.dj_mood or 'groove')}\x1b[0m\n"
         f"\x1b[3;38;2;200;200;230m  “{dj.quip(st.dj_mood or 'groove')}”\x1b[0m"
     )
-    print(boxed(f"CC-JUKEBOX · {st.source}", body, width=40))
+    print(boxed(f"CWB · {st.source}", body, width=40))
     return 0
 
 
@@ -215,7 +215,7 @@ def cmd_player() -> int:
 
     blocks.append(f"\x1b[38;2;155;188;15m{dj.sprite(st.dj_mood or 'neutral')}\x1b[0m")
     blocks.append(f"\x1b[3;38;2;200;200;230m  “{dj.quip(st.dj_mood or 'neutral')}”\x1b[0m")
-    print(boxed(f"CC-JUKEBOX · {st.source}", "\n".join(blocks), width=max(width + 4, 44)))
+    print(boxed(f"CWB · {st.source}", "\n".join(blocks), width=max(width + 4, 44)))
     return 0
 
 

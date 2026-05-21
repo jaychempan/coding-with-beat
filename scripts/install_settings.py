@@ -1,7 +1,7 @@
 """Idempotent merger for Claude Code's ~/.claude/settings.json.
 
 Adds (or removes) entries for:
-  - mcpServers["cc-jukebox"]
+  - mcpServers["coding-with-beat"]
   - statusLine (only if unset, or already ours; we don't clobber other tools)
   - hooks: PreToolUse, PostToolUse, SessionStart, Stop  (with matcher: ".*")
   - UserPromptExpansion hook for /juke, so music controls do not enter chat context
@@ -15,10 +15,10 @@ import json
 import sys
 from pathlib import Path
 
-from cc_jukebox.juke_agent import HOOK_TIMEOUT
+from coding_with_beat.cwb_agent import HOOK_TIMEOUT
 
 
-TAG = "cc-jukebox"
+TAG = "coding-with-beat"
 
 
 def hook_entry(python: str, repo: str) -> dict:
@@ -27,7 +27,7 @@ def hook_entry(python: str, repo: str) -> dict:
         "hooks": [
             {
                 "type": "command",
-                "command": f'{python} -m cc_jukebox hook',
+                "command": f'{python} -m coding_with_beat hook',
                 "timeout": 5,
             }
         ],
@@ -41,7 +41,7 @@ def session_hook_entry(python: str, repo: str) -> dict:
         "hooks": [
             {
                 "type": "command",
-                "command": f'{python} -m cc_jukebox hook',
+                "command": f'{python} -m coding_with_beat hook',
                 "timeout": 5,
             }
         ],
@@ -51,11 +51,11 @@ def session_hook_entry(python: str, repo: str) -> dict:
 
 def juke_expansion_hook_entry(python: str, repo: str) -> dict:
     return {
-        "matcher": "juke",
+        "matcher": "cwb",
         "hooks": [
             {
                 "type": "command",
-                "command": f'{python} -m cc_jukebox hook',
+                "command": f'{python} -m coding_with_beat hook',
                 "timeout": HOOK_TIMEOUT,
             }
         ],
@@ -84,7 +84,7 @@ def merge(settings: dict, python: str, repo: str) -> dict:
     servers = settings.setdefault("mcpServers", {})
     servers[TAG] = {
         "command": python,
-        "args": ["-m", "cc_jukebox.server"],
+        "args": ["-m", "coding_with_beat.server"],
         "cwd": repo,
     }
 
@@ -93,7 +93,7 @@ def merge(settings: dict, python: str, repo: str) -> dict:
     if not sl or (isinstance(sl, dict) and sl.get("_owner") == TAG):
         settings["statusLine"] = {
             "type": "command",
-            "command": f"{python} -m cc_jukebox statusline",
+            "command": f"{python} -m coding_with_beat statusline",
             "refreshInterval": 1,
             "_owner": TAG,
         }

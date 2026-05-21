@@ -1,8 +1,8 @@
-"""Private headless Claude controller for the /juke slash command.
+"""Private headless Claude controller for the /cwb slash command.
 
 The current Claude Code conversation should not spend context on music control.
 This module lets the UserPromptExpansion hook spin up a one-shot Claude process
-to interpret the user's /juke intent, then executes a validated cc-jukebox CLI
+to interpret the user's /cwb intent, then executes a validated coding-with-beat CLI
 command locally.
 """
 from __future__ import annotations
@@ -62,9 +62,9 @@ _MODES = {
     "single": "repeat_one",
 }
 
-_SYSTEM_PROMPT = """You are a private one-shot controller for cc-jukebox.
-Your only job is to translate the user's /juke intent into one safe
-cc-jukebox CLI action. You cannot use tools in this session.
+_SYSTEM_PROMPT = """You are a private one-shot controller for coding-with-beat.
+Your only job is to translate the user's /cwb intent into one safe
+coding-with-beat CLI action. You cannot use tools in this session.
 
 Return exactly one JSON object that matches the rules below. Do not include
 Markdown, code fences, prose, or a shell command string.
@@ -84,7 +84,7 @@ Valid commands and args:
 
 Choose status for an empty or ambiguous intent. Preserve Chinese song names and
 artist names verbatim. Put a play search query in args as one string when
-possible. Never output /juke, claude, shell metacharacters, file paths, or any
+possible. Never output /cwb, claude, shell metacharacters, file paths, or any
 command outside this list.
 
 Important interpretation rules:
@@ -94,12 +94,12 @@ Important interpretation rules:
 """
 
 
-class JukeAgentError(RuntimeError):
+class CwbAgentError(RuntimeError):
     pass
 
 
 @dataclass(frozen=True)
-class JukePlan:
+class CwbPlan:
     command: str
     args: tuple[str, ...] = ()
     note: str = ""
@@ -121,14 +121,14 @@ def build_agent_prompt(intent: str) -> str:
     if not intent:
         intent = "(empty)"
     return (
-        "User intent after /juke:\n"
+        "User intent after /cwb:\n"
         f"{intent}\n\n"
         "Return the JSON plan now."
     )
 
 
 def build_claude_command(prompt: str) -> list[str]:
-    claude = os.environ.get("CC_JUKEBOX_CLAUDE", "claude")
+    claude = os.environ.get("CWB_CLAUDE", "claude")
     cmd = [
         claude,
         "-p",
@@ -147,7 +147,7 @@ def build_claude_command(prompt: str) -> list[str]:
     ]
     # --bare skips OAuth/keychain auth in current Claude Code builds, so keep it
     # opt-in for users who authenticate headless Claude via ANTHROPIC_API_KEY.
-    if _truthy_env("CC_JUKEBOX_JUKE_AGENT_BARE"):
+    if _truthy_env("CWB_AGENT_BARE"):
         cmd.insert(1, "--bare")
     return cmd
 
@@ -167,25 +167,25 @@ def _json_from_text(text: str) -> Any:
         return json.loads(cleaned[start : end + 1])
 
 
-def parse_claude_plan(raw: str) -> JukePlan:
+def parse_claude_plan(raw: str) -> CwbPlan:
     data = _json_from_text(raw)
     if isinstance(data, dict) and "result" in data:
         result = data["result"]
         data = _json_from_text(result) if isinstance(result, str) else result
     if not isinstance(data, dict):
-        raise JukeAgentError("Claude returned a non-object plan")
+        raise CwbAgentError("Claude returned a non-object plan")
     return normalize_plan(data)
 
 
-def normalize_plan(data: dict[str, Any]) -> JukePlan:
+def normalize_plan(data: dict[str, Any]) -> CwbPlan:
     command = str(data.get("command") or "").strip().lower().replace("-", "_")
     command = _COMMAND_ALIASES.get(command, command)
     if command not in _ALLOWED_COMMANDS:
-        raise JukeAgentError(f"Unsupported juke command: {command or '(empty)'}")
+        raise CwbAgentError(f"Unsupported cwb command: {command or '(empty)'}")
 
     raw_args = data.get("args") or []
     if not isinstance(raw_args, list):
-        raise JukeAgentError("Plan args must be a list")
+        raise CwbAgentError("Plan args must be a list")
     args_list = []
     for item in raw_args:
         arg = _clean_arg(item)
@@ -196,24 +196,24 @@ def normalize_plan(data: dict[str, Any]) -> JukePlan:
 
     if command == "source":
         if len(args) != 1:
-            raise JukeAgentError("source requires exactly one argument")
-        return JukePlan(command, (_normalize_source(args[0]),), note)
+            raise CwbAgentError("source requires exactly one argument")
+        return CwbPlan(command, (_normalize_source(args[0]),), note)
     if command == "mode":
         if len(args) != 1:
-            raise JukeAgentError("mode requires exactly one argument")
-        return JukePlan(command, (_normalize_mode(args[0]),), note)
+            raise CwbAgentError("mode requires exactly one argument")
+        return CwbPlan(command, (_normalize_mode(args[0]),), note)
     if command != "play" and args:
-        raise JukeAgentError(f"{command} does not accept arguments")
+        raise CwbAgentError(f"{command} does not accept arguments")
     if command == "play" and any(len(arg) > 300 for arg in args):
-        raise JukeAgentError("play query is too long")
-    return JukePlan(command, args, note)
+        raise CwbAgentError("play query is too long")
+    return CwbPlan(command, args, note)
 
 
 def _clean_arg(value: Any) -> str:
     arg = str(value).strip()
     arg = arg.replace("\x00", "")
     if any(ch in arg for ch in "\r\n"):
-        raise JukeAgentError("Arguments cannot contain newlines")
+        raise CwbAgentError("Arguments cannot contain newlines")
     return arg
 
 
@@ -221,24 +221,24 @@ def _normalize_source(value: str) -> str:
     key = value.strip().lower().replace("-", "_")
     key = key.replace("_", " ") if key not in _SOURCES else key
     if key not in _SOURCES:
-        raise JukeAgentError(f"Unsupported source: {value}")
+        raise CwbAgentError(f"Unsupported source: {value}")
     return _SOURCES[key]
 
 
 def _normalize_mode(value: str) -> str:
     key = value.strip().lower().replace("-", "_").replace(" ", "_")
     if key not in _MODES:
-        raise JukeAgentError(f"Unsupported mode: {value}")
+        raise CwbAgentError(f"Unsupported mode: {value}")
     return _MODES[key]
 
 
-def run_child_claude(intent: str, *, timeout: Optional[int] = None) -> JukePlan:
+def run_child_claude(intent: str, *, timeout: Optional[int] = None) -> CwbPlan:
     prompt = build_agent_prompt(intent)
     cmd = build_claude_command(prompt)
-    timeout = timeout or int(os.environ.get("CC_JUKEBOX_JUKE_AGENT_TIMEOUT", _DEFAULT_CLAUDE_TIMEOUT))
+    timeout = timeout or int(os.environ.get("CWB_AGENT_TIMEOUT", _DEFAULT_CLAUDE_TIMEOUT))
     try:
         env = os.environ.copy()
-        env["CC_JUKEBOX_DISABLE_HOOK"] = "1"
+        env["CWB_DISABLE_HOOK"] = "1"
         proc = subprocess.run(
             cmd,
             stdout=subprocess.PIPE,
@@ -248,19 +248,19 @@ def run_child_claude(intent: str, *, timeout: Optional[int] = None) -> JukePlan:
             env=env,
         )
     except FileNotFoundError as e:
-        raise JukeAgentError("Claude CLI was not found on PATH") from e
+        raise CwbAgentError("Claude CLI was not found on PATH") from e
     except subprocess.TimeoutExpired as e:
-        raise JukeAgentError(f"Claude juke agent timed out after {timeout}s") from e
+        raise CwbAgentError(f"cwb agent timed out after {timeout}s") from e
     if proc.returncode != 0:
         detail = _clean_text(proc.stdout, limit=800)
-        raise JukeAgentError(f"Claude juke agent failed: {detail or f'exit {proc.returncode}'}")
+        raise CwbAgentError(f"cwb agent failed: {detail or f'exit {proc.returncode}'}")
     return parse_claude_plan(proc.stdout)
 
 
-def execute_plan(plan: JukePlan, *, timeout: Optional[int] = None) -> tuple[int, str]:
-    timeout = timeout or int(os.environ.get("CC_JUKEBOX_JUKE_CLI_TIMEOUT", _DEFAULT_CLI_TIMEOUT))
+def execute_plan(plan: CwbPlan, *, timeout: Optional[int] = None) -> tuple[int, str]:
+    timeout = timeout or int(os.environ.get("CWB_CLI_TIMEOUT", _DEFAULT_CLI_TIMEOUT))
     proc = subprocess.run(
-        [sys.executable, "-m", "cc_jukebox", plan.command, *plan.args],
+        [sys.executable, "-m", "coding_with_beat", plan.command, *plan.args],
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
@@ -272,7 +272,7 @@ def execute_plan(plan: JukePlan, *, timeout: Optional[int] = None) -> tuple[int,
 def run_intent(intent: str) -> str:
     plan = run_child_claude(intent)
     code, output = execute_plan(plan)
-    message = _clean_text(output) or f"juke {plan.command} done"
+    message = _clean_text(output) or f"cwb {plan.command} done"
     if code != 0:
         message = f"{message}\n(exit {code})"
     return message
@@ -282,12 +282,12 @@ def handle_prompt_expansion(event: dict) -> Optional[dict]:
     hook = (event.get("hook_event_name") or "").lower()
     if hook != "userpromptexpansion":
         return None
-    if (event.get("command_name") or "").lower() != "juke":
+    if (event.get("command_name") or "").lower() != "cwb":
         return None
     try:
         message = run_intent(event.get("command_args") or "")
     except Exception as e:
-        message = f"juke agent failed: {_clean_text(str(e), limit=800)}"
+        message = f"cwb agent failed: {_clean_text(str(e), limit=800)}"
     return {
         "decision": "block",
         "reason": message,

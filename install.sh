@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
-# CC-Jukebox installer — one-click, idempotent.
+# coding-with-beat installer — one-click, idempotent.
 #
 # What this does (re-run anytime; existing entries are updated in place):
-#   1. Creates a user-level venv at ~/.cc-jukebox/venv with the best
+#   1. Creates a user-level venv at ~/.coding-with-beat/venv with the best
 #      Python ≥3.10 it can find on PATH.
-#   2. Installs cc-jukebox into that venv in editable mode, registering
-#      the `cc-jukebox` console script.
-#   3. Symlinks `cc-jukebox` into ~/.local/bin/ and makes sure that dir
+#   2. Installs coding-with-beat into that venv in editable mode, registering
+#      the `cwb` console script.
+#   3. Symlinks `cwb` into ~/.local/bin/ and makes sure that dir
 #      is on your PATH (writes a marked block into ~/.zshrc / ~/.bashrc).
-#   4. Symlinks the /juke slash command into ~/.claude/commands/.
-#   5. Registers MCP server, statusline, vibe hooks, and the /juke
+#   4. Symlinks the /cwb slash command into ~/.claude/commands/.
+#   5. Registers MCP server, statusline, vibe hooks, and the /cwb
 #      UserPromptExpansion hook with Claude Code via ~/.claude/settings.json.
 set -euo pipefail
 
@@ -20,14 +20,14 @@ ok()   { printf "\033[32m✓\033[0m %s\n" "$1"; }
 warn() { printf "\033[33m!\033[0m %s\n" "$1"; }
 die()  { printf "\033[31m✗ %s\033[0m\n" "$1" >&2; exit 1; }
 
-bold "CC-Jukebox installer"
+bold "coding-with-beat installer"
 echo "  repo:    $REPO"
-echo "  venv:    $HOME/.cc-jukebox/venv"
-echo "  bin:     $HOME/.local/bin/cc-jukebox"
-echo "  command: $HOME/.claude/commands/juke.md"
+echo "  venv:    $HOME/.coding-with-beat/venv"
+echo "  bin:     $HOME/.local/bin/cwb"
+echo "  command: $HOME/.claude/commands/cwb.md"
 
 # 1. find a Python ≥3.10
-#    Honours $CC_JUKEBOX_PYTHON if set; otherwise scans PATH, Homebrew prefixes
+#    Honours $CWB_PYTHON if set; otherwise scans PATH, Homebrew prefixes
 #    (Apple Silicon + Intel), and conda envs.
 check_py() {
   local cand="$1"
@@ -43,8 +43,8 @@ check_py() {
 
 PY=""
 # explicit override
-if [ -n "${CC_JUKEBOX_PYTHON:-}" ] && check_py "$CC_JUKEBOX_PYTHON"; then
-  PY="$CC_JUKEBOX_PYTHON"
+if [ -n "${CWB_PYTHON:-}" ] && check_py "$CWB_PYTHON"; then
+  PY="$CWB_PYTHON"
 fi
 # PATH
 if [ -z "$PY" ]; then
@@ -74,7 +74,7 @@ bootstrap_via_uv() {
   if ! command -v uv >/dev/null 2>&1 && [ ! -x "$UV_BIN" ]; then
     bold "No Python ≥3.10 found — installing uv (single-binary Python manager)..."
     if ! command -v curl >/dev/null 2>&1; then
-      die "need curl to bootstrap uv. Install curl and re-run (or set CC_JUKEBOX_PYTHON=...)."
+      die "need curl to bootstrap uv. Install curl and re-run (or set CWB_PYTHON=...)."
     fi
     curl -LsSf https://astral.sh/uv/install.sh | sh
   fi
@@ -101,9 +101,9 @@ if [ -z "$PY" ]; then
 fi
 ok "python: $PY ($($PY --version))"
 
-# 2. venv at ~/.cc-jukebox/venv
-VENV="$HOME/.cc-jukebox/venv"
-mkdir -p "$HOME/.cc-jukebox"
+# 2. venv at ~/.coding-with-beat/venv
+VENV="$HOME/.coding-with-beat/venv"
+mkdir -p "$HOME/.coding-with-beat"
 if [ ! -d "$VENV" ]; then
   "$PY" -m venv "$VENV"
   ok "created venv at $VENV"
@@ -113,13 +113,13 @@ fi
 VENV_PY="$VENV/bin/python"
 "$VENV/bin/pip" install --quiet --upgrade pip
 "$VENV/bin/pip" install --quiet -e "$REPO"
-ok "installed cc-jukebox (editable) + deps"
+ok "installed coding-with-beat (editable) + deps"
 
-# 3. symlink ~/.local/bin/cc-jukebox
+# 3. symlink ~/.local/bin/cwb
 BIN_DIR="$HOME/.local/bin"
 mkdir -p "$BIN_DIR"
-LINK="$BIN_DIR/cc-jukebox"
-TARGET="$VENV/bin/cc-jukebox"
+LINK="$BIN_DIR/cwb"
+TARGET="$VENV/bin/cwb"
 [ -x "$TARGET" ] || die "expected $TARGET to exist after pip install; aborting."
 if [ -L "$LINK" ] || [ ! -e "$LINK" ]; then
   ln -sfn "$TARGET" "$LINK"
@@ -132,15 +132,15 @@ fi
 inject_path() {
   local rc="$1"
   [ -f "$rc" ] || return 0
-  if grep -q ">>> cc-jukebox >>>" "$rc"; then
+  if grep -q ">>> coding-with-beat >>>" "$rc"; then
     return 0  # already there
   fi
   {
     echo ""
-    echo "# >>> cc-jukebox >>>"
-    echo '# Added by cc-jukebox install.sh. Remove this block (or run uninstall.sh) to revert.'
+    echo "# >>> coding-with-beat >>>"
+    echo '# Added by coding-with-beat install.sh. Remove this block (or run uninstall.sh) to revert.'
     echo 'case ":$PATH:" in *":$HOME/.local/bin:"*) ;; *) export PATH="$HOME/.local/bin:$PATH";; esac'
-    echo "# <<< cc-jukebox <<<"
+    echo "# <<< coding-with-beat <<<"
   } >> "$rc"
   ok "added PATH block to $rc"
 }
@@ -151,14 +151,14 @@ inject_path "$HOME/.bashrc"
 
 case ":$PATH:" in
   *":$BIN_DIR:"*) ok "$BIN_DIR is on PATH in this shell" ;;
-  *) warn "Open a new terminal (or 'source ~/.zshrc') so cc-jukebox is on PATH." ;;
+  *) warn "Open a new terminal (or 'source ~/.zshrc') so cwb is on PATH." ;;
 esac
 
-# 5. install the /juke slash command (symlink so repo is source of truth)
+# 5. install the /cwb slash command (symlink so repo is source of truth)
 CMD_DIR="$HOME/.claude/commands"
 mkdir -p "$CMD_DIR"
-CMD_LINK="$CMD_DIR/juke.md"
-CMD_SRC="$REPO/commands/juke.md"
+CMD_LINK="$CMD_DIR/cwb.md"
+CMD_SRC="$REPO/commands/cwb.md"
 [ -f "$CMD_SRC" ] || die "missing $CMD_SRC — repo is incomplete."
 if [ -L "$CMD_LINK" ] || [ ! -e "$CMD_LINK" ]; then
   ln -sfn "$CMD_SRC" "$CMD_LINK"
@@ -180,15 +180,15 @@ mkdir -p "$SETTINGS_DIR"
 ok "Claude Code settings patched: $SETTINGS_FILE"
 
 # 7. Make sure data dir exists
-"$VENV_PY" -c "from cc_jukebox.config import ensure_dirs; ensure_dirs()"
-ok "data dir ready: ~/.cc-jukebox/"
+"$VENV_PY" -c "from coding_with_beat.config import ensure_dirs; ensure_dirs()"
+ok "data dir ready: ~/.coding-with-beat/"
 
 echo
-"$VENV/bin/cc-jukebox" welcome 2>/dev/null || true
+"$VENV/bin/cwb" welcome 2>/dev/null || true
 echo
 bold "From a new shell (or after 'source ~/.zshrc'):"
-echo "  cc-jukebox player       — open the pixel player"
-echo "  cc-jukebox watch        — live TUI"
-echo "  /juke play 周杰伦        — drive it from Claude Code"
+echo "  cwb player       — open the pixel player"
+echo "  cwb watch        — live TUI"
+echo "  /cwb play 周杰伦        — drive it from Claude Code"
 echo
-warn "To remove: ./uninstall.sh   (add --purge to also delete ~/.cc-jukebox)"
+warn "To remove: ./uninstall.sh   (add --purge to also delete ~/.coding-with-beat)"

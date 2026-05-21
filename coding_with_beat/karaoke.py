@@ -1,6 +1,6 @@
 """Full-screen karaoke lyrics mode.
 
-    cc-jukebox karaoke [width]
+    coding-with-beat karaoke [width]
 
 Displays the current lyric line large and centred, with ±3 context lines faded
 above/below. The active line has a per-character wave animation and a white

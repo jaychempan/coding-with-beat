@@ -1,6 +1,6 @@
 """Local file backend using afplay (macOS built-in).
 
-State is persisted to ~/.cc-jukebox/local.json so we can resume / show position.
+State is persisted to ~/.coding-with-beat/local.json so we can resume / show position.
 The afplay process runs detached; we read PID + start time to compute position.
 """
 from __future__ import annotations

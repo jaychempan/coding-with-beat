@@ -38,7 +38,7 @@ def _lrclib_lyrics(title: str, artist: str, album: str, duration: float) -> Opti
             r = c.get(
                 "https://lrclib.net/api/get",
                 params=params,
-                headers={"Lrclib-Client": "cc-jukebox/1.0"},
+                headers={"Lrclib-Client": "coding-with-beat/1.0"},
             )
             if r.status_code != 200:
                 return None

@@ -1,7 +1,7 @@
 """MCP server: exposes CC-Jukebox tools to Claude Code.
 
 Run with:
-    python -m cc_jukebox.server
+    python -m coding_with_beat.server
 """
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ from .ui import (
 )
 
 
-mcp = FastMCP("cc-jukebox")
+mcp = FastMCP("cwb")
 
 
 def _unsupported(source: str, feature: str, reason: str) -> str:
@@ -254,7 +254,7 @@ def show_player(width: int = 36, with_lyrics: bool = True) -> str:
     lines.append(f"\x1b[38;2;155;188;15m{buddy}\x1b[0m")
     lines.append(f"\x1b[3;38;2;200;200;230m  “{quip}”\x1b[0m")
     body = "\n".join(lines)
-    return boxed(f"CC-JUKEBOX · {st.source}", body, width=max(width + 4, 40))
+    return boxed(f"CWB · {st.source}", body, width=max(width + 4, 40))
 
 
 @mcp.tool()
@@ -319,7 +319,7 @@ def focus_status() -> str:
 
 @mcp.tool()
 def banner() -> str:
-    """Print the giant CC-JUKEBOX retro banner. Use on SessionStart or when
+    """Print the giant CWB retro banner. Use on SessionStart or when
     the user wants the full intro."""
     return retro_banner("a pixel companion for vibecoding")
 

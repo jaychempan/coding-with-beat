@@ -54,12 +54,12 @@ def boxed(title: str, body: str, width: int = 40, color: str = GB_GREEN) -> str:
 
 
 _BANNER_LINES = [
-    " ██████╗ ██████╗     ██╗██╗   ██╗██╗  ██╗███████╗██████╗  ██████╗ ██╗  ██╗",
-    "██╔════╝██╔════╝     ██║██║   ██║██║ ██╔╝██╔════╝██╔══██╗██╔═══██╗╚██╗██╔╝",
-    "██║     ██║          ██║██║   ██║█████╔╝ █████╗  ██████╔╝██║   ██║ ╚███╔╝ ",
-    "██║     ██║     ██   ██║██║   ██║██╔═██╗ ██╔══╝  ██╔══██╗██║   ██║ ██╔██╗ ",
-    "╚██████╗╚██████╗╚█████╔╝╚██████╔╝██║  ██╗███████╗██████╔╝╚██████╔╝██╔╝ ██╗",
-    " ╚═════╝ ╚═════╝ ╚════╝  ╚═════╝ ╚═╝  ╚═╝╚══════╝╚═════╝  ╚═════╝ ╚═╝  ╚═╝",
+    "██╗    ██╗██╗████████╗██╗  ██╗    ██████╗ ███████╗ █████╗ ████████╗",
+    "██║    ██║██║╚══██╔══╝██║  ██║    ██╔══██╗██╔════╝██╔══██╗╚══██╔══╝",
+    "██║ █╗ ██║██║   ██║   ███████║    ██████╔╝█████╗  ███████║   ██║   ",
+    "██║███╗██║██║   ██║   ██╔══██║    ██╔══██╗██╔══╝  ██╔══██║   ██║   ",
+    "╚███╔███╔╝██║   ██║   ██║  ██║    ██████╔╝███████╗██║  ██║   ██║   ",
+    " ╚══╝╚══╝ ╚═╝   ╚═╝   ╚═╝  ╚═╝    ╚═════╝ ╚══════╝╚═╝  ╚═╝   ╚═╝  ",
 ]
 
 
@@ -130,9 +130,9 @@ def welcome_screen() -> str:
     vinyl_block = "\n".join(f"{' ' * 28}{ln}" for ln in vinyl_lines)
 
     tag    = f" {CREAM}{'(♪‿♪)   a pixel companion for vibecoding   (♪‿♪)'.center(76)}{R}"
-    check1 = f" {MID}   ✓  MCP server registered                ✓  /juke command installed{R}"
+    check1 = f" {MID}   ✓  MCP server registered                ✓  /cwb command installed{R}"
     check2 = f" {MID}   ✓  CC hooks active                      ✓  statusline ready{R}"
-    hint   = f" {DIM}   open Claude Code and say: \"play some lofi\"  ·  or /juke play 周杰伦{R}"
+    hint   = f" {DIM}   open Claude Code and say: \"play some lofi\"  ·  or /cwb play 周杰伦{R}"
 
     return "\n".join([
         "",

@@ -39,7 +39,7 @@ QQ_PROCESS = "QQMusic"
 QQ_PLAY_MENU = "播放控制"
 UNSUPPORTED_NOW_PLAYING = (
     "qq_music cannot read the QQMusic desktop client's current track/state. "
-    "Only cc-jukebox QQ preview playback can report now-playing."
+    "Only coding-with-beat QQ preview playback can report now-playing."
 )
 UNSUPPORTED_FULL_PLAYBACK = (
     "qq_music can search QQ Music metadata, but cannot ask the QQMusic desktop "

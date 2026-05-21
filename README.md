@@ -1,23 +1,23 @@
-# CC-Jukebox
+# Coding With Beat
 
 > **你上一次 vibecoding 的时候又唱又跳是什么时候？**
 >
 > 对。你已经不记得了。
 
 ```
- ██████╗ ██████╗     ██╗██╗   ██╗██╗  ██╗███████╗██████╗  ██████╗ ██╗  ██╗
-██╔════╝██╔════╝     ██║██║   ██║██║ ██╔╝██╔════╝██╔══██╗██╔═══██╗╚██╗██╔╝
-██║     ██║          ██║██║   ██║█████╔╝ █████╗  ██████╔╝██║   ██║ ╚███╔╝
-██║     ██║     ██   ██║██║   ██║██╔═██╗ ██╔══╝  ██╔══██╗██║   ██║ ██╔██╗
-╚██████╗╚██████╗╚█████╔╝╚██████╔╝██║  ██╗███████╗██████╔╝╚██████╔╝██╔╝ ██╗
- ╚═════╝ ╚═════╝ ╚════╝  ╚═════╝ ╚═╝  ╚═╝╚══════╝╚═════╝  ╚═════╝ ╚═╝  ╚═╝
-                   a pixel companion for vibecoding
+██╗    ██╗██╗████████╗██╗  ██╗    ██████╗ ███████╗ █████╗ ████████╗
+██║    ██║██║╚══██╔══╝██║  ██║    ██╔══██╗██╔════╝██╔══██╗╚══██╔══╝
+██║ █╗ ██║██║   ██║   ███████║    ██████╔╝█████╗  ███████║   ██║
+██║███╗██║██║   ██║   ██╔══██║    ██╔══██╗██╔══╝  ██╔══██║   ██║
+╚███╔███╔╝██║   ██║   ██║  ██║    ██████╔╝███████╗██║  ██║   ██║
+ ╚══╝╚══╝ ╚═╝   ╚═╝   ╚═╝  ╚═╝    ╚═════╝ ╚══════╝╚═╝  ╚═╝   ╚═╝
+              coding · with · beat  —  a pixel companion for vibecoding
 ```
 
 你只是在敲代码。Claude 在旁边静静地看着。终端里除了光标在闪，什么声音都没有。
 这个工具的存在，就是为了终结这种悲剧。
 
-**CC-Jukebox** 是一个住在 Claude Code 里的像素风 DJ 小伙伴。
+**Coding With Beat** 是一个住在 Claude Code 里的像素风 DJ 小伙伴。
 它帮你放音乐、看歌词、在你 commit 成功的时候庆祝，在测试挂掉的时候跟你一起崩溃。
 
 ---
@@ -40,35 +40,35 @@
 ### 一行搞定（推荐）
 
 ```bash
-curl -LsSf https://raw.githubusercontent.com/jaychempan/cc-jukebox/main/bootstrap.sh | sh
+curl -LsSf https://raw.githubusercontent.com/jaychempan/coding-with-beat/main/bootstrap.sh | sh
 ```
 
-克隆到 `~/.cc-jukebox/src`，然后自动跑 `install.sh`。想更新？再跑一次。
+克隆到 `~/.coding-with-beat/src`，然后自动跑 `install.sh`。想更新？再跑一次。
 
 ### 手动装
 
 ```bash
-git clone https://github.com/jaychempan/cc-jukebox.git
-cd cc-jukebox
+git clone https://github.com/jaychempan/coding-with-beat.git
+cd coding-with-beat
 ./install.sh
 ```
 
 ### `install.sh` 背后在干什么
 
-1. **找 Python** — 按顺序找 PATH 上的、Homebrew 的、conda 环境里的 Python ≥3.10。一个都没有？自动装 uv，再用 uv 下 Python 3.12。你的系统不会多出任何垃圾。想指定路径就 `CC_JUKEBOX_PYTHON=/path/to/python ./install.sh`。
-2. **建 venv** — 放在 `~/.cc-jukebox/venv`，不在项目目录里，删了源码也不影响。
-3. **`cc-jukebox` 命令** — symlink 进 `~/.local/bin/`，顺便往 `~/.zshrc` / `~/.bashrc` 写一条 `export PATH`。
+1. **找 Python** — 按顺序找 PATH 上的、Homebrew 的、conda 环境里的 Python ≥3.10。一个都没有？自动装 uv，再用 uv 下 Python 3.12。你的系统不会多出任何垃圾。想指定路径就 `CWB_PYTHON=/path/to/python ./install.sh`。
+2. **建 venv** — 放在 `~/.coding-with-beat/venv`，不在项目目录里，删了源码也不影响。
+3. **`cwb` 命令** — symlink 进 `~/.local/bin/`，顺便往 `~/.zshrc` / `~/.bashrc` 写一条 `export PATH`。
 4. **`/juke` slash command** — symlink 进 `~/.claude/commands/`，指向仓库里的文件，`git pull` 自动更新。
 5. **Claude Code 配置** — 合并写入 `~/.claude/settings.json`：MCP server、状态栏、vibe hooks，以及 `/juke` 的 UserPromptExpansion hook。
-6. **状态目录** — `~/.cc-jukebox/` 存运行时 JSON。
+6. **状态目录** — `~/.coding-with-beat/` 存运行时 JSON。
 
-每项配置都打上 `_owner: "cc-jukebox"` 标签，卸载时精准清除，不动你自己的配置。
+每项配置都打上 `_owner: "coding-with-beat"` 标签，卸载时精准清除，不动你自己的配置。
 
 装完开个新 shell、新 Claude Code 会话，状态栏里出现 `(•_•)` 就成了。然后试试：
 
 > 帮我打开播放器
 
-Claude 会调 `show_player`，把像素播放器画在终端里。或者直接 `/juke play 周杰伦`。
+Claude 会调 `show_player`，把像素播放器画在终端里。或者直接 `/cwb play 周杰伦`。
 
 ---
 
@@ -77,10 +77,10 @@ Claude 会调 `show_player`，把像素播放器画在终端里。或者直接 `
 在任意项目目录：
 
 ```bash
-cc-jukebox init
+cwb init
 ```
 
-生成 `.cc-jukebox.toml`，可以给不同项目设不同的默认氛围、音源、启动歌单。
+生成 `.coding-with-beat.toml`，可以给不同项目设不同的默认氛围、音源、启动歌单。
 写 Python 时放 lo-fi，写 Makefile 时放 city pop，完全合理。
 
 ---
@@ -88,22 +88,22 @@ cc-jukebox init
 ## 命令行
 
 ```
-cc-jukebox status              # 当前状态
-cc-jukebox np                  # 一行：曲名 — 艺术家
-cc-jukebox play [query]        # 继续播放，或搜索并播
-cc-jukebox pause               # 暂停
-cc-jukebox next                # 下一首
-cc-jukebox prev                # 上一首
-cc-jukebox player              # 完整像素播放器
-cc-jukebox watch               # TUI 实时模式（Ctrl-C 退出）
-cc-jukebox cover [rgb|gameboy] # 只显示封面
-cc-jukebox lyrics              # 卡拉 OK 歌词窗口
-cc-jukebox demo                # 视觉测试
-cc-jukebox banner              # 大横幅
-cc-jukebox init                # 生成 .cc-jukebox.toml
-cc-jukebox server              # MCP server（CC 会自动启动）
-cc-jukebox statusline          # 输出一帧状态栏（CC 调用）
-cc-jukebox hook                # CC hook 接收器（stdin = JSON 事件）
+cwb status              # 当前状态
+cwb np                  # 一行：曲名 — 艺术家
+cwb play [query]        # 继续播放，或搜索并播
+cwb pause               # 暂停
+cwb next                # 下一首
+cwb prev                # 上一首
+cwb player              # 完整像素播放器
+cwb watch               # TUI 实时模式（Ctrl-C 退出）
+cwb cover [rgb|gameboy] # 只显示封面
+cwb lyrics              # 卡拉 OK 歌词窗口
+cwb demo                # 视觉测试
+cwb banner              # 大横幅
+cwb init                # 生成 .coding-with-beat.toml
+cwb server              # MCP server（CC 会自动启动）
+cwb statusline          # 输出一帧状态栏（CC 调用）
+cwb hook                # CC hook 接收器（stdin = JSON 事件）
 ```
 
 ### `play` 搜索逻辑
@@ -114,19 +114,19 @@ Apple Music 搜索三段走，从快到慢：
 2. **多词 AND 匹配** — `"青花瓷 周杰伦"` → 每个词分别命中 `name` 或 `artist`，自然语言查询也能用。
 3. **iTunes Search API** — 本地找不到？走苹果公开搜索 API，拿到 catalog URL 让 Music.app 打开。需要有效的 Apple Music 订阅才能真正播放。
 
-### `/juke` slash command
+### `/cwb` slash command
 
 装完之后在 Claude Code 里直接用：
 
 ```
-/juke status
-/juke play 稻香 周杰伦
-/juke next
-/juke pause
-/juke np
+/cwb status
+/cwb play 稻香 周杰伦
+/cwb next
+/cwb pause
+/cwb np
 ```
 
-中英文自由输入，`下一首`、`暂停`、`在放什么` 都行。默认情况下 `/juke` 会先被 UserPromptExpansion hook 接住，启动一个一次性的 headless Claude 子会话来理解你的意图，再执行经过校验的 `cc-jukebox` 命令；主会话只看到短结果，不会把点歌过程塞进当前上下文。
+中英文自由输入，`下一首`、`暂停`、`在放什么` 都行。默认情况下 `/cwb` 会先被 UserPromptExpansion hook 接住，启动一个一次性的 headless Claude 子会话来理解你的意图，再执行经过校验的 `cwb` 命令；主会话只看到短结果，不会把点歌过程塞进当前上下文。
 
 ---
 
@@ -165,7 +165,7 @@ QQ 音乐没有 AppleScript 接口，也没有公开 API，用的是非官方搜
 ## 文件结构
 
 ```
-cc_jukebox/
+coding_with_beat/
 ├── __main__.py            # CLI 入口
 ├── server.py              # MCP server（21 个工具）
 ├── statusline.py          # 单帧状态栏
@@ -198,6 +198,6 @@ cc_jukebox/
 ## 卸载
 
 ```bash
-./uninstall.sh           # 移除 settings.json 条目、cc-jukebox 命令、/juke 命令、PATH 块
-./uninstall.sh --purge   # 同上，另外删除 ~/.cc-jukebox/（venv + 状态文件）
+./uninstall.sh           # 移除 settings.json 条目、cwb 命令、/cwb 命令、PATH 块
+./uninstall.sh --purge   # 同上，另外删除 ~/.coding-with-beat/（venv + 状态文件）
 ```

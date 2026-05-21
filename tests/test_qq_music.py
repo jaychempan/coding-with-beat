@@ -5,9 +5,9 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-from cc_jukebox.sources import local as local_source
-from cc_jukebox.sources import qq_music as qm
-from cc_jukebox.sources.base import NowPlaying
+from coding_with_beat.sources import local as local_source
+from coding_with_beat.sources import qq_music as qm
+from coding_with_beat.sources.base import NowPlaying
 
 
 class FakeResponse:

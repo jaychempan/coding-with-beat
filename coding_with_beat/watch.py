@@ -2,7 +2,7 @@
 
 Run in a side terminal pane (or tmux window):
 
-    python -m cc_jukebox watch
+    python -m coding_with_beat watch
 
 The statusline already interpolates position between MCP refreshes — but
 the statusline itself only redraws on Claude Code events. This mode owns
@@ -98,7 +98,7 @@ def _interpolated_position(cache: _Cache) -> float:
 def _render_frame(cache: _Cache, width: int) -> str:
     if not cache.np or not cache.np.title:
         return boxed(
-            "CC-JUKEBOX · watch",
+            "CWB · watch",
             "\x1b[38;2;120;130;130m(no track playing)\x1b[0m",
             width=width,
         )
@@ -141,7 +141,7 @@ def _render_frame(cache: _Cache, width: int) -> str:
     blocks.append(f"\x1b[38;2;155;188;15m{dj.sprite(mood)}\x1b[0m")
 
     return boxed(
-        f"CC-JUKEBOX · {np.source} · LIVE",
+        f"CWB · {np.source} · LIVE",
         "\n".join(blocks),
         width=width,
     )
