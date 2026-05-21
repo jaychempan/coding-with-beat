@@ -36,6 +36,32 @@ class RelayProtocolTest(unittest.TestCase):
             self.assertFalse(relay.should_proxy_cli(["hook"]))
             self.assertTrue(relay.should_proxy_cli(["statusline"]))
 
+    def test_local_attach_uses_remote_default_control_socket(self):
+        launched = {}
+
+        class FakeProcess:
+            stdout = []
+            stderr = []
+
+            def __init__(self):
+                self.stdin = mock.Mock()
+                self.stdin.close = mock.Mock()
+
+            def wait(self):
+                return 0
+
+        def fake_popen(cmd, **kwargs):
+            launched["cmd"] = cmd
+            return FakeProcess()
+
+        with mock.patch("subprocess.Popen", side_effect=fake_popen):
+            code = relay.run_local_attach("dev@example.com")
+
+        self.assertEqual(code, 0)
+        remote_command = launched["cmd"][-1]
+        self.assertIn("~/.cc-jukebox/run/agent-control.sock", remote_command)
+        self.assertNotIn(str(Path.home()), remote_command)
+
     def test_install_settings_can_write_relay_environment(self):
         settings = install_settings.merge(
             {},

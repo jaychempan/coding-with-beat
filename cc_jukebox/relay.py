@@ -47,6 +47,7 @@ DEFAULT_TIMEOUT = 300
 RUN_DIR = Path.home() / ".cc-jukebox" / "run"
 DEFAULT_REQUEST_SOCKET = RUN_DIR / "agent-request.sock"
 DEFAULT_CONTROL_SOCKET = RUN_DIR / "agent-control.sock"
+REMOTE_DEFAULT_CONTROL_SOCKET = "~/.cc-jukebox/run/agent-control.sock"
 
 _MCP_TOOL_NAMES = {
     "now_playing",
@@ -371,7 +372,7 @@ def run_local_attach(
     *,
     port: int = 22,
     remote_bin: str = "$HOME/.local/bin/cc-jukebox",
-    control_socket: str = str(DEFAULT_CONTROL_SOCKET),
+    control_socket: str = REMOTE_DEFAULT_CONTROL_SOCKET,
     extra_ssh_args: list[str] | None = None,
 ) -> int:
     remote_cmd = (
@@ -445,7 +446,7 @@ def run_cli(argv: list[str] | None = None) -> int:
     local_attach.add_argument("ssh_target")
     local_attach.add_argument("--port", type=int, default=22)
     local_attach.add_argument("--remote-bin", default="$HOME/.local/bin/cc-jukebox")
-    local_attach.add_argument("--control-socket", default=str(DEFAULT_CONTROL_SOCKET))
+    local_attach.add_argument("--control-socket", default=REMOTE_DEFAULT_CONTROL_SOCKET)
     local_attach.add_argument("--ssh-arg", action="append", default=[])
 
     call = sub.add_parser("call", help="debug: forward one CLI command through the relay")
