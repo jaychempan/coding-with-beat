@@ -9,26 +9,27 @@
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg:      #0d0d0e;
-      --bg2:     #161618;
-      --bg3:     #1e1e21;
-      --text:    #c0b8a8;
-      --bright:  #e6ddd0;
+      --bg:      #0d0d10;
+      --bg2:     #1a1a1e;
+      --bg3:     #23232a;
+      --text:    #cec8bc;
+      --bright:  #f0ece4;
       --green:   #9bbc0f;
       --amber:   #d6be32;
       --coral:   #c85f41;
       --ltgrn:   #78c850;
       --yellow:  #ffe650;
-      --dim:     #52525f;
-      --border:  rgba(155,188,15,.18);
+      --dim:     #68687a;
+      --border:  rgba(155,188,15,.2);
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    html { scroll-behavior: smooth; }
+    /* html holds the dark bg; body is transparent so canvas z-index:-1 stays visible */
+    html { scroll-behavior: smooth; background: #0d0d10; }
 
     body {
-      background: var(--bg);
+      background: transparent;
       color: var(--text);
       font-family: 'JetBrains Mono', 'Courier New', monospace;
       font-size: 13px;
@@ -48,6 +49,14 @@
       opacity: 0.028;
       mix-blend-mode: screen;
       z-index: 9999;
+    }
+
+    /* Byte-flow canvas */
+    #byteflow {
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      pointer-events: none;
     }
 
     a { color: inherit; text-decoration: none; }
@@ -464,6 +473,8 @@
 </head>
 <body>
 
+<canvas id="byteflow"></canvas>
+
 <!-- NAV -->
 <nav>
   <div class="nav-logo">♪ <span>coding</span>-with-beat</div>
@@ -764,6 +775,89 @@
     frameIdx = (frameIdx + 1) % FRAMES.length;
     buddyPre.innerHTML = FRAMES[frameIdx];
   }, 600);
+</script>
+
+<script>
+/* ── Byte flow ── */
+(function () {
+  const canvas = document.getElementById('byteflow');
+  const ctx    = canvas.getContext('2d');
+  const CHARS  = '0123456789abcdef01♪♫▸▌░▒';
+  const COL_W  = 22;
+
+  let cols, state;
+
+  function randChar() { return CHARS[Math.floor(Math.random() * CHARS.length)]; }
+
+  function resize() {
+    canvas.width  = window.innerWidth;
+    canvas.height = window.innerHeight;
+    cols  = Math.floor(canvas.width / COL_W);
+    state = Array.from({length: cols}, () => ({
+      active:    Math.random() < 0.32,
+      y:         Math.random() * window.innerHeight,
+      speed:     30 + Math.random() * 50,
+      ch:        randChar(),
+      swapIn:    Math.random() * 600,
+      restartIn: 2000 + Math.random() * 7000,
+      green:     Math.random() < 0.18,
+    }));
+  }
+
+  let last = 0;
+  function tick(ts) {
+    const dt = Math.min(ts - last, 50) / 1000;
+    last = ts;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.font = '12px "JetBrains Mono", monospace';
+
+    for (let i = 0; i < cols; i++) {
+      const s = state[i];
+      if (!s.active) {
+        s.restartIn -= dt * 1000;
+        if (s.restartIn <= 0) {
+          s.active    = true;
+          s.y         = -14;
+          s.speed     = 30 + Math.random() * 50;
+          s.restartIn = 3000 + Math.random() * 8000;
+          s.green     = Math.random() < 0.18;
+        }
+        continue;
+      }
+
+      s.y       += s.speed * dt;
+      s.swapIn  -= dt * 1000;
+      if (s.swapIn <= 0) {
+        s.ch     = randChar();
+        s.swapIn = 120 + Math.random() * 500;
+      }
+
+      /* fade in top 10%, fade out bottom 20% */
+      const p = s.y / canvas.height;
+      const a = p < 0.10 ? p / 0.10
+              : p > 0.80 ? (1 - p) / 0.20
+              : 1;
+
+      ctx.fillStyle = s.green
+        ? `rgba(155,188,15,${(a * 0.18).toFixed(3)})`
+        : `rgba(235,228,215,${(a * 0.11).toFixed(3)})`;
+
+      ctx.fillText(s.ch, i * COL_W + 4, s.y);
+
+      if (s.y > canvas.height + 20) {
+        s.active    = false;
+        s.restartIn = 1500 + Math.random() * 6000;
+      }
+    }
+
+    requestAnimationFrame(tick);
+  }
+
+  resize();
+  window.addEventListener('resize', resize);
+  requestAnimationFrame(tick);
+})();
 </script>
 </body>
 </html>
