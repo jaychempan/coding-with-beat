@@ -14,6 +14,40 @@
 set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+RELAY_SOCKET="${CC_JUKEBOX_RELAY_SOCKET:-}"
+RELAY_URL="${CC_JUKEBOX_RELAY_URL:-}"
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --relay-socket)
+      [ "$#" -ge 2 ] || { echo "--relay-socket requires a value" >&2; exit 2; }
+      RELAY_SOCKET="$2"
+      shift 2
+      ;;
+    --relay-url)
+      [ "$#" -ge 2 ] || { echo "--relay-url requires a value" >&2; exit 2; }
+      RELAY_URL="$2"
+      shift 2
+      ;;
+    -h|--help)
+      cat <<'EOF'
+Usage: ./install.sh [--relay-socket PATH | --relay-url URL]
+
+Options:
+  --relay-socket PATH  Configure Claude Code to send cc-jukebox commands to a
+                       remote relay agent request socket, usually
+                       ~/.cc-jukebox/run/agent-request.sock.
+  --relay-url URL      Configure Claude Code to send cc-jukebox commands to a
+                       local HTTP relay URL, usually http://127.0.0.1:8765.
+EOF
+      exit 0
+      ;;
+    *)
+      echo "unknown option: $1" >&2
+      exit 2
+      ;;
+  esac
+done
 
 bold() { printf "\033[1m%s\033[0m\n" "$1"; }
 ok()   { printf "\033[32m✓\033[0m %s\n" "$1"; }
@@ -25,6 +59,11 @@ echo "  repo:    $REPO"
 echo "  venv:    $HOME/.cc-jukebox/venv"
 echo "  bin:     $HOME/.local/bin/cc-jukebox"
 echo "  command: $HOME/.claude/commands/juke.md"
+if [ -n "$RELAY_SOCKET" ]; then
+  echo "  relay:   socket $RELAY_SOCKET"
+elif [ -n "$RELAY_URL" ]; then
+  echo "  relay:   url $RELAY_URL"
+fi
 
 # 1. find a Python ≥3.10
 #    Honours $CC_JUKEBOX_PYTHON if set; otherwise scans PATH, Homebrew prefixes
@@ -172,10 +211,14 @@ SETTINGS_DIR="$HOME/.claude"
 SETTINGS_FILE="$SETTINGS_DIR/settings.json"
 mkdir -p "$SETTINGS_DIR"
 
-"$VENV_PY" "$REPO/scripts/install_settings.py" \
-  --settings "$SETTINGS_FILE" \
-  --python   "$VENV_PY" \
-  --repo     "$REPO"
+SETTINGS_ARGS=(
+  --settings "$SETTINGS_FILE"
+  --python "$VENV_PY"
+  --repo "$REPO"
+)
+[ -z "$RELAY_SOCKET" ] || SETTINGS_ARGS+=(--relay-socket "$RELAY_SOCKET")
+[ -z "$RELAY_URL" ] || SETTINGS_ARGS+=(--relay-url "$RELAY_URL")
+"$VENV_PY" "$REPO/scripts/install_settings.py" "${SETTINGS_ARGS[@]}"
 
 ok "Claude Code settings patched: $SETTINGS_FILE"
 

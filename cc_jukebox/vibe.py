@@ -102,6 +102,7 @@ def main() -> int:
     """Hook entry point. Reads JSON from stdin, updates state, exits 0."""
     if os.environ.get("CC_JUKEBOX_DISABLE_HOOK") == "1":
         return 0
+    raw = ""
     try:
         raw = sys.stdin.read()
         event = json.loads(raw) if raw.strip() else {}
@@ -111,6 +112,16 @@ def main() -> int:
     if juke_response is not None:
         print(json.dumps(juke_response, ensure_ascii=False))
         return 0
+    from . import relay
+    if relay.relay_configured() and not relay.relay_is_local():
+        response = relay.cli_request(["hook"], raw)
+        stdout = str(response.get("stdout") or "")
+        stderr = str(response.get("stderr") or "")
+        if stdout:
+            sys.stdout.write(stdout)
+        if stderr:
+            sys.stderr.write(stderr)
+        return int(response.get("exit_code") or (0 if response.get("ok", True) else 1))
     handle_hook(event)
     return 0
 

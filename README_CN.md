@@ -72,6 +72,40 @@ cc-jukebox init
 
 ……会写入 `.cc-jukebox.toml`，让不同项目可以默认不同的氛围/来源/起始查询。
 
+## SSH 远端 Claude Code
+
+如果 Claude Code 在服务器上运行，而 Apple Music 在本机 Mac 上运行，可以使用 relay 模式。远端 `cc-jukebox` 负责接入 Claude Code 的 MCP、hooks、statusline 和 `/juke`，实际音乐控制仍由本机 Mac 执行。
+
+推荐使用 SSH attach 模式：
+
+```bash
+# 本机 Mac：正常安装
+./install.sh
+
+# 服务器：安装并把 Claude Code 配到远端 request socket
+./install.sh --relay-socket ~/.cc-jukebox/run/agent-request.sock
+
+# 服务器：启动远端 relay agent
+cc-jukebox relay agent-service
+
+# 本机 Mac：建立长期 SSH attach
+cc-jukebox relay attach user@server
+```
+
+之后在服务器上的 Claude Code 中，MCP 工具、状态栏、hooks 和 `/juke` 都会通过 relay 回到本机 Mac 执行。
+如果服务器上的 `cc-jukebox` 不在默认 `$HOME/.local/bin/cc-jukebox`，给 attach 加 `--remote-bin /path/to/cc-jukebox`。
+
+也可以使用 HTTP + SSH 反向端口转发：
+
+```bash
+# 本机 Mac
+cc-jukebox relay serve --host 127.0.0.1 --port 8765
+ssh -R 127.0.0.1:8765:127.0.0.1:8765 user@server
+
+# 服务器
+./install.sh --relay-url http://127.0.0.1:8765
+```
+
 ## 命令行工具
 
 安装后，`cc-jukebox` 命令已在 PATH 中。
@@ -91,6 +125,7 @@ cc-jukebox demo                # 视觉冒烟测试
 cc-jukebox banner              # 大型横幅
 cc-jukebox init                # 写入 .cc-jukebox.toml
 cc-jukebox server              # MCP 服务器（CC 会自动启动）
+cc-jukebox relay               # SSH/HTTP 远端 relay
 cc-jukebox statusline          # 单帧状态栏（CC 调用）
 cc-jukebox hook                # CC 钩子接收器（stdin = JSON 事件）
 ```

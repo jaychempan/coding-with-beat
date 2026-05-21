@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import shlex
 import sys
 from pathlib import Path
 
@@ -21,13 +22,29 @@ from cc_jukebox.juke_agent import HOOK_TIMEOUT
 TAG = "cc-jukebox"
 
 
-def hook_entry(python: str, repo: str) -> dict:
+def _relay_env(relay_socket: str = "", relay_url: str = "") -> dict[str, str]:
+    env = {}
+    if relay_socket:
+        env["CC_JUKEBOX_RELAY_SOCKET"] = relay_socket
+    if relay_url:
+        env["CC_JUKEBOX_RELAY_URL"] = relay_url
+    return env
+
+
+def _with_env(command: str, env: dict[str, str]) -> str:
+    if not env:
+        return command
+    prefix = " ".join(f"{key}={shlex.quote(value)}" for key, value in sorted(env.items()))
+    return f"{prefix} {command}"
+
+
+def hook_entry(python: str, repo: str, relay_env: dict[str, str] | None = None) -> dict:
     return {
         "matcher": ".*",
         "hooks": [
             {
                 "type": "command",
-                "command": f'{python} -m cc_jukebox hook',
+                "command": _with_env(f'{python} -m cc_jukebox hook', relay_env or {}),
                 "timeout": 5,
             }
         ],
@@ -36,12 +53,12 @@ def hook_entry(python: str, repo: str) -> dict:
     }
 
 
-def session_hook_entry(python: str, repo: str) -> dict:
+def session_hook_entry(python: str, repo: str, relay_env: dict[str, str] | None = None) -> dict:
     return {
         "hooks": [
             {
                 "type": "command",
-                "command": f'{python} -m cc_jukebox hook',
+                "command": _with_env(f'{python} -m cc_jukebox hook', relay_env or {}),
                 "timeout": 5,
             }
         ],
@@ -49,13 +66,13 @@ def session_hook_entry(python: str, repo: str) -> dict:
     }
 
 
-def juke_expansion_hook_entry(python: str, repo: str) -> dict:
+def juke_expansion_hook_entry(python: str, repo: str, relay_env: dict[str, str] | None = None) -> dict:
     return {
         "matcher": "juke",
         "hooks": [
             {
                 "type": "command",
-                "command": f'{python} -m cc_jukebox hook',
+                "command": _with_env(f'{python} -m cc_jukebox hook', relay_env or {}),
                 "timeout": HOOK_TIMEOUT,
             }
         ],
@@ -79,21 +96,26 @@ def save_settings(path: Path, data: dict) -> None:
     path.write_text(json.dumps(data, indent=2, ensure_ascii=False))
 
 
-def merge(settings: dict, python: str, repo: str) -> dict:
+def merge(settings: dict, python: str, repo: str, relay_socket: str = "", relay_url: str = "") -> dict:
+    relay_env = _relay_env(relay_socket, relay_url)
+
     # mcpServers
     servers = settings.setdefault("mcpServers", {})
-    servers[TAG] = {
+    server = {
         "command": python,
         "args": ["-m", "cc_jukebox.server"],
         "cwd": repo,
     }
+    if relay_env:
+        server["env"] = relay_env
+    servers[TAG] = server
 
     # statusLine — only set if not present OR already ours
     sl = settings.get("statusLine")
     if not sl or (isinstance(sl, dict) and sl.get("_owner") == TAG):
         settings["statusLine"] = {
             "type": "command",
-            "command": f"{python} -m cc_jukebox statusline",
+            "command": _with_env(f"{python} -m cc_jukebox statusline", relay_env),
             "refreshInterval": 1,
             "_owner": TAG,
         }
@@ -104,16 +126,16 @@ def merge(settings: dict, python: str, repo: str) -> dict:
         lst = hooks.setdefault(event, [])
         # remove any prior entries we own
         lst[:] = [e for e in lst if not (isinstance(e, dict) and e.get("_owner") == TAG)]
-        lst.append(hook_entry(python, repo))
+        lst.append(hook_entry(python, repo, relay_env))
 
     for event in ("SessionStart", "Stop"):
         lst = hooks.setdefault(event, [])
         lst[:] = [e for e in lst if not (isinstance(e, dict) and e.get("_owner") == TAG)]
-        lst.append(session_hook_entry(python, repo))
+        lst.append(session_hook_entry(python, repo, relay_env))
 
     lst = hooks.setdefault("UserPromptExpansion", [])
     lst[:] = [e for e in lst if not (isinstance(e, dict) and e.get("_owner") == TAG)]
-    lst.append(juke_expansion_hook_entry(python, repo))
+    lst.append(juke_expansion_hook_entry(python, repo, relay_env))
 
     return settings
 
@@ -144,6 +166,8 @@ def main() -> int:
     ap.add_argument("--settings", required=True)
     ap.add_argument("--python", required=True)
     ap.add_argument("--repo", required=True)
+    ap.add_argument("--relay-socket", default="")
+    ap.add_argument("--relay-url", default="")
     ap.add_argument("--remove", action="store_true")
     args = ap.parse_args()
 
@@ -153,7 +177,7 @@ def main() -> int:
     if args.remove:
         settings = remove(settings)
     else:
-        settings = merge(settings, args.python, args.repo)
+        settings = merge(settings, args.python, args.repo, args.relay_socket, args.relay_url)
 
     save_settings(path, settings)
     return 0

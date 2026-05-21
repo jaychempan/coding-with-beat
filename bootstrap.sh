@@ -30,4 +30,4 @@ else
   git clone --depth 1 "$REPO_URL" "$DEST"
 fi
 
-exec bash "$DEST/install.sh"
+exec bash "$DEST/install.sh" "$@"

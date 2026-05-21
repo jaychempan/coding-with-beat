@@ -5,6 +5,7 @@ Usage:
 
 Commands:
     server       — start the MCP server (used by CC)
+    relay        — run or attach the remote relay bridge
     statusline   — emit one statusline frame (used by CC)
     hook         — receive a CC hook event JSON on stdin and update vibe
     init         — scaffold .cc-jukebox.toml in the current directory
@@ -385,6 +386,11 @@ def cmd_server() -> int:
     return 0
 
 
+def cmd_relay() -> int:
+    from .relay import run_cli
+    return run_cli(sys.argv[2:])
+
+
 def cmd_statusline() -> int:
     from .statusline import main
     return main()
@@ -398,6 +404,7 @@ def cmd_hook() -> int:
 COMMANDS = {
     "_prefetch": cmd_prefetch,
     "server": cmd_server,
+    "relay": cmd_relay,
     "statusline": cmd_statusline,
     "hook": cmd_hook,
     "init": cmd_init,
@@ -427,6 +434,9 @@ def main() -> int:
         print(__doc__)
         return 0
     cmd = sys.argv[1]
+    from .relay import proxy_cli_to_relay, should_proxy_cli
+    if should_proxy_cli(sys.argv[1:]):
+        return proxy_cli_to_relay(sys.argv[1:])
     if cmd not in COMMANDS:
         print(f"unknown command: {cmd}\n")
         print(__doc__)

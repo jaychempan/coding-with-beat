@@ -25,6 +25,11 @@ from .ui import (
 mcp = FastMCP("cc-jukebox")
 
 
+def _relay_tool(name: str, **kwargs) -> str | None:
+    from .relay import forward_tool_if_configured
+    return forward_tool_if_configured(name, kwargs)
+
+
 def _unsupported(source: str, feature: str, reason: str) -> str:
     return f"(unsupported — source={source}, feature={feature})\n{reason}"
 
@@ -56,6 +61,8 @@ def now_playing() -> str:
     Output: a short text block with title, artist, album, position, source.
     Use this whenever the user asks 'what's playing' or before deciding to
     skip/replay."""
+    if (relay_result := _relay_tool("now_playing")) is not None:
+        return relay_result
     st, np = _refresh_now_playing()
     if _unsupported_reason(np):
         return _unsupported(np.source or st.source, "now_playing", _unsupported_reason(np))
@@ -71,6 +78,8 @@ def now_playing() -> str:
 @mcp.tool()
 def play() -> str:
     """Resume playback on the active source."""
+    if (relay_result := _relay_tool("play")) is not None:
+        return relay_result
     st = state.load()
     get_source(st.source).play()
     _refresh_now_playing()
@@ -80,6 +89,8 @@ def play() -> str:
 @mcp.tool()
 def pause() -> str:
     """Pause playback on the active source."""
+    if (relay_result := _relay_tool("pause")) is not None:
+        return relay_result
     st = state.load()
     get_source(st.source).pause()
     _refresh_now_playing()
@@ -89,6 +100,8 @@ def pause() -> str:
 @mcp.tool()
 def toggle() -> str:
     """Toggle play/pause."""
+    if (relay_result := _relay_tool("toggle")) is not None:
+        return relay_result
     st = state.load()
     get_source(st.source).toggle()
     _refresh_now_playing()
@@ -98,6 +111,8 @@ def toggle() -> str:
 @mcp.tool()
 def next_track() -> str:
     """Skip to the next track."""
+    if (relay_result := _relay_tool("next_track")) is not None:
+        return relay_result
     st = state.load()
     get_source(st.source).next()
     _refresh_now_playing()
@@ -107,6 +122,8 @@ def next_track() -> str:
 @mcp.tool()
 def prev_track() -> str:
     """Go to the previous track."""
+    if (relay_result := _relay_tool("prev_track")) is not None:
+        return relay_result
     st = state.load()
     get_source(st.source).prev()
     _refresh_now_playing()
@@ -116,6 +133,8 @@ def prev_track() -> str:
 @mcp.tool()
 def seek(seconds: float) -> str:
     """Jump to position (seconds) in the current track."""
+    if (relay_result := _relay_tool("seek", seconds=seconds)) is not None:
+        return relay_result
     st = state.load()
     get_source(st.source).seek(seconds)
     _refresh_now_playing()
@@ -125,6 +144,8 @@ def seek(seconds: float) -> str:
 @mcp.tool()
 def set_volume(percent: int) -> str:
     """Set source/system volume (0-100)."""
+    if (relay_result := _relay_tool("set_volume", percent=percent)) is not None:
+        return relay_result
     st = state.load()
     get_source(st.source).set_volume(percent)
     st.volume = max(0, min(100, int(percent)))
@@ -137,6 +158,8 @@ def like_current() -> str:
     """Like/favorite the current track on the active source.
     Apple Music uses Music.app AppleScript. QQMusic uses macOS System Events
     menu automation. Sources that do not support this raise NotImplementedError."""
+    if (relay_result := _relay_tool("like_current")) is not None:
+        return relay_result
     st = state.load()
     ok = get_source(st.source).like_current()
     return f"♥ liked current track  source={st.source}" if ok else f"error: like failed  source={st.source}"
@@ -148,6 +171,8 @@ def set_play_mode(mode: str) -> str:
     Common modes: shuffle, sequential, repeat. Apple Music also supports
     repeat_one and repeat_all. Unsupported modes/sources raise
     NotImplementedError from the source backend."""
+    if (relay_result := _relay_tool("set_play_mode", mode=mode)) is not None:
+        return relay_result
     st = state.load()
     ok = get_source(st.source).set_play_mode(mode)
     return f"play mode = {mode}  source={st.source}" if ok else f"error: play mode failed  source={st.source}"
@@ -157,6 +182,8 @@ def set_play_mode(mode: str) -> str:
 def search(query: str, limit: int = 8) -> str:
     """Search the current source for tracks matching the query. Returns a
     numbered list. Use this before play_song if multiple matches are likely."""
+    if (relay_result := _relay_tool("search", query=query, limit=limit)) is not None:
+        return relay_result
     st = state.load()
     hits = get_source(st.source).search(query, limit=limit)
     if not hits:
@@ -170,6 +197,8 @@ def search(query: str, limit: int = 8) -> str:
 @mcp.tool()
 def play_song(query: str) -> str:
     """Search for and start playing the first match for 'query'."""
+    if (relay_result := _relay_tool("play_song", query=query)) is not None:
+        return relay_result
     st = state.load()
     src = get_source(st.source)
     np = src.play_query(query)
@@ -186,6 +215,8 @@ def play_song(query: str) -> str:
 @mcp.tool()
 def set_source(name: str) -> str:
     """Switch the active music source. name ∈ {apple_music, local, qq_music}."""
+    if (relay_result := _relay_tool("set_source", name=name)) is not None:
+        return relay_result
     try:
         src = get_source(name)
     except ValueError as e:
@@ -200,6 +231,8 @@ def set_source(name: str) -> str:
 def show_cover(style: str = "rgb", width: int = 32, height: int = 16) -> str:
     """Render the current track's album cover as pixel ASCII.
     style: 'rgb' (true-color photo) or 'gameboy' (4-color retro)."""
+    if (relay_result := _relay_tool("show_cover", style=style, width=width, height=height)) is not None:
+        return relay_result
     st, np = _refresh_now_playing()
     if _unsupported_reason(np):
         return _unsupported(np.source or st.source, "show_cover", _unsupported_reason(np))
@@ -227,6 +260,8 @@ def _current_lyrics() -> Optional[str]:
 def show_player(width: int = 36, with_lyrics: bool = True) -> str:
     """Render the full retro player: pixel cover + title + progress + spectrum +
     DJ Buddy sprite + (optionally) live lyrics. The 'whole experience' in one call."""
+    if (relay_result := _relay_tool("show_player", width=width, with_lyrics=with_lyrics)) is not None:
+        return relay_result
     st, np = _refresh_now_playing()
     if _unsupported_reason(np):
         return _unsupported(np.source or st.source, "show_player", _unsupported_reason(np))
@@ -263,6 +298,8 @@ def show_lyrics(window: int = 7) -> str:
     Pulls timed LRC lyrics from the active source (Apple Music falls back to
     NetEase's public lyric API when AppleScript can't read catalog lyrics).
     Active line is picked by current playback position."""
+    if (relay_result := _relay_tool("show_lyrics", window=window)) is not None:
+        return relay_result
     st, np = _refresh_now_playing()
     if _unsupported_reason(np):
         return _unsupported(np.source or st.source, "show_lyrics", _unsupported_reason(np))
@@ -280,6 +317,8 @@ def show_lyrics(window: int = 7) -> str:
 def dj_say(mood: str = "") -> str:
     """DJ Buddy drops a one-liner in character. If mood is empty, uses the
     current vibe-derived mood. Useful for breaking up long debugging sessions."""
+    if (relay_result := _relay_tool("dj_say", mood=mood)) is not None:
+        return relay_result
     st = state.load()
     m = mood or st.dj_mood or "neutral"
     return f"{dj.face(m)}  “{dj.quip(m)}”"
@@ -288,6 +327,8 @@ def dj_say(mood: str = "") -> str:
 @mcp.tool()
 def vibe_set(name: str) -> str:
     """Manually set the vibe (focus|build|debug|victory|fail|idle|review)."""
+    if (relay_result := _relay_tool("vibe_set", name=name)) is not None:
+        return relay_result
     st = state.load()
     st.vibe = name
     state.save(st)
@@ -297,6 +338,8 @@ def vibe_set(name: str) -> str:
 @mcp.tool()
 def focus_start() -> str:
     """Start a 25/5 pomodoro loop. Status visible in statusline."""
+    if (relay_result := _relay_tool("focus_start")) is not None:
+        return relay_result
     s = focus.start()
     return f"🍅 focus on — {s.phase} {s.remaining}s remaining"
 
@@ -304,6 +347,8 @@ def focus_start() -> str:
 @mcp.tool()
 def focus_stop() -> str:
     """Stop the pomodoro loop."""
+    if (relay_result := _relay_tool("focus_stop")) is not None:
+        return relay_result
     focus.stop()
     return "focus off"
 
@@ -311,6 +356,8 @@ def focus_stop() -> str:
 @mcp.tool()
 def focus_status() -> str:
     """Get current focus loop status."""
+    if (relay_result := _relay_tool("focus_status")) is not None:
+        return relay_result
     s = focus.status()
     if not s.active:
         return "focus off"
@@ -321,12 +368,16 @@ def focus_status() -> str:
 def banner() -> str:
     """Print the giant CC-JUKEBOX retro banner. Use on SessionStart or when
     the user wants the full intro."""
+    if (relay_result := _relay_tool("banner")) is not None:
+        return relay_result
     return retro_banner("a pixel companion for vibecoding")
 
 
 @mcp.tool()
 def session_intro() -> str:
     """One-shot greeting: banner + current state + a DJ Buddy hello."""
+    if (relay_result := _relay_tool("session_intro")) is not None:
+        return relay_result
     st, np = _refresh_now_playing()
     parts = [retro_banner("a pixel companion for vibecoding")]
     if np.title:
