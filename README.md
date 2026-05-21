@@ -165,6 +165,7 @@ cc-jukebox player              # 完整像素播放器
 cc-jukebox watch               # TUI 实时模式（Ctrl-C 退出）
 cc-jukebox cover [rgb|gameboy] # 只显示封面
 cc-jukebox lyrics              # 卡拉 OK 歌词窗口
+cc-jukebox karaoke             # 全屏歌词窗口
 cc-jukebox demo                # 视觉测试
 cc-jukebox banner              # 大横幅
 cc-jukebox init                # 生成 .cc-jukebox.toml

@@ -164,15 +164,20 @@ class RelayProtocolTest(unittest.TestCase):
                         attach.stdin.flush()
 
                 threading.Thread(target=local_executor, daemon=True).start()
-                time.sleep(0.2)
 
-                with mock.patch.dict(os.environ, {relay.RELAY_SOCKET_ENV: str(request_socket)}, clear=False):
-                    response = relay.send_request({
-                        "id": "round-trip",
-                        "kind": "cli",
-                        "argv": ["welcome"],
-                        "stdin": "",
-                    })
+                deadline = time.time() + 3
+                response = {}
+                while time.time() < deadline:
+                    with mock.patch.dict(os.environ, {relay.RELAY_SOCKET_ENV: str(request_socket)}, clear=False):
+                        response = relay.send_request({
+                            "id": "round-trip",
+                            "kind": "cli",
+                            "argv": ["welcome"],
+                            "stdin": "",
+                        })
+                    if response.get("ok") or "no local cc-jukebox attach connection" not in str(response.get("error", "")):
+                        break
+                    time.sleep(0.05)
 
                 self.assertTrue(response["ok"], response)
                 self.assertIn("pixel companion", response["stdout"])

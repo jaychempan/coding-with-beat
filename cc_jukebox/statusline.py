@@ -11,13 +11,12 @@ from __future__ import annotations
 
 import json
 import re
-import subprocess
 import sys
 import time
 
 from . import state, focus, dj
-from .config import DATA_DIR, LYRICS_CACHE
-from .sources import get_source
+from .config import LYRICS_CACHE
+from .mcp_client import MCPClientError, call_tool
 from .ui.lyrics import parse_lrc, _index_for_position
 from .ui.progress import render_progress
 
@@ -39,18 +38,19 @@ def _mmss(seconds: float) -> str:
 
 
 def _maybe_refresh(st):
-    """If the position sample is stale, re-poll the active source.
-    Returns (possibly updated state, unsupported reason). Failures fall back to
-    cached state silently."""
+    """Refresh track state through the configured HTTP MCP endpoint."""
     base = st.track.position_sampled_at or st.updated_at
-    if base and (time.time() - base) < _STALE_AFTER:
+    if st.track.title and base and (time.time() - base) < _STALE_AFTER:
         return st, ""
     try:
-        src = get_source(st.source)
-        np = src.now_playing()
-    except Exception:
-        return st, ""
-    unsupported_reason = getattr(np, "unsupported_reason", None) or ""
+        data = json.loads(call_tool("now_playing_snapshot"))
+    except MCPClientError as e:
+        return st, f"MCP offline: {str(e).splitlines()[0]}"
+    except Exception as e:
+        return st, f"MCP snapshot failed: {e}"
+
+    unsupported_reason = str(data.get("unsupported_reason") or "")
+    source = str(data.get("source") or st.source)
     if unsupported_reason:
         st.track.title = ""
         st.track.artist = ""
@@ -59,24 +59,40 @@ def _maybe_refresh(st):
         st.track.position = 0.0
         st.track.position_sampled_at = time.time()
         st.track.artwork_path = None
-        st.track.source = np.source
+        st.track.source = source
+        st.source = source
         st.playing = False
         try:
             state.save(st)
         except Exception:
             pass
         return st, unsupported_reason
-    if not np.title:
+    if not data.get("title"):
+        st.track.title = ""
+        st.track.artist = ""
+        st.track.album = ""
+        st.track.duration = 0.0
+        st.track.position = 0.0
+        st.track.position_sampled_at = time.time()
+        st.track.artwork_path = None
+        st.track.source = source
+        st.source = source
+        st.playing = bool(data.get("playing"))
+        try:
+            state.save(st)
+        except Exception:
+            pass
         return st, ""
-    st.track.title = np.title
-    st.track.artist = np.artist
-    st.track.album = np.album
-    st.track.duration = np.duration
-    st.track.position = np.position
-    st.track.position_sampled_at = time.time()
-    st.track.artwork_path = np.artwork_path
-    st.track.source = np.source
-    st.playing = np.playing
+    st.source = source
+    st.track.title = str(data.get("title") or "")
+    st.track.artist = str(data.get("artist") or "")
+    st.track.album = str(data.get("album") or "")
+    st.track.duration = float(data.get("duration") or 0.0)
+    st.track.position = float(data.get("position") or 0.0)
+    st.track.position_sampled_at = float(data.get("sampled_at") or time.time())
+    st.track.artwork_path = str(data.get("artwork_path") or "") or None
+    st.track.source = source
+    st.playing = bool(data.get("playing"))
     try:
         state.save(st)
     except Exception:
@@ -123,34 +139,6 @@ def _cached_lyric_line(st, pos: float):
     if idx < 0:
         return None
     return cues[idx][1]
-
-
-def _bg_fetch_lyrics(st) -> None:
-    """Spawn one background process to fetch+cache lyrics when none are cached.
-    A lock file under DATA_DIR prevents duplicate fetches for the same track."""
-    t = st.track
-    if not t.title:
-        return
-    key = _KEY_RE.sub("_", f"{t.artist}_{t.album}_{t.title}").strip("_")[:160]
-    prefix = _SOURCE_PREFIX.get(st.source, "am")
-    cache = LYRICS_CACHE / f"{prefix}_{key}.txt"
-    if cache.exists():
-        return
-    lock = DATA_DIR / f".lyfetch_{prefix}_{key}"
-    if lock.exists():
-        if (time.time() - lock.stat().st_mtime) < 45:
-            return  # still fetching
-        lock.unlink(missing_ok=True)
-    try:
-        lock.touch()
-        subprocess.Popen(
-            [sys.executable, "-m", "cc_jukebox", "_prefetch"],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            start_new_session=True,
-        )
-    except Exception:
-        pass
 
 
 # Accent colour per vibe — tints the progress bar, play icon, vibe chip, and quip.
@@ -201,7 +189,10 @@ def render(term_width: int = 0) -> str:
         else:
             icon_seq = "\x1b[1;38;2;120;130;130m❚❚\x1b[0m"
         track = f"{icon_seq} \x1b[38;2;200;200;230m{title}\x1b[0m \x1b[38;2;120;130;130m— {artist}\x1b[0m {bar}"
-    elif unsupported_reason or st.source == "qq_music":
+    elif unsupported_reason:
+        msg = unsupported_reason.splitlines()[0][:54]
+        track = f"\x1b[38;2;120;130;130m{msg}\x1b[0m"
+    elif st.source == "qq_music":
         track = "\x1b[38;2;120;130;130mqq_music now-playing unsupported\x1b[0m"
     else:
         track = "\x1b[38;2;120;130;130mno track loaded — try /juke play 周杰伦\x1b[0m"
@@ -246,7 +237,6 @@ def render(term_width: int = 0) -> str:
                     f" \x1b[3;38;2;180;180;200m♪ {lyric}\x1b[0m"
                 )
         else:
-            _bg_fetch_lyrics(st)
             chip = f"  \x1b[38;2;55;58;72m♪\x1b[0m" if avail >= 3 else ""
     else:
         chip = f"  \x1b[38;2;55;58;72m♪\x1b[0m" if avail >= 3 else ""

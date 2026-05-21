@@ -82,6 +82,21 @@ def _refresh_after_control(delay: float = CONTROL_REFRESH_DELAY):
     return _refresh_now_playing()
 
 
+def _now_playing_payload(st, np) -> dict:
+    return {
+        "source": np.source or st.source,
+        "title": np.title or "",
+        "artist": np.artist or "",
+        "album": np.album or "",
+        "duration": float(np.duration or 0.0),
+        "position": float(np.position or 0.0),
+        "playing": bool(np.playing),
+        "artwork_path": np.artwork_path or "",
+        "unsupported_reason": _unsupported_reason(np),
+        "sampled_at": time.time(),
+    }
+
+
 @mcp.tool()
 def now_playing() -> str:
     """Return the currently playing track from the active source.
@@ -98,6 +113,13 @@ def now_playing() -> str:
         f"  by {np.artist or '—'} · {np.album or '—'}\n"
         f"  {int(np.position):>4}s / {int(np.duration):>4}s  source={np.source}  {'▶ playing' if np.playing else '❚❚ paused'}"
     )
+
+
+@mcp.tool()
+def now_playing_snapshot() -> str:
+    """Return structured now-playing data as JSON for terminal integrations."""
+    st, np = _refresh_now_playing()
+    return json.dumps(_now_playing_payload(st, np), ensure_ascii=False)
 
 
 @mcp.tool()

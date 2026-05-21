@@ -18,7 +18,7 @@ Commands:
     player       — render the full live player (cover + progress + lyrics + buddy)
     watch        — real-time ticking player in an alt-screen TUI (Ctrl-C to exit)
     source [name] — print or set source (apple_music | local | qq_music)
-    karaoke      — full-screen centred lyrics with wave animation (Ctrl-C to exit)
+    karaoke      — full-screen centred lyrics from the MCP server (Ctrl-C to exit)
     play [query] — resume current track, or search & play if a query is given
     pause        — pause playback
     next         — skip to next track

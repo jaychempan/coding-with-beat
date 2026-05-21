@@ -152,6 +152,7 @@ cc-jukebox player              # 完整像素播放器边框
 cc-jukebox watch               # 滚动 TUI（Ctrl-C 退出）
 cc-jukebox cover [rgb|gameboy] # 仅显示当前封面
 cc-jukebox lyrics              # 卡拉OK窗口
+cc-jukebox karaoke             # 全屏歌词窗口
 cc-jukebox demo                # 视觉冒烟测试
 cc-jukebox banner              # 大型横幅
 cc-jukebox init                # 写入 .cc-jukebox.toml
