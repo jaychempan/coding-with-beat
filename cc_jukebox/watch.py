@@ -26,7 +26,7 @@ from .ui import (
     render_cover,
     render_hud_chip,
     render_led_time,
-    render_lyrics_window,
+    render_lyrics_wave,
     render_progress,
     render_spectrum_color,
 )
@@ -131,8 +131,8 @@ def _render_frame(cache: _Cache, width: int) -> str:
 
     if cache.lyrics:
         blocks.append("\x1b[38;2;90;90;105m─── lyrics ───\x1b[0m")
-        blocks.append(render_lyrics_window(
-            cache.lyrics, position=pos, duration=np.duration, window=5
+        blocks.append(render_lyrics_wave(
+            cache.lyrics, position=pos, duration=np.duration, window=5, t=t
         ))
     else:
         blocks.append("\x1b[38;2;120;130;130m  (no lyrics for this track)\x1b[0m")

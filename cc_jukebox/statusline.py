@@ -11,11 +11,12 @@ from __future__ import annotations
 
 import json
 import re
+import subprocess
 import sys
 import time
 
 from . import state, focus, dj
-from .config import LYRICS_CACHE
+from .config import DATA_DIR, LYRICS_CACHE
 from .sources import get_source
 from .ui.lyrics import parse_lrc, _index_for_position
 from .ui.progress import render_progress
@@ -101,6 +102,34 @@ def _cached_lyric_line(st, pos: float):
     return cues[idx][1]
 
 
+def _bg_fetch_lyrics(st) -> None:
+    """Spawn one background process to fetch+cache lyrics when none are cached.
+    A lock file under DATA_DIR prevents duplicate fetches for the same track."""
+    t = st.track
+    if not t.title:
+        return
+    key = _KEY_RE.sub("_", f"{t.artist}_{t.album}_{t.title}").strip("_")[:160]
+    prefix = _SOURCE_PREFIX.get(st.source, "am")
+    cache = LYRICS_CACHE / f"{prefix}_{key}.txt"
+    if cache.exists():
+        return
+    lock = DATA_DIR / f".lyfetch_{prefix}_{key}"
+    if lock.exists():
+        if (time.time() - lock.stat().st_mtime) < 45:
+            return  # still fetching
+        lock.unlink(missing_ok=True)
+    try:
+        lock.touch()
+        subprocess.Popen(
+            [sys.executable, "-m", "cc_jukebox", "_prefetch"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+    except Exception:
+        pass
+
+
 _PLAY_PULSE = ("▶", "▷")  # alternates every second when playing
 
 
@@ -136,14 +165,18 @@ def render() -> str:
 
     line1 = f"{face}  {track}{vibe_chip}{focus_chip}"
 
-    lyric = _cached_lyric_line(st, pos) if st.track.title else None
-    if lyric:
-        # Truncate so the lyric line isn't longer than the track line is wide.
-        if len(lyric) > 60:
-            lyric = lyric[:57] + "…"
-        line2 = f"\x1b[3;38;2;180;180;200m♪ {lyric}\x1b[0m"
-        return f"{line1}\n{line2}"
-    return line1
+    if st.track.title:
+        lyric = _cached_lyric_line(st, pos)
+        if lyric:
+            if len(lyric) > 60:
+                lyric = lyric[:57] + "…"
+            line2 = f"\x1b[3;38;2;180;180;200m♪ {lyric}\x1b[0m"
+        else:
+            _bg_fetch_lyrics(st)
+            line2 = f"\x1b[38;2;55;58;72m♪\x1b[0m"
+    else:
+        line2 = f"\x1b[38;2;55;58;72m♪\x1b[0m"
+    return f"{line1}\n{line2}"
 
 
 def main() -> int:

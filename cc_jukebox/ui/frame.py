@@ -69,3 +69,42 @@ def retro_banner(subtitle: str = "press any key to play") -> str:
         out.append(f"{GB_GREEN}{line}{RESET}")
     out.append(f"\x1b[38;2;200;200;230m{subtitle.center(70)}{RESET}")
     return "\n".join(out)
+
+
+def welcome_screen() -> str:
+    """Full welcome splash shown on first install / cc-jukebox welcome."""
+    C   = "\x1b[38;2;204;120;92m"   # Claude coral
+    A   = "\x1b[38;2;220;175;80m"   # amber
+    W   = "\x1b[38;2;250;235;215m"  # warm cream
+    DIM = "\x1b[38;2;140;85;55m"
+    B   = "\x1b[1m"
+    R   = "\x1b[0m"
+
+    def body_row(content: str) -> str:
+        raw = _strip_ansi(content)
+        pad = max(0, 27 - len(raw))
+        lpad = pad // 2
+        rpad = pad - lpad
+        return f"        {C}║{R}{' ' * lpad}{content}{' ' * rpad}{C}║{R}"
+
+    # Head inner width = 15. Center col = 22.
+    # Body inner width = 27. ╩ connector at col 22.
+    return "\n".join([
+        "",
+        f"  {A}♩  ♪  ♫  ♬  ♩  ♪  ♫  ♬  ♩  ♪  ♫  ♬{R}",
+        "",
+        f"              {C}╔{'═' * 15}╗{R}",
+        f"        {C}◄═════╣               ╠═════►{R}",
+        f"              {C}║   {A}◉{C}       {A}◉{C}   ║{R}",
+        f"              {C}║               ║{R}",
+        f"              {C}║   {A}╰───────╯{C}   ║{R}",
+        f"              {C}╚{'═' * 15}╝{R}",
+        f"                      {C}║{R}",
+        f"        {C}╔{'═' * 13}╩{'═' * 13}╗{R}",
+        body_row(f"{B}{W}♫   CC-JUKEBOX   ♫{R}"),
+        body_row(f"{W}vibecode with soul{R}"),
+        f"        {C}╚{'═' * 27}╝{R}",
+        "",
+        f"  {DIM}✓ installed — try: cc-jukebox player   or   /juke play 周杰伦{R}",
+        "",
+    ])

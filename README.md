@@ -1,8 +1,8 @@
 # CC-Jukebox
 
-A pixel-art music companion for Claude Code. Listen to music without leaving
-the terminal, get a reactive retro UI, and let a tiny DJ Buddy change the
-vibe as you code.
+> **你上一次 vibecoding 的时候又唱又跳是什么时候？**
+>
+> 对。你已经不记得了。
 
 ```
  ██████╗ ██████╗     ██╗██╗   ██╗██╗  ██╗███████╗██████╗  ██████╗ ██╗  ██╗
@@ -14,37 +14,38 @@ vibe as you code.
                    a pixel companion for vibecoding
 ```
 
-## What it does
+你只是在敲代码。Claude 在旁边静静地看着。终端里除了光标在闪，什么声音都没有。
+这个工具的存在，就是为了终结这种悲剧。
 
-- **MCP server** — exposes 21 tools to Claude Code so you can say "play some
-  lofi", "skip this", "show the player", "what's playing?" and have it work.
-- **Music sources** — Apple Music (AppleScript, no GUI needed), local files
-  (afplay), QQ Music (search + preview via public API).
-- **Pixel UI** — album covers rendered as half-block ANSI, GameBoy 4-color
-  palette mode, retro frame, reactive (deterministic-from-position) spectrum.
-- **DJ Buddy** — a 5-line pixel character that changes mood with your work.
-- **Vibe Engine** — CC hooks (PreToolUse/PostToolUse/SessionStart/Stop)
-  watch your activity and update the mood/vibe in real time. Test fails →
-  Buddy panics. Commit lands → victory chip.
-- **Statusline** — compact one-liner with face + current track + progress.
-- **Focus Loop** — 25/5 pomodoro that shows in the statusline.
-- **One-click install** — `bootstrap.sh` / `install.sh` set up everything
-  globally (venv, PATH, slash command, MCP server, hooks). No system Python
-  required — falls back to [uv](https://docs.astral.sh/uv/) to fetch one if
-  your machine doesn't have Python ≥3.10.
+**CC-Jukebox** 是一个住在 Claude Code 里的像素风 DJ 小伙伴。
+它帮你放音乐、看歌词、在你 commit 成功的时候庆祝，在测试挂掉的时候跟你一起崩溃。
 
-## Install
+---
 
-### One-liner (recommended)
+## 它能干什么
+
+- **MCP server** — 接入 21 个工具，让你直接跟 Claude 说「放点 lofi」「跳过这首」「现在在放啥」，全都好使。
+- **音乐源** — Apple Music（AppleScript 驱动，不用开 GUI）、本地文件（afplay）、QQ 音乐（搜索 + 预览）。
+- **像素 UI** — 专辑封面用半格 ANSI 字符渲染，支持 GameBoy 四色模式，复古边框，加一个「看起来很像真的」频谱均衡器。
+- **DJ Buddy** — 一个 5 行高的像素小人，会根据你的工作状态换表情。测试挂了它也跟着慌。
+- **Vibe 引擎** — 通过 CC hooks（PreToolUse / PostToolUse / SessionStart / Stop）实时感知你在干什么，自动切换氛围。`git commit` 了？胜利音效。测试炸了？小人开始 panic。
+- **状态栏** — 一行小脸 + 当前曲目 + 进度条，随时知道放到哪了。
+- **专注模式** — 内置 25/5 番茄钟，显示在状态栏里，让你假装自己很自律。
+- **一键安装** — `bootstrap.sh` / `install.sh` 全局搞定，不需要手动配置任何东西。没有 Python？自动用 [uv](https://docs.astral.sh/uv/) 帮你下一个。
+
+---
+
+## 装上它
+
+### 一行搞定（推荐）
 
 ```bash
 curl -LsSf https://raw.githubusercontent.com/jaychempan/cc-jukebox/main/bootstrap.sh | sh
 ```
 
-That clones cc-jukebox into `~/.cc-jukebox/src`, then runs `install.sh`.
-Re-run anytime to update.
+克隆到 `~/.cc-jukebox/src`，然后自动跑 `install.sh`。想更新？再跑一次。
 
-### Manual
+### 手动装
 
 ```bash
 git clone https://github.com/jaychempan/cc-jukebox.git
@@ -52,90 +53,70 @@ cd cc-jukebox
 ./install.sh
 ```
 
-### What install.sh does
+### `install.sh` 背后在干什么
 
-1. **Python** — finds a Python ≥3.10 on PATH, in `/opt/homebrew/bin`,
-   `/usr/local/bin`, or any conda env under `~/miniconda3/envs` etc.
-   If none of those exist, **automatically installs uv and uses it to
-   download Python 3.12** (no system pollution; lives under `~/.local/`).
-   Override with `CC_JUKEBOX_PYTHON=/path/to/python ./install.sh`.
-2. **venv** at `~/.cc-jukebox/venv` (not in the repo dir, so the install
-   survives moving / deleting the source).
-3. **`cc-jukebox` CLI** symlinked into `~/.local/bin/` and (idempotently)
-   appends a marked `export PATH=…` block to `~/.zshrc` (and `~/.bashrc`)
-   so the command is reachable from any new shell.
-4. **`/juke` slash command** symlinked from `commands/juke.md` into
-   `~/.claude/commands/` — the repo is the source of truth, so a
-   `git pull` updates the command without re-running install.
-5. **Claude Code settings** — merges entries into `~/.claude/settings.json`:
-   - `mcpServers["cc-jukebox"]`
-   - `statusLine` (only if you don't already have one)
-   - hooks for `PreToolUse`, `PostToolUse`, `SessionStart`, `Stop`
-6. **State dir** `~/.cc-jukebox/` for runtime JSON.
+1. **找 Python** — 按顺序找 PATH 上的、Homebrew 的、conda 环境里的 Python ≥3.10。一个都没有？自动装 uv，再用 uv 下 Python 3.12。你的系统不会多出任何垃圾。想指定路径就 `CC_JUKEBOX_PYTHON=/path/to/python ./install.sh`。
+2. **建 venv** — 放在 `~/.cc-jukebox/venv`，不在项目目录里，删了源码也不影响。
+3. **`cc-jukebox` 命令** — symlink 进 `~/.local/bin/`，顺便往 `~/.zshrc` / `~/.bashrc` 写一条 `export PATH`。
+4. **`/juke` slash command** — symlink 进 `~/.claude/commands/`，指向仓库里的文件，`git pull` 自动更新。
+5. **Claude Code 配置** — 合并写入 `~/.claude/settings.json`：MCP server、状态栏、四个 hooks。
+6. **状态目录** — `~/.cc-jukebox/` 存运行时 JSON。
 
-Each entry is tagged with `_owner: "cc-jukebox"` so `./uninstall.sh` can
-remove only what we added.
+每项配置都打上 `_owner: "cc-jukebox"` 标签，卸载时精准清除，不动你自己的配置。
 
-Start a new shell (so PATH picks up the new entry) and a new Claude Code
-session. You should see a `(•_•)` face in the statusline. Try saying:
+装完开个新 shell、新 Claude Code 会话，状态栏里出现 `(•_•)` 就成了。然后试试：
 
-> show me the player
+> 帮我打开播放器
 
-…and Claude will call `show_player`, painting the pixel frame inline. Or
-type `/juke play 周杰伦` to drive it directly.
+Claude 会调 `show_player`，把像素播放器画在终端里。或者直接 `/juke play 周杰伦`。
 
-## Project-level config
+---
 
-In any project directory:
+## 项目级配置
+
+在任意项目目录：
 
 ```bash
 cc-jukebox init
 ```
 
-…writes `.cc-jukebox.toml` so different projects can default to different
-vibes / sources / starter queries.
+生成 `.cc-jukebox.toml`，可以给不同项目设不同的默认氛围、音源、启动歌单。
+写 Python 时放 lo-fi，写 Makefile 时放 city pop，完全合理。
 
-## CLI
+---
 
-After `install.sh`, the `cc-jukebox` command is on your PATH.
+## 命令行
 
 ```
-cc-jukebox status              # current state
-cc-jukebox np                  # one-line: title — artist
-cc-jukebox play [query]        # resume, or search & play (see below)
-cc-jukebox pause
-cc-jukebox next
-cc-jukebox prev
-cc-jukebox player              # full pixel player frame
-cc-jukebox watch               # ticking TUI (Ctrl-C to exit)
-cc-jukebox cover [rgb|gameboy] # current cover only
-cc-jukebox lyrics              # karaoke window
-cc-jukebox demo                # visual smoke test
-cc-jukebox banner              # the giant banner
-cc-jukebox init                # write .cc-jukebox.toml
-cc-jukebox server              # MCP server (CC starts this for you)
-cc-jukebox statusline          # one statusline frame (CC calls this)
-cc-jukebox hook                # CC hook receiver (stdin = JSON event)
+cc-jukebox status              # 当前状态
+cc-jukebox np                  # 一行：曲名 — 艺术家
+cc-jukebox play [query]        # 继续播放，或搜索并播
+cc-jukebox pause               # 暂停
+cc-jukebox next                # 下一首
+cc-jukebox prev                # 上一首
+cc-jukebox player              # 完整像素播放器
+cc-jukebox watch               # TUI 实时模式（Ctrl-C 退出）
+cc-jukebox cover [rgb|gameboy] # 只显示封面
+cc-jukebox lyrics              # 卡拉 OK 歌词窗口
+cc-jukebox demo                # 视觉测试
+cc-jukebox banner              # 大横幅
+cc-jukebox init                # 生成 .cc-jukebox.toml
+cc-jukebox server              # MCP server（CC 会自动启动）
+cc-jukebox statusline          # 输出一帧状态栏（CC 调用）
+cc-jukebox hook                # CC hook 接收器（stdin = JSON 事件）
 ```
 
-### `cc-jukebox play` search behaviour
+### `play` 搜索逻辑
 
-Apple Music search is three-tiered (cheapest first):
+Apple Music 搜索三段走，从快到慢：
 
-1. **Local-library substring** — `every track of library playlist 1 whose
-   name contains "Q" or artist contains "Q"`. Fast, exact.
-2. **Multi-token AND** — `"青花瓷 周杰伦"` → tracks where each token hits
-   `name` or `artist`. Lets natural "song artist" queries work even when no
-   single field contains the whole string.
-3. **iTunes Search API** — if nothing local matches, hit Apple's public
-   search endpoint and ask Music.app to open the top hit's catalog URL
-   (`music://music.apple.com/song/<id>`). Requires an active Apple Music
-   subscription to actually play; otherwise Music will just show the page.
+1. **本地库子串匹配** — `name` 或 `artist` 包含关键词，秒出。
+2. **多词 AND 匹配** — `"青花瓷 周杰伦"` → 每个词分别命中 `name` 或 `artist`，自然语言查询也能用。
+3. **iTunes Search API** — 本地找不到？走苹果公开搜索 API，拿到 catalog URL 让 Music.app 打开。需要有效的 Apple Music 订阅才能真正播放。
 
 ### `/juke` slash command
 
-Installed at `~/.claude/commands/juke.md` (symlinked to this repo). Inside
-Claude Code:
+装完之后在 Claude Code 里直接用：
 
 ```
 /juke status
@@ -145,77 +126,78 @@ Claude Code:
 /juke np
 ```
 
-Accepts free-form Chinese or English intents (`下一首`, `暂停`, `在放什么`).
+中英文自由输入，`下一首`、`暂停`、`在放什么` 都行。
 
-## Source capability matrix
+---
 
-| Source       | now_playing | play/pause | skip | seek | search       | full playback | cover art |
-|--------------|-------------|------------|------|------|--------------|---------------|-----------|
-| apple_music  | ✓ (osascript) | ✓          | ✓    | ✓    | ✓ (library)  | ✓             | ✓         |
-| local        | ✓ (PID + clock) | ✓ (kill/respawn) | ✓ (next file) | ⚠ best-effort | ✓ (filename) | ✓        | ✓ (id3)   |
-| qq_music     | partial       | ✓ (preview only) | —    | —    | ✓ (HTTP API) | ⚠ 30s preview only | ✓ |
+## 音源能力矩阵
 
-QQ Music has no AppleScript hook and no official public API. We use the
-unofficial search endpoint for metadata and try to play 30-second previews.
-Full paid-track playback requires the QQ Music desktop app and is not
-something we can drive headlessly.
+| 音源         | 当前曲目 | 播放/暂停 | 跳曲 | 进度 | 搜索        | 完整播放          | 封面 |
+|--------------|----------|-----------|------|------|-------------|-------------------|------|
+| apple_music  | ✓        | ✓         | ✓    | ✓    | ✓（本地库） | ✓                 | ✓    |
+| local        | ✓        | ✓         | ✓    | ⚠    | ✓（文件名） | ✓                 | ✓    |
+| qq_music     | 部分     | ✓（预览） | —    | —    | ✓（HTTP）   | ⚠ 仅 30 秒预览   | ✓    |
 
-## Vibe rules (default)
+QQ 音乐没有 AppleScript 接口，也没有公开 API，用的是非官方搜索接口配合 30 秒预览。想完整播放还是得开 QQ 音乐客户端，这不是我们能驱动的范围。
 
-| Event                                     | Mood       | Vibe     |
-|-------------------------------------------|------------|----------|
-| `SessionStart`                            | happy      | focus    |
-| `Edit` / `Write` / `MultiEdit`            | focus      | from ext (py/ts → build, sql → focus, md → review) |
-| `Read` / `Grep` / `Glob`                  | thinking   | review   |
-| `Bash` containing `pytest`/`npm test`/etc | victory or sad | victory or fail |
-| `Bash` containing `git commit`            | victory    | victory  |
-| `Stop`                                    | sleep      | idle     |
+---
 
-Override at any time:
+## Vibe 规则（默认）
 
-> set vibe to debug
-> dj say something cheerful
+| 事件                                      | 心情     | 氛围     |
+|-------------------------------------------|----------|----------|
+| `SessionStart`                            | happy    | focus    |
+| `Edit` / `Write` / `MultiEdit`            | focus    | 根据扩展名（py/ts → build，sql → focus，md → review） |
+| `Read` / `Grep` / `Glob`                  | thinking | review   |
+| `Bash` 含 `pytest` / `npm test` 等        | victory 或 sad | victory 或 fail |
+| `Bash` 含 `git commit`                    | victory  | victory  |
+| `Stop`                                    | sleep    | idle     |
 
-(These trigger the `vibe_set` and `dj_say` MCP tools.)
+随时可以覆盖：
 
-## Files
+> 切换到 debug 模式
+> DJ 说点鼓励的话
+
+这会触发 `vibe_set` 和 `dj_say` 工具。
+
+---
+
+## 文件结构
 
 ```
 cc_jukebox/
-├── __main__.py            # CLI dispatcher
-├── server.py              # MCP server (21 tools)
-├── statusline.py          # one-frame statusline
-├── vibe.py                # hook receiver + classifier
-├── focus.py               # pomodoro loop
-├── dj.py                  # DJ Buddy character (faces, sprites, quips)
-├── state.py               # JSON-backed shared state
-├── config.py              # paths + palettes + vibe maps
+├── __main__.py            # CLI 入口
+├── server.py              # MCP server（21 个工具）
+├── statusline.py          # 单帧状态栏
+├── vibe.py                # hook 接收器 + 分类器
+├── focus.py               # 番茄钟
+├── dj.py                  # DJ Buddy（表情、精灵、台词）
+├── state.py               # JSON 状态存取
+├── config.py              # 路径、调色板、vibe 映射
 ├── sources/
 │   ├── apple_music.py     # AppleScript
-│   ├── local.py           # afplay + mutagen tags
-│   └── qq_music.py        # HTTP search + preview
+│   ├── local.py           # afplay + mutagen 标签
+│   └── qq_music.py        # HTTP 搜索 + 预览
 └── ui/
-    ├── pixel_cover.py     # image → half-block ANSI
-    ├── progress.py        # progress bar + pseudo-spectrum
-    ├── frame.py           # retro pixel border + banner
-    └── lyrics.py          # karaoke-style window
+    ├── pixel_cover.py     # 图片 → 半格 ANSI
+    ├── progress.py        # 进度条 + 伪频谱
+    ├── frame.py           # 复古像素边框 + 横幅
+    └── lyrics.py          # 卡拉 OK 窗口
 ```
 
-## Caveats
+---
 
-- **macOS only.** Apple Music + afplay are macOS-specific. Linux/Windows
-  would need replacement backends.
-- **The "spectrum" is fake.** We can't capture system audio from terminal,
-  so the bars animate deterministically from `position`. It looks alive
-  without lying about being a real FFT.
-- **DJ Buddy will not shut up if you let it.** It only speaks when CC calls
-  `dj_say`. The hooks just update state.
+## 已知局限
 
-## Uninstall
+- **仅限 macOS。** Apple Music 和 afplay 都是 macOS 独有的。Linux / Windows 需要换后端，目前没有计划。
+- **频谱是假的。** 终端里没法捕获系统音频，所以均衡器的柱子是根据播放进度用确定性算法生成的动画。好看，但不是真 FFT，不要误会。
+- **DJ Buddy 不会主动打扰你。** 它只在 CC 调用 `dj_say` 时说话，hooks 只更新状态，不会突然弹出来。
+
+---
+
+## 卸载
 
 ```bash
-./uninstall.sh           # drops settings.json entries, the cc-jukebox bin
-                         # symlink, the /juke command, and the PATH block
-                         # in ~/.zshrc / ~/.bashrc.
-./uninstall.sh --purge   # also deletes ~/.cc-jukebox/ (venv + state).
+./uninstall.sh           # 移除 settings.json 条目、cc-jukebox 命令、/juke 命令、PATH 块
+./uninstall.sh --purge   # 同上，另外删除 ~/.cc-jukebox/（venv + 状态文件）
 ```
