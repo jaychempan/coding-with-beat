@@ -222,6 +222,12 @@ class LocalFiles:
             capture_output=True,
         )
 
+    def like_current(self) -> bool:
+        raise NotImplementedError("local source does not support liking tracks")
+
+    def set_play_mode(self, mode: str) -> bool:
+        raise NotImplementedError("local source does not support play modes")
+
     def _scan(self) -> List[Path]:
         if not self.library.exists():
             return []

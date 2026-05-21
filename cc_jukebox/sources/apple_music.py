@@ -319,6 +319,60 @@ end tell
         p = max(0, min(100, int(percent)))
         _osa_silent(f'tell application "Music" to set sound volume to {p}')
 
+    def like_current(self) -> bool:
+        script = '''
+tell application "Music"
+    if not (exists current track) then return "no_track"
+    set favorited of current track to true
+    return "ok"
+end tell
+'''
+        try:
+            return _osa(script) == "ok"
+        except Exception:
+            return False
+
+    def set_play_mode(self, mode: str) -> bool:
+        normalized = (mode or "").lower().replace("-", "_")
+        if normalized in ("shuffle", "random"):
+            script = '''
+tell application "Music"
+    set shuffle enabled to true
+    set song repeat to off
+    return "ok"
+end tell
+'''
+        elif normalized in ("sequential", "sequence", "normal", "off"):
+            script = '''
+tell application "Music"
+    set shuffle enabled to false
+    set song repeat to off
+    return "ok"
+end tell
+'''
+        elif normalized in ("repeat", "loop", "repeat_all", "all"):
+            script = '''
+tell application "Music"
+    set shuffle enabled to false
+    set song repeat to all
+    return "ok"
+end tell
+'''
+        elif normalized in ("repeat_one", "one", "single"):
+            script = '''
+tell application "Music"
+    set shuffle enabled to false
+    set song repeat to one
+    return "ok"
+end tell
+'''
+        else:
+            raise NotImplementedError(f"unsupported Apple Music play mode: {mode}")
+        try:
+            return _osa(script) == "ok"
+        except Exception:
+            return False
+
     def search(self, query: str, limit: int = 8) -> List[dict]:
         q = query.replace('"', '\\"')
         script = f'''

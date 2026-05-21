@@ -123,6 +123,27 @@ def set_volume(percent: int) -> str:
 
 
 @mcp.tool()
+def like_current() -> str:
+    """Like/favorite the current track on the active source.
+    Apple Music uses Music.app AppleScript. QQMusic uses macOS System Events
+    menu automation. Sources that do not support this raise NotImplementedError."""
+    st = state.load()
+    ok = get_source(st.source).like_current()
+    return f"♥ liked current track  source={st.source}" if ok else f"error: like failed  source={st.source}"
+
+
+@mcp.tool()
+def set_play_mode(mode: str) -> str:
+    """Set play mode on the active source.
+    Common modes: shuffle, sequential, repeat. Apple Music also supports
+    repeat_one and repeat_all. Unsupported modes/sources raise
+    NotImplementedError from the source backend."""
+    st = state.load()
+    ok = get_source(st.source).set_play_mode(mode)
+    return f"play mode = {mode}  source={st.source}" if ok else f"error: play mode failed  source={st.source}"
+
+
+@mcp.tool()
 def search(query: str, limit: int = 8) -> str:
     """Search the current source for tracks matching the query. Returns a
     numbered list. Use this before play_song if multiple matches are likely."""
@@ -152,13 +173,13 @@ def play_song(query: str) -> str:
 def set_source(name: str) -> str:
     """Switch the active music source. name ∈ {apple_music, local, qq_music}."""
     try:
-        get_source(name)
+        src = get_source(name)
     except ValueError as e:
         return f"error: {e}"
     st = state.load()
-    st.source = name
+    st.source = src.name
     state.save(st)
-    return f"source = {name}"
+    return f"source = {src.name}"
 
 
 @mcp.tool()

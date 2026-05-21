@@ -15,11 +15,14 @@ Commands:
     lyrics       — render a karaoke window for the current track
     player       — render the full live player (cover + progress + lyrics + buddy)
     watch        — real-time ticking player in an alt-screen TUI (Ctrl-C to exit)
+    source [name] — print or set source (apple_music | local | qq_music)
     play [query] — resume current track, or search & play if a query is given
     pause        — pause playback
     next         — skip to next track
     prev         — go to previous track
     np           — print current track (title — artist)
+    like         — like/favorite the current track on the active source
+    mode <mode>  — set play mode: shuffle | sequential | repeat | repeat_one
 """
 from __future__ import annotations
 
@@ -192,6 +195,25 @@ def cmd_watch() -> int:
     return run(width=width)
 
 
+def cmd_source() -> int:
+    from . import state
+    from .sources import get_source
+    st = state.load()
+    if len(sys.argv) < 3:
+        print(st.source)
+        return 0
+    name = sys.argv[2]
+    try:
+        src = get_source(name)
+    except ValueError as e:
+        print(f"error: {e}")
+        return 2
+    st.source = src.name
+    state.save(st)
+    print(f"source = {src.name}")
+    return 0
+
+
 def _print_np(np) -> int:
     if np and getattr(np, "title", None):
         print(f"{np.title} — {np.artist or '?'}")
@@ -252,6 +274,36 @@ def cmd_np() -> int:
     return _print_np(src.now_playing())
 
 
+def cmd_like() -> int:
+    from . import state
+    from .sources import get_source
+    src = get_source(state.load().source)
+    try:
+        ok = src.like_current()
+    except NotImplementedError as e:
+        print(f"not implemented: {e}")
+        return 2
+    print(f"liked  source={src.name}" if ok else f"error: like failed  source={src.name}")
+    return 0 if ok else 1
+
+
+def cmd_mode() -> int:
+    from . import state
+    from .sources import get_source
+    mode = sys.argv[2] if len(sys.argv) > 2 else ""
+    if not mode:
+        print("error: mode is required")
+        return 2
+    src = get_source(state.load().source)
+    try:
+        ok = src.set_play_mode(mode)
+    except NotImplementedError as e:
+        print(f"not implemented: {e}")
+        return 2
+    print(f"mode = {mode}  source={src.name}" if ok else f"error: mode failed  source={src.name}")
+    return 0 if ok else 1
+
+
 def cmd_server() -> int:
     from .server import main
     main()
@@ -280,11 +332,15 @@ COMMANDS = {
     "lyrics": cmd_lyrics,
     "player": cmd_player,
     "watch": cmd_watch,
+    "source": cmd_source,
     "play": cmd_play,
     "pause": cmd_pause,
     "next": cmd_next,
     "prev": cmd_prev,
     "np": cmd_np,
+    "like": cmd_like,
+    "favorite": cmd_like,
+    "mode": cmd_mode,
 }
 
 

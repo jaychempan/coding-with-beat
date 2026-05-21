@@ -3,3 +3,4 @@
 /cc_jukebox/ui/__pycache__
 /cc_jukebox/sources/__pycache__
 /cc_jukebox.egg-info
+*.pyc
