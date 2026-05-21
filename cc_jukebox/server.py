@@ -15,6 +15,7 @@ from typing import Optional
 from mcp.server.fastmcp import FastMCP
 
 from . import dj, focus, state, vibe
+from .lyrics_snapshot import current_text as current_lyrics_text, track_key
 from .sources import get_source
 from .ui import (
     boxed, render_cover, render_cover_gameboy,
@@ -61,14 +62,20 @@ def _unsupported_reason(obj) -> str:
 
 def _refresh_now_playing():
     st = state.load()
+    old_key = track_key(st.track.source or st.source, st.track.artist, st.track.album, st.track.title)
     src = get_source(st.source)
     np = src.now_playing()
+    new_key = track_key(np.source or st.source, np.artist, np.album, np.title)
     st.track.title = np.title
     st.track.artist = np.artist
     st.track.album = np.album
     st.track.duration = np.duration
     st.track.position = np.position
     st.track.position_sampled_at = time.time()
+    if old_key != new_key:
+        st.track.lyrics_key = ""
+        st.track.lyrics_text = ""
+        st.track.lyrics_pending = False
     st.track.artwork_path = np.artwork_path
     st.track.source = np.source
     st.playing = np.playing
@@ -82,9 +89,22 @@ def _refresh_after_control(delay: float = CONTROL_REFRESH_DELAY):
     return _refresh_now_playing()
 
 
-def _now_playing_payload(st, np) -> dict:
+def _now_playing_payload(st, np, known_lyrics_key: str = "") -> dict:
+    source = np.source or st.source
+    lyrics_key = track_key(source, np.artist or "", np.album or "", np.title or "")
+    lyrics_text = ""
+    lyrics_pending = False
+    if np.title and not _unsupported_reason(np):
+        lyrics_text, lyrics_pending = current_lyrics_text(
+            source,
+            np.artist or "",
+            np.album or "",
+            np.title or "",
+        )
+        if lyrics_key and lyrics_key == known_lyrics_key:
+            lyrics_text = ""
     return {
-        "source": np.source or st.source,
+        "source": source,
         "title": np.title or "",
         "artist": np.artist or "",
         "album": np.album or "",
@@ -92,6 +112,9 @@ def _now_playing_payload(st, np) -> dict:
         "position": float(np.position or 0.0),
         "playing": bool(np.playing),
         "artwork_path": np.artwork_path or "",
+        "lyrics_key": lyrics_key,
+        "lyrics_text": lyrics_text,
+        "lyrics_pending": lyrics_pending,
         "unsupported_reason": _unsupported_reason(np),
         "sampled_at": time.time(),
     }
@@ -116,10 +139,10 @@ def now_playing() -> str:
 
 
 @mcp.tool()
-def now_playing_snapshot() -> str:
+def now_playing_snapshot(known_lyrics_key: str = "") -> str:
     """Return structured now-playing data as JSON for terminal integrations."""
     st, np = _refresh_now_playing()
-    return json.dumps(_now_playing_payload(st, np), ensure_ascii=False)
+    return json.dumps(_now_playing_payload(st, np, known_lyrics_key), ensure_ascii=False)
 
 
 @mcp.tool()

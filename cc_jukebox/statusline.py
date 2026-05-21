@@ -15,9 +15,8 @@ import sys
 import time
 
 from . import state, focus, dj
-from .config import LYRICS_CACHE
 from .mcp_client import MCPClientError, call_tool
-from .ui.lyrics import parse_lrc, _index_for_position
+from .lyrics_snapshot import line_from_text
 from .ui.progress import render_progress
 
 
@@ -43,7 +42,8 @@ def _maybe_refresh(st):
     if st.track.title and base and (time.time() - base) < _STALE_AFTER:
         return st, ""
     try:
-        data = json.loads(call_tool("now_playing_snapshot"))
+        known_lyrics_key = st.track.lyrics_key if st.track.lyrics_text else ""
+        data = json.loads(call_tool("now_playing_snapshot", {"known_lyrics_key": known_lyrics_key}))
     except MCPClientError as e:
         return st, f"MCP offline: {str(e).splitlines()[0]}"
     except Exception as e:
@@ -58,6 +58,9 @@ def _maybe_refresh(st):
         st.track.duration = 0.0
         st.track.position = 0.0
         st.track.position_sampled_at = time.time()
+        st.track.lyrics_key = ""
+        st.track.lyrics_text = ""
+        st.track.lyrics_pending = False
         st.track.artwork_path = None
         st.track.source = source
         st.source = source
@@ -74,6 +77,9 @@ def _maybe_refresh(st):
         st.track.duration = 0.0
         st.track.position = 0.0
         st.track.position_sampled_at = time.time()
+        st.track.lyrics_key = ""
+        st.track.lyrics_text = ""
+        st.track.lyrics_pending = False
         st.track.artwork_path = None
         st.track.source = source
         st.source = source
@@ -89,7 +95,17 @@ def _maybe_refresh(st):
     st.track.album = str(data.get("album") or "")
     st.track.duration = float(data.get("duration") or 0.0)
     st.track.position = float(data.get("position") or 0.0)
-    st.track.position_sampled_at = float(data.get("sampled_at") or time.time())
+    # Use the local receive time as the extrapolation base. In SSH setups the
+    # Mac MCP server and the remote shell can have different wall clocks.
+    st.track.position_sampled_at = time.time()
+    lyrics_key = str(data.get("lyrics_key") or "")
+    if lyrics_key != st.track.lyrics_key:
+        st.track.lyrics_text = ""
+    st.track.lyrics_key = lyrics_key
+    lyrics_text = data.get("lyrics_text")
+    if isinstance(lyrics_text, str) and lyrics_text:
+        st.track.lyrics_text = lyrics_text
+    st.track.lyrics_pending = bool(data.get("lyrics_pending"))
     st.track.artwork_path = str(data.get("artwork_path") or "") or None
     st.track.source = source
     st.playing = bool(data.get("playing"))
@@ -108,37 +124,6 @@ def _live_position(st) -> float:
     if st.playing and base and st.track.duration:
         pos = min(st.track.duration, pos + (time.time() - base))
     return pos
-
-
-_KEY_RE = re.compile(r"[^a-zA-Z0-9一-鿿]+")
-_SOURCE_PREFIX = {"apple_music": "am", "local": "local", "qq_music": "qq"}
-
-
-def _cached_lyric_line(st, pos: float):
-    """Return the active LRC line for the current track, or None.
-    Reads only from the on-disk cache — no network calls in the statusline."""
-    t = st.track
-    if not t.title:
-        return None
-    key = _KEY_RE.sub("_", f"{t.artist}_{t.album}_{t.title}").strip("_")[:160]
-    prefix = _SOURCE_PREFIX.get(st.source, "am")
-    cache = LYRICS_CACHE / f"{prefix}_{key}.txt"
-    if not cache.exists():
-        return None
-    try:
-        txt = cache.read_text(encoding="utf-8")
-    except Exception:
-        return None
-    cues, is_lrc = parse_lrc(txt)
-    if not is_lrc:
-        return None
-    cues = [(ts, body) for ts, body in cues if body.strip()]
-    if not cues:
-        return None
-    idx = _index_for_position(cues, pos)
-    if idx < 0:
-        return None
-    return cues[idx][1]
 
 
 # Accent colour per vibe — tints the progress bar, play icon, vibe chip, and quip.
@@ -224,7 +209,7 @@ def render(term_width: int = 0) -> str:
         else:
             chip = ""
     elif st.track.title:
-        lyric = _cached_lyric_line(st, pos)
+        lyric = line_from_text(st.track.lyrics_text, pos, st.track.duration).strip()
         if lyric:
             max_lyric = max(0, avail - 2)  # "♪ " prefix = 2 chars
             if max_lyric <= 0:
