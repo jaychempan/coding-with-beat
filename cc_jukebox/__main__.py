@@ -9,6 +9,7 @@ Commands:
     hook         — receive a CC hook event JSON on stdin and update vibe
     init         — scaffold .cc-jukebox.toml in the current directory
     status       — print human-readable current state
+    welcome      — show the install welcome logo
     demo         — render a demo player frame (great for visual testing)
     banner       — print the retro banner
     cover        — render the current track's cover as pixel art

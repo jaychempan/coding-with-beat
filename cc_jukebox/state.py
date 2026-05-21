@@ -34,6 +34,9 @@ class JukeboxState:
     focus_phase: str = "work"            # work | break
     focus_started_at: float = 0.0
     updated_at: float = 0.0
+    dj_quip: str = ""
+    dj_quip_at: float = 0.0
+    last_tool_at: float = 0.0
 
 
 def load() -> JukeboxState:

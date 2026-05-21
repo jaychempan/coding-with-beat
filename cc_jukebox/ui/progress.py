@@ -20,13 +20,15 @@ def _mmss(seconds: float) -> str:
     return f"{s // 60:02d}:{s % 60:02d}"
 
 
-def render_progress(position: float, duration: float, width: int = 28) -> str:
+def render_progress(position: float, duration: float, width: int = 28,
+                    accent: tuple = (155, 188, 15)) -> str:
     duration = max(0.0, duration)
     position = max(0.0, min(position, duration if duration else position))
     ratio = (position / duration) if duration > 0 else 0.0
     filled = int(round(ratio * width))
     bar = BAR_FILLED * filled + BAR_EMPTY * (width - filled)
-    return f"\x1b[38;2;155;188;15m{bar}\x1b[0m  \x1b[38;2;200;200;200m{_mmss(position)} / {_mmss(duration)}\x1b[0m"
+    r, g, b = accent
+    return f"\x1b[38;2;{r};{g};{b}m{bar}\x1b[0m  \x1b[38;2;200;200;200m{_mmss(position)} / {_mmss(duration)}\x1b[0m"
 
 
 def render_spectrum(position: float, width: int = 28, energy: float = 0.85) -> str:

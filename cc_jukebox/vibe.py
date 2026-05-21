@@ -65,8 +65,21 @@ def classify(event: dict) -> Tuple[str, str]:
 def handle_hook(event: dict) -> dict:
     mood, vibe = classify(event)
     st = state.load()
+    prev_mood = st.dj_mood
     st.dj_mood = mood
     st.vibe = vibe
+
+    # Fire a DJ quip when something significant happens
+    hook = (event.get("hook_event_name") or "").lower()
+    if hook in ("pretooluse", "posttooluse"):
+        st.last_tool_at = time.time()
+    if mood != prev_mood and mood in ("victory", "sad", "panic", "happy", "groove"):
+        st.dj_quip = dj.quip(mood)
+        st.dj_quip_at = time.time()
+    elif hook == "stop":
+        st.dj_quip = dj.quip("sleep")
+        st.dj_quip_at = time.time()
+
     state.save(st)
     _log(f"hook {event.get('hook_event_name')} tool={event.get('tool_name')} → mood={mood} vibe={vibe}")
     return {"mood": mood, "vibe": vibe}
