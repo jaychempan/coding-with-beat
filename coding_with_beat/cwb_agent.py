@@ -257,25 +257,69 @@ def run_child_claude(intent: str, *, timeout: Optional[int] = None) -> CwbPlan:
     return parse_claude_plan(proc.stdout)
 
 
+_DJ_PLAY = "◖|♪ ‿ ♪|◗"
+_DJ_OK   = "◖|•‿•|◗"
+_DJ_FAIL = "◖|×_×|◗"
+_DJ_IDLE = "◖|•_•|◗"
+
+_PASSTHROUGH_COMMANDS = {"player", "status", "lyrics"}
+
+
 def execute_plan(plan: CwbPlan, *, timeout: Optional[int] = None) -> tuple[int, str]:
     timeout = timeout or int(os.environ.get("CWB_CLI_TIMEOUT", _DEFAULT_CLI_TIMEOUT))
     proc = subprocess.run(
         [sys.executable, "-m", "coding_with_beat", plan.command, *plan.args],
         stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
+        stderr=subprocess.PIPE,  # Separate stderr so technical messages don't leak into output
         text=True,
         timeout=timeout,
     )
     return proc.returncode, proc.stdout
 
 
+def _format_result(plan: CwbPlan, code: int, output: str) -> str:
+    clean = _clean_text(output).strip()
+
+    # Rich-output commands — pass through as-is
+    if plan.command in _PASSTHROUGH_COMMANDS:
+        if code != 0:
+            return f"{_DJ_FAIL}  {clean or plan.command + ' 失败'}"
+        return clean
+
+    if code != 0:
+        if plan.command == "play":
+            query = " ".join(plan.args) if plan.args else ""
+            if query:
+                return f"{_DJ_FAIL}  找不到「{query}」\n  试试加上艺术家名，或换个搜索词"
+            return f"{_DJ_FAIL}  没有正在播放的歌曲"
+        if plan.command in ("np", "pause", "next", "prev", "like"):
+            return f"{_DJ_IDLE}  当前没有正在播放的歌曲"
+        return f"{_DJ_FAIL}  {clean or plan.command + ' 失败'}"
+
+    track = clean or ""
+    if plan.command == "play":
+        return f"{_DJ_PLAY}  ♪ {track}" if track else f"{_DJ_PLAY}  开始播放"
+    if plan.command == "np":
+        return f"{_DJ_IDLE}  ♪ {track}" if track else f"{_DJ_IDLE}  当前没有正在播放的歌曲"
+    if plan.command == "pause":
+        return f"{_DJ_IDLE}  已暂停  {track}".rstrip()
+    if plan.command == "next":
+        return f"{_DJ_PLAY}  下一首 ♪ {track}" if track else f"{_DJ_PLAY}  下一首"
+    if plan.command == "prev":
+        return f"{_DJ_PLAY}  上一首 ♪ {track}" if track else f"{_DJ_PLAY}  上一首"
+    if plan.command == "like":
+        return f"{_DJ_OK}  已收藏 ♥"
+    if plan.command == "source":
+        return f"{_DJ_OK}  音源 → {track}"
+    if plan.command == "mode":
+        return f"{_DJ_OK}  播放模式 → {track}"
+    return f"{_DJ_OK}  {track}" if track else f"{_DJ_OK}  完成"
+
+
 def run_intent(intent: str) -> str:
     plan = run_child_claude(intent)
     code, output = execute_plan(plan)
-    message = _clean_text(output) or f"cwb {plan.command} done"
-    if code != 0:
-        message = f"{message}\n(exit {code})"
-    return message
+    return _format_result(plan, code, output)
 
 
 def handle_prompt_expansion(event: dict) -> Optional[dict]:
@@ -286,8 +330,11 @@ def handle_prompt_expansion(event: dict) -> Optional[dict]:
         return None
     try:
         message = run_intent(event.get("command_args") or "")
-    except Exception as e:
-        message = f"cwb agent failed: {_clean_text(str(e), limit=800)}"
+    except CwbAgentError as e:
+        err = _clean_text(str(e), limit=200)
+        message = f"{_DJ_FAIL}  解析失败\n  {err}" if err else f"{_DJ_FAIL}  解析失败，请重试"
+    except Exception:
+        message = f"{_DJ_FAIL}  出了点问题，请重试"
     return {
         "decision": "block",
         "reason": message,

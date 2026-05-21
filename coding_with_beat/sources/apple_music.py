@@ -238,27 +238,42 @@ def _play_catalog(query: str) -> bool:
     artist = hit.get("artistName") or "?"
     url = f"https://music.apple.com/{storefront}/song/{tid}"
     _osa_silent(f'tell application "Music" to open location "{url}"')
-    time.sleep(1.4)
+    time.sleep(1.5)
     _osa_silent('tell application "Music" to play')
-    time.sleep(0.6)
-    try:
-        state = _osa('tell application "Music" to get player state as text')
-    except Exception:
-        state = ""
-    # When no Apple Music subscription, Music.app enters a degenerate state:
-    # player_state may read 'playing' but the "current track" is just a stub
-    # whose name is the numeric storeID and whose artist is empty. Detect
-    # that and report honest failure.
-    current_name = ""
-    try:
-        current_name = _osa('tell application "Music" to get name of current track')
-    except Exception:
-        pass
-    real_playback = (state == "playing" and current_name and current_name != str(tid))
+    # Retry up to 6 times (max ~5s) waiting for Music.app to buffer and start
+    real_playback = False
+    for attempt in range(6):
+        time.sleep(0.8)
+        try:
+            state = _osa('tell application "Music" to get player state as text')
+        except Exception:
+            state = ""
+        current_name = ""
+        try:
+            current_name = _osa('tell application "Music" to get name of current track')
+        except Exception:
+            pass
+        # When no Apple Music subscription, Music.app enters a degenerate state:
+        # player_state may read 'playing' but "current track" is just a stub
+        # whose name is the numeric storeID and whose artist is empty.
+        real_playback = (state == "playing" and current_name and current_name != str(tid))
+        if real_playback:
+            break
+        if state not in ("playing", "stopped", ""):
+            # still loading / buffering — keep waiting
+            continue
     if real_playback:
         return True
-    # Stop the stub playback so the player doesn't keep "playing" garbage.
-    _osa_silent('tell application "Music" to stop')
+    # Stop and delete the stub track so it doesn't pollute the library or statusline.
+    _osa_silent(f'''tell application "Music"
+        stop
+        try
+            set badTracks to (every track of library playlist 1 whose name is "{tid}")
+            repeat with t in badTracks
+                delete t
+            end repeat
+        end try
+    end tell''')
     print(
         f"! catalog hit: {title} — {artist} ({url})\n"
         f"  Music.app couldn't actually play it — "
@@ -491,6 +506,11 @@ end tell
             return self.now_playing()
         if _play_catalog(query):
             import time
-            time.sleep(0.6)
+            # Wait longer for Music.app to load the catalog track
+            for _ in range(5):
+                time.sleep(0.8)
+                np = self.now_playing()
+                if np.title:
+                    return np
             return self.now_playing()
         return None
