@@ -444,6 +444,18 @@
       font-size: 11px;
     }
 
+    .visit-count {
+      margin-top: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--dim);
+    }
+    .visit-icon { color: var(--green); font-size: 9px; }
+    .visit-num  { color: var(--text); font-weight: 600; }
+
     footer a {
       color: var(--dim);
       border-bottom: 1px solid transparent;
@@ -474,6 +486,7 @@
 </head>
 <body>
 
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
 <canvas id="byteflow"></canvas>
 
 <!-- NAV -->
@@ -648,6 +661,16 @@
   <a href="https://github.com/jaychempan/coding-with-beat/blob/main/README.md" target="_blank" rel="noopener" data-i18n="docs">Docs</a>
   <span class="sep">·</span>
   <span data-i18n="made">Made for Claude Code</span>
+  <div class="visit-count">
+    <span class="visit-icon">◉</span>
+    <span id="busuanzi_container_site_uv">
+      <span data-i18n="visitors">visitors</span>&nbsp;<span id="busuanzi_value_site_uv" class="visit-num">—</span>
+    </span>
+    <span class="sep">·</span>
+    <span id="busuanzi_container_site_pv">
+      <span data-i18n="views">views</span>&nbsp;<span id="busuanzi_value_site_pv" class="visit-num">—</span>
+    </span>
+  </div>
 </footer>
 
 <script>
@@ -687,6 +710,8 @@
       'link-cit':    'Monitor citation counts for your papers in real time.',
       docs:          'Docs',
       made:          'Made for Claude Code',
+      visitors:      'visitors',
+      views:         'views',
     },
     zh: {
       eyebrow:       '振码时的像素 DJ 伴侣',
@@ -722,6 +747,8 @@
       'link-cit':    '实时监控论文引用数量。',
       docs:          '文档',
       made:          '为 Claude Code 而生',
+      visitors:      '访客',
+      views:         '浏览量',
     }
   };
 
