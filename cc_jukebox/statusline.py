@@ -25,6 +25,12 @@ from .ui.progress import render_progress
 # If our cached position sample is older than this, do a fast re-poll
 # of the source before rendering. ~50–150ms for AppleScript; acceptable.
 _STALE_AFTER = 2.5
+_ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
+
+
+def _vlen(s: str) -> int:
+    """Visible character count — strips ANSI escape sequences."""
+    return len(_ANSI_RE.sub("", s))
 
 
 def _mmss(seconds: float) -> str:
@@ -146,7 +152,7 @@ _FLOW_WARM  = 90   # seconds since last tool → · (still warm)
 _QUIP_TTL   = 4.0  # seconds to show DJ quip before falling back to lyric
 
 
-def render() -> str:
+def render(term_width: int = 0) -> str:
     st = state.load()
     st = _maybe_refresh(st)
     f = focus.status()
@@ -190,37 +196,64 @@ def render() -> str:
 
     line1 = f"{face_part}  {track}{vibe_chip}{focus_chip}"
 
-    # ── lyric / DJ quip chip ────────────────────────────────────
+    # ── lyric / DJ quip chip (width-aware) ─────────────────────
+    # Available chars for chip text = terminal_width - visible(line1) - overhead.
+    # overhead: "  │ " = 4 visible chars; prefix "♪ " or "✦ " = 2 each.
+    avail = (term_width - _vlen(line1) - 4) if term_width > 0 else 999
+
     quip_age = now - (st.dj_quip_at or 0)
     if st.dj_quip and quip_age < _QUIP_TTL:
-        chip = (
-            f"  \x1b[38;2;70;72;90m│\x1b[0m"
-            f" \x1b[38;2;{ar};{ag};{ab}m✦ {st.dj_quip}\x1b[0m"
-        )
+        content = st.dj_quip
+        if avail >= len(content) + 2:
+            chip = (
+                f"  \x1b[38;2;70;72;90m│\x1b[0m"
+                f" \x1b[38;2;{ar};{ag};{ab}m✦ {content}\x1b[0m"
+            )
+        elif avail >= 3:
+            chip = f"  \x1b[38;2;{ar};{ag};{ab}m✦\x1b[0m"
+        else:
+            chip = ""
     elif st.track.title:
         lyric = _cached_lyric_line(st, pos)
         if lyric:
-            if len(lyric) > 50:
-                lyric = lyric[:47] + "…"
-            chip = (
-                f"  \x1b[38;2;70;72;90m│\x1b[0m"
-                f" \x1b[3;38;2;180;180;200m♪ {lyric}\x1b[0m"
-            )
+            max_lyric = max(0, avail - 2)  # "♪ " prefix = 2 chars
+            if max_lyric <= 0:
+                chip = f"  \x1b[38;2;55;58;72m♪\x1b[0m" if avail >= 3 else ""
+            else:
+                if len(lyric) > max_lyric:
+                    lyric = lyric[:max_lyric - 1] + "…"
+                chip = (
+                    f"  \x1b[38;2;70;72;90m│\x1b[0m"
+                    f" \x1b[3;38;2;180;180;200m♪ {lyric}\x1b[0m"
+                )
         else:
             _bg_fetch_lyrics(st)
-            chip = f"  \x1b[38;2;55;58;72m♪\x1b[0m"
+            chip = f"  \x1b[38;2;55;58;72m♪\x1b[0m" if avail >= 3 else ""
     else:
-        chip = f"  \x1b[38;2;55;58;72m♪\x1b[0m"
+        chip = f"  \x1b[38;2;55;58;72m♪\x1b[0m" if avail >= 3 else ""
 
     return f"{line1}{chip}"
 
 
 def main() -> int:
+    term_width = 0
     try:
-        _ = sys.stdin.read()  # CC sends context JSON; we don't currently need it
+        raw = sys.stdin.read()
+        ctx = json.loads(raw) if raw.strip() else {}
+        # CC may provide terminal dimensions under various keys
+        term_width = int(
+            ctx.get("columns") or ctx.get("terminalWidth") or
+            ctx.get("terminal_width") or ctx.get("cols") or 0
+        )
     except Exception:
         pass
-    sys.stdout.write(render())
+    if not term_width:
+        try:
+            import shutil
+            term_width = shutil.get_terminal_size((0, 0)).columns
+        except Exception:
+            pass
+    sys.stdout.write(render(term_width=term_width))
     sys.stdout.write("\n")
     return 0
 
