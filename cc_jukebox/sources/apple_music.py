@@ -143,35 +143,101 @@ end tell
         return False
 
 
+_CATALOG_STOREFRONTS = ("cn", "jp", "us", "hk", "tw")
+
+# Descriptive suffixes that confuse iTunes Search (it does literal substring
+# matching on title/artist, not semantic search). When a query ends with one
+# of these we retry once with it stripped.
+_CATALOG_NOISE_SUFFIXES = (
+    "主题曲", "主题歌", "片头曲", "片尾曲", "插曲", "主题",
+    "OST", "BGM", "OP", "ED", "原声", "原声带",
+)
+
+
+def _catalog_query_variants(query: str):
+    """Yield search-term variants to try in order. Original first, then
+    progressively stripped of trailing descriptive modifiers."""
+    yield query
+    q = query.strip()
+    for suffix in _CATALOG_NOISE_SUFFIXES:
+        if q.endswith(suffix) and len(q) > len(suffix):
+            stripped = q[: -len(suffix)].strip()
+            if stripped and stripped != query:
+                yield stripped
+
+
 def _play_catalog(query: str) -> bool:
     """Hit Apple's public iTunes Search API and ask Music.app to open the top
-    song hit. Returns True iff we successfully sent the open command; whether
-    playback actually starts depends on the user's Apple Music subscription."""
+    song hit. Tries multiple storefronts because the default US store often
+    misses CJK catalog entries. Returns True iff playback actually started
+    (Music.app reports 'playing' afterwards). If a song was found but Music
+    couldn't play it (typical when no Apple Music subscription), prints a
+    diagnostic to stderr and returns False."""
+    import sys, time
     try:
         import httpx
     except ImportError:
         return False
+    hit = None
+    storefront = "us"
     try:
         with httpx.Client(timeout=6.0) as c:
-            r = c.get(
-                "https://itunes.apple.com/search",
-                params={"term": query, "entity": "song", "limit": 1},
-            )
-            data = r.json()
+            for term in _catalog_query_variants(query):
+                for sf in _CATALOG_STOREFRONTS:
+                    try:
+                        r = c.get(
+                            "https://itunes.apple.com/search",
+                            params={"term": term, "entity": "song", "limit": 1, "country": sf},
+                        )
+                        data = r.json()
+                    except Exception:
+                        continue
+                    hits = data.get("results") or []
+                    if hits and hits[0].get("trackId"):
+                        hit = hits[0]
+                        storefront = sf
+                        break
+                if hit:
+                    break
     except Exception:
         return False
-    hits = data.get("results") or []
-    if not hits:
+    if not hit:
         return False
-    tid = hits[0].get("trackId")
-    if not tid:
-        return False
-    url = f"https://music.apple.com/song/{tid}"
+    tid = hit["trackId"]
+    title = hit.get("trackName") or "?"
+    artist = hit.get("artistName") or "?"
+    url = f"https://music.apple.com/{storefront}/song/{tid}"
     _osa_silent(f'tell application "Music" to open location "{url}"')
-    import time
-    time.sleep(1.2)
+    time.sleep(1.4)
     _osa_silent('tell application "Music" to play')
-    return True
+    time.sleep(0.6)
+    try:
+        state = _osa('tell application "Music" to get player state as text')
+    except Exception:
+        state = ""
+    # When no Apple Music subscription, Music.app enters a degenerate state:
+    # player_state may read 'playing' but the "current track" is just a stub
+    # whose name is the numeric storeID and whose artist is empty. Detect
+    # that and report honest failure.
+    current_name = ""
+    try:
+        current_name = _osa('tell application "Music" to get name of current track')
+    except Exception:
+        pass
+    real_playback = (state == "playing" and current_name and current_name != str(tid))
+    if real_playback:
+        return True
+    # Stop the stub playback so the player doesn't keep "playing" garbage.
+    _osa_silent('tell application "Music" to stop')
+    print(
+        f"! catalog hit: {title} — {artist} ({url})\n"
+        f"  Music.app couldn't actually play it — "
+        f"this almost always means no active Apple Music subscription, "
+        f"or you're not signed in with the subscribing Apple ID.\n"
+        f"  Add the song to your library manually, or pick something local.",
+        file=sys.stderr,
+    )
+    return False
 
 
 class AppleMusic:
