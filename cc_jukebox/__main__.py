@@ -35,14 +35,6 @@ import sys
 from pathlib import Path
 
 
-def _unsupported(source: str, feature: str, reason: str) -> str:
-    return f"(unsupported — source={source}, feature={feature})\n{reason}"
-
-
-def _unsupported_reason(obj) -> str:
-    return getattr(obj, "unsupported_reason", None) or ""
-
-
 def _env_int(name: str, default: int) -> int:
     value = os.environ.get(name, "")
     if not value:
@@ -51,6 +43,18 @@ def _env_int(name: str, default: int) -> int:
         return int(value)
     except ValueError:
         return default
+
+
+def _mcp_print(tool: str, kwargs: dict | None = None) -> int:
+    from .mcp_client import MCPClientError, call_tool
+    try:
+        output = call_tool(tool, kwargs or {})
+    except MCPClientError as e:
+        print(str(e), file=sys.stderr)
+        return 1
+    if output:
+        print(output)
+    return 0
 
 
 def cmd_init() -> int:
@@ -87,28 +91,7 @@ md = "review"
 
 
 def cmd_status() -> int:
-    from . import state, focus
-    from .sources import get_source
-    st = state.load()
-    f = focus.status()
-    print(f"source : {st.source}")
-    print(f"vibe   : {st.vibe}  (mood={st.dj_mood})")
-    print(f"focus  : {f.phase if f.active else 'off'}"
-          + (f" — {f.remaining}s left" if f.active else ""))
-    try:
-        np = get_source(st.source).now_playing()
-    except Exception:
-        np = None
-    if np is not None and _unsupported_reason(np):
-        print(f"track  : {_unsupported(np.source or st.source, 'now_playing', _unsupported_reason(np))}")
-        return 2
-    if st.track.title:
-        print(f"track  : {st.track.title} — {st.track.artist}")
-        print(f"         {int(st.track.position)}s / {int(st.track.duration)}s "
-              + ("▶" if st.playing else "❚❚"))
-    else:
-        print("track  : (none)")
-    return 0
+    return _mcp_print("status")
 
 
 def cmd_demo() -> int:
@@ -139,9 +122,7 @@ def cmd_demo() -> int:
 
 
 def cmd_banner() -> int:
-    from .ui import retro_banner
-    print(retro_banner("a pixel companion for vibecoding"))
-    return 0
+    return _mcp_print("banner")
 
 
 def cmd_welcome() -> int:
@@ -151,83 +132,17 @@ def cmd_welcome() -> int:
 
 
 def cmd_cover() -> int:
-    from . import state
-    from .ui import render_cover, render_cover_gameboy
-    st = state.load()
     style = sys.argv[2] if len(sys.argv) > 2 else "rgb"
-    if style == "gameboy":
-        print(render_cover_gameboy(st.track.artwork_path or None, width=40, height=20))
-    else:
-        print(render_cover(st.track.artwork_path or None, width=40, height=20))
-    return 0
+    return _mcp_print("show_cover", {"style": style, "width": 40, "height": 20})
 
 
 def cmd_lyrics() -> int:
-    from . import state
-    from .sources import get_source
-    from .ui.lyrics import render_lyrics_window
-    st = state.load()
-    src = get_source(st.source)
-    fn = getattr(src, "lyrics", None)
-    if not callable(fn):
-        print(f"(source {st.source!r} does not support lyrics)")
-        return 1
-    np = src.now_playing()
-    if _unsupported_reason(np):
-        print(_unsupported(np.source or st.source, "lyrics", _unsupported_reason(np)))
-        return 2
-    text = fn()
-    if not text:
-        print(f"(no lyrics for: {np.title or '(unknown)'} — {np.artist or '?'})")
-        return 1
     window = int(sys.argv[2]) if len(sys.argv) > 2 else 7
-    print(f"\x1b[1;38;2;255;230;100m♪ {np.title}\x1b[0m  \x1b[38;2;120;130;130m— {np.artist}\x1b[0m")
-    print(f"\x1b[38;2;120;130;130m  {int(np.position):>3}s / {int(np.duration):>3}s\x1b[0m")
-    print()
-    print(render_lyrics_window(text, position=np.position, duration=np.duration, window=window))
-    return 0
+    return _mcp_print("show_lyrics", {"window": window})
 
 
 def cmd_player() -> int:
-    from . import state, dj
-    from .sources import get_source
-    from .ui import boxed, render_cover, render_progress
-    from .ui.progress import render_spectrum_color
-    from .ui.lyrics import render_lyrics_window
-
-    st = state.load()
-    src = get_source(st.source)
-    np = src.now_playing()
-    if _unsupported_reason(np):
-        print(_unsupported(np.source or st.source, "player", _unsupported_reason(np)))
-        return 2
-
-    width = 40
-    cover = render_cover(np.artwork_path, width=width, height=int(width * 0.45))
-    title = np.title or "(no track)"
-    artist = np.artist or "—"
-
-    blocks = [
-        cover,
-        f"\x1b[1;38;2;255;230;100m♪ {title}\x1b[0m",
-        f"\x1b[38;2;180;180;200m  {artist}\x1b[0m",
-        render_progress(np.position, np.duration, width=width - 2),
-        render_spectrum_color(np.position, width=width - 2),
-    ]
-
-    fn = getattr(src, "lyrics", None)
-    if callable(fn):
-        text = fn()
-        if text:
-            blocks.append("\x1b[38;2;90;90;105m─── lyrics ───\x1b[0m")
-            blocks.append(render_lyrics_window(
-                text, position=np.position, duration=np.duration, window=5
-            ))
-
-    blocks.append(f"\x1b[38;2;155;188;15m{dj.sprite(st.dj_mood or 'neutral')}\x1b[0m")
-    blocks.append(f"\x1b[3;38;2;200;200;230m  “{dj.quip(st.dj_mood or 'neutral')}”\x1b[0m")
-    print(boxed(f"CC-JUKEBOX · {st.source}", "\n".join(blocks), width=max(width + 4, 44)))
-    return 0
+    return _mcp_print("show_player", {"width": 40, "with_lyrics": True})
 
 
 def cmd_watch() -> int:
@@ -237,22 +152,10 @@ def cmd_watch() -> int:
 
 
 def cmd_source() -> int:
-    from . import state
-    from .sources import get_source
-    st = state.load()
     if len(sys.argv) < 3:
-        print(st.source)
-        return 0
+        return _mcp_print("current_source")
     name = sys.argv[2]
-    try:
-        src = get_source(name)
-    except ValueError as e:
-        print(f"error: {e}")
-        return 2
-    st.source = src.name
-    state.save(st)
-    print(f"source = {src.name}")
-    return 0
+    return _mcp_print("set_source", {"name": name})
 
 
 def cmd_karaoke() -> int:
@@ -261,108 +164,40 @@ def cmd_karaoke() -> int:
     return run(width=width)
 
 
-def _print_np(np) -> int:
-    if np and _unsupported_reason(np):
-        print(_unsupported(getattr(np, "source", "") or "unknown", "now_playing", _unsupported_reason(np)))
-        return 2
-    if np and getattr(np, "title", None):
-        print(f"{np.title} — {np.artist or '?'}")
-        return 0
-    print("(no track)")
-    return 1
-
-
-def _print_control_result(action: str, source_name: str, np) -> int:
-    if np and _unsupported_reason(np):
-        print(f"{action} sent  source={source_name}  (now-playing unsupported)")
-        return 0
-    return _print_np(np)
-
-
 def cmd_play() -> int:
     """play [query] — resume if no query, otherwise search and play."""
-    from . import state
-    from .sources import get_source
-    import time
-    src = get_source(state.load().source)
     query = " ".join(sys.argv[2:]).strip()
     if query:
-        np = src.play_query(query)
-        if np and _unsupported_reason(np):
-            print(_unsupported(np.source or src.name, "play", _unsupported_reason(np)))
-            return 2
-    else:
-        src.play()
-        time.sleep(0.4)
-        np = src.now_playing()
-        return _print_control_result("play", src.name, np)
-    return _print_np(np)
+        return _mcp_print("play_song", {"query": query})
+    return _mcp_print("play")
 
 
 def cmd_pause() -> int:
-    from . import state
-    from .sources import get_source
-    src = get_source(state.load().source)
-    src.pause()
-    np = src.now_playing()
-    return _print_control_result("pause", src.name, np)
+    return _mcp_print("pause")
 
 
 def cmd_next() -> int:
-    from . import state
-    from .sources import get_source
-    import time
-    src = get_source(state.load().source)
-    src.next()
-    time.sleep(0.4)  # Apple Music needs a tick before now_playing reflects the new track
-    return _print_control_result("next", src.name, src.now_playing())
+    return _mcp_print("next_track")
 
 
 def cmd_prev() -> int:
-    from . import state
-    from .sources import get_source
-    import time
-    src = get_source(state.load().source)
-    src.prev()
-    time.sleep(0.4)
-    return _print_control_result("prev", src.name, src.now_playing())
+    return _mcp_print("prev_track")
 
 
 def cmd_np() -> int:
-    from . import state
-    from .sources import get_source
-    src = get_source(state.load().source)
-    return _print_np(src.now_playing())
+    return _mcp_print("now_playing")
 
 
 def cmd_like() -> int:
-    from . import state
-    from .sources import get_source
-    src = get_source(state.load().source)
-    try:
-        ok = src.like_current()
-    except NotImplementedError as e:
-        print(f"not implemented: {e}")
-        return 2
-    print(f"liked  source={src.name}" if ok else f"error: like failed  source={src.name}")
-    return 0 if ok else 1
+    return _mcp_print("like_current")
 
 
 def cmd_mode() -> int:
-    from . import state
-    from .sources import get_source
     mode = sys.argv[2] if len(sys.argv) > 2 else ""
     if not mode:
         print("error: mode is required")
         return 2
-    src = get_source(state.load().source)
-    try:
-        ok = src.set_play_mode(mode)
-    except NotImplementedError as e:
-        print(f"not implemented: {e}")
-        return 2
-    print(f"mode = {mode}  source={src.name}" if ok else f"error: mode failed  source={src.name}")
-    return 0 if ok else 1
+    return _mcp_print("set_play_mode", {"mode": mode})
 
 
 def cmd_prefetch() -> int:

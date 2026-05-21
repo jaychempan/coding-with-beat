@@ -1,42 +1,14 @@
 import contextlib
 import io
+import os
 import sys
 import unittest
 from unittest import mock
 
 from cc_jukebox import __main__ as cli
-from cc_jukebox.sources.base import unsupported_now_playing
 
 
-class CliUnsupportedReadbackTest(unittest.TestCase):
-    def test_control_command_succeeds_when_only_now_playing_readback_is_unsupported(self):
-        np = unsupported_now_playing(
-            "qq_music",
-            "qq_music cannot read the QQMusic desktop client's current track/state.",
-        )
-        out = io.StringIO()
-
-        with contextlib.redirect_stdout(out):
-            code = cli._print_control_result("play", "qq_music", np)
-
-        self.assertEqual(code, 0)
-        self.assertIn("play sent", out.getvalue())
-        self.assertIn("now-playing unsupported", out.getvalue())
-
-    def test_now_playing_request_still_fails_when_source_cannot_report_status(self):
-        np = unsupported_now_playing(
-            "qq_music",
-            "qq_music cannot read the QQMusic desktop client's current track/state.",
-        )
-        out = io.StringIO()
-
-        with contextlib.redirect_stdout(out):
-            code = cli._print_np(np)
-
-        self.assertEqual(code, 2)
-        self.assertIn("unsupported", out.getvalue())
-        self.assertIn("feature=now_playing", out.getvalue())
-
+class CliCommandTest(unittest.TestCase):
     def test_server_command_configures_streamable_http_server(self):
         from cc_jukebox.server import mcp
 
@@ -81,6 +53,61 @@ class CliUnsupportedReadbackTest(unittest.TestCase):
             mcp.settings.streamable_http_path = old_path
             mcp.settings.stateless_http = old_stateless
             mcp.settings.log_level = old_log_level
+
+    def test_music_cli_commands_call_http_mcp_tools(self):
+        cases = [
+            (["np"], "now_playing", {}),
+            (["play"], "play", {}),
+            (["play", "稻香", "周杰伦"], "play_song", {"query": "稻香 周杰伦"}),
+            (["pause"], "pause", {}),
+            (["next"], "next_track", {}),
+            (["prev"], "prev_track", {}),
+            (["like"], "like_current", {}),
+            (["mode", "shuffle"], "set_play_mode", {"mode": "shuffle"}),
+            (["source"], "current_source", {}),
+            (["source", "qq_music"], "set_source", {"name": "qq_music"}),
+            (["cover"], "show_cover", {"style": "rgb", "width": 40, "height": 20}),
+            (["cover", "gameboy"], "show_cover", {"style": "gameboy", "width": 40, "height": 20}),
+            (["lyrics"], "show_lyrics", {"window": 7}),
+            (["lyrics", "5"], "show_lyrics", {"window": 5}),
+            (["player"], "show_player", {"width": 40, "with_lyrics": True}),
+            (["status"], "status", {}),
+            (["banner"], "banner", {}),
+        ]
+
+        for argv, tool, kwargs in cases:
+            with self.subTest(argv=argv):
+                out = io.StringIO()
+                with (
+                    mock.patch.object(sys, "argv", ["cc-jukebox", *argv]),
+                    mock.patch.dict(os.environ, {"CC_JUKEBOX_RELAY_SOCKET": "/tmp/relay.sock"}, clear=False),
+                    mock.patch("cc_jukebox.mcp_client.call_tool", return_value="ok") as call_tool,
+                    contextlib.redirect_stdout(out),
+                ):
+                    code = cli.main()
+
+                self.assertEqual(code, 0)
+                call_tool.assert_called_once_with(tool, kwargs)
+                self.assertEqual(out.getvalue(), "ok\n")
+
+    def test_music_cli_mcp_errors_do_not_fallback_to_local_source(self):
+        from cc_jukebox.mcp_client import MCPClientError
+
+        err = MCPClientError("server unavailable")
+        out = io.StringIO()
+        stderr = io.StringIO()
+        with (
+            mock.patch.object(sys, "argv", ["cc-jukebox", "next"]),
+            mock.patch("cc_jukebox.mcp_client.call_tool", side_effect=err) as call_tool,
+            contextlib.redirect_stdout(out),
+            contextlib.redirect_stderr(stderr),
+        ):
+            code = cli.main()
+
+        self.assertEqual(code, 1)
+        call_tool.assert_called_once_with("next_track", {})
+        self.assertEqual(out.getvalue(), "")
+        self.assertIn("server unavailable", stderr.getvalue())
 
 
 if __name__ == "__main__":

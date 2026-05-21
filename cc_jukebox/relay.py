@@ -5,14 +5,17 @@ There are two supported transports:
 1. Ping Island-style SSH attach:
    - remote: ``cc-jukebox relay agent-service`` listens on Unix sockets
    - local:  ``cc-jukebox relay attach user@host`` connects over ssh stdio
-   - remote commands call the request socket and are executed on the local Mac
+   - configured remote statusline/hooks call the request socket and are
+     executed on the local Mac
 
 2. HTTP relay:
    - local:  ``cc-jukebox relay serve``
-   - remote commands use ``CC_JUKEBOX_RELAY_URL=http://127.0.0.1:8765``
+   - configured remote statusline/hooks use
+     ``CC_JUKEBOX_RELAY_URL=http://127.0.0.1:8765``
 
-The request protocol is intentionally small and JSON-only so hooks, statusline,
-ordinary CLI commands, and MCP tool calls can share the same path.
+The request protocol is intentionally small and JSON-only. Automatic CLI
+proxying is limited to remote statusline rendering; hooks forward themselves
+after /juke prompt expansion has had a chance to run on the remote host.
 """
 from __future__ import annotations
 
@@ -49,32 +52,6 @@ DEFAULT_REQUEST_SOCKET = RUN_DIR / "agent-request.sock"
 DEFAULT_CONTROL_SOCKET = RUN_DIR / "agent-control.sock"
 REMOTE_DEFAULT_CONTROL_SOCKET = "~/.cc-jukebox/run/agent-control.sock"
 
-_MCP_TOOL_NAMES = {
-    "now_playing",
-    "play",
-    "pause",
-    "toggle",
-    "next_track",
-    "prev_track",
-    "seek",
-    "set_volume",
-    "like_current",
-    "set_play_mode",
-    "search",
-    "play_song",
-    "set_source",
-    "show_cover",
-    "show_player",
-    "show_lyrics",
-    "dj_say",
-    "vibe_set",
-    "focus_start",
-    "focus_stop",
-    "focus_status",
-    "banner",
-    "session_intro",
-}
-
 
 def relay_configured() -> bool:
     return bool(os.environ.get(RELAY_SOCKET_ENV) or os.environ.get(RELAY_URL_ENV))
@@ -87,11 +64,7 @@ def relay_is_local() -> bool:
 def should_proxy_cli(argv: list[str]) -> bool:
     if relay_is_local() or not relay_configured() or not argv:
         return False
-    # "server" starts the HTTP MCP transport and must not be proxied as an
-    # ordinary CLI call.
-    # "hook" stays remote long enough to handle /juke UserPromptExpansion with
-    # the remote Claude CLI; ordinary hook events are forwarded by vibe.main.
-    return argv[0] not in {"server", "relay", "hook"}
+    return argv[0] == "statusline"
 
 
 def proxy_cli_to_relay(argv: list[str]) -> int:
@@ -123,24 +96,6 @@ def _print_cli_response(response: dict[str, Any]) -> None:
         sys.stderr.write(stderr)
 
 
-def forward_tool_if_configured(name: str, kwargs: dict[str, Any] | None = None) -> str | None:
-    if relay_is_local() or not relay_configured():
-        return None
-    request = {
-        "id": str(uuid4()),
-        "kind": "tool",
-        "name": name,
-        "kwargs": kwargs or {},
-    }
-    try:
-        response = send_request(request)
-    except Exception as e:
-        return f"cc-jukebox relay error: {e}"
-    if not response.get("ok", False):
-        return f"cc-jukebox relay error: {response.get('error') or 'request failed'}"
-    return str(response.get("result") or "")
-
-
 def send_request(request: dict[str, Any]) -> dict[str, Any]:
     if os.environ.get(RELAY_SOCKET_ENV):
         return _send_socket_request(request, os.environ[RELAY_SOCKET_ENV])
@@ -153,8 +108,6 @@ def execute_local_request(request: dict[str, Any]) -> dict[str, Any]:
     kind = request.get("kind")
     if kind == "cli":
         return _execute_local_cli(request)
-    if kind == "tool":
-        return _execute_local_tool(request)
     return _error_response(request, f"unknown relay request kind: {kind!r}")
 
 
@@ -509,31 +462,6 @@ def _execute_local_cli(request: dict[str, Any]) -> dict[str, Any]:
         }
     except subprocess.TimeoutExpired as e:
         return _error_response(request, f"local cli timed out after {timeout}s: {e}")
-
-
-def _execute_local_tool(request: dict[str, Any]) -> dict[str, Any]:
-    name = str(request.get("name") or "")
-    kwargs = request.get("kwargs") or {}
-    if name not in _MCP_TOOL_NAMES:
-        return _error_response(request, f"unsupported MCP tool: {name}")
-    if not isinstance(kwargs, dict):
-        return _error_response(request, "tool request kwargs must be an object")
-
-    old_env = os.environ.copy()
-    try:
-        os.environ[RELAY_LOCAL_ENV] = "1"
-        os.environ.pop(RELAY_SOCKET_ENV, None)
-        os.environ.pop(RELAY_URL_ENV, None)
-        from . import server
-
-        fn = getattr(server, name)
-        result = fn(**kwargs)
-        return {"id": request.get("id"), "ok": True, "result": str(result)}
-    except Exception as e:
-        return _error_response(request, f"local tool failed: {e}")
-    finally:
-        os.environ.clear()
-        os.environ.update(old_env)
 
 
 def _send_socket_request(request: dict[str, Any], path: str) -> dict[str, Any]:

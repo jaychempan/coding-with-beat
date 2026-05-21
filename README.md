@@ -24,7 +24,7 @@
 
 ## 它能干什么
 
-- **MCP server** — 接入 21 个工具，让你直接跟 Claude 说「放点 lofi」「跳过这首」「现在在放啥」，全都好使。
+- **MCP server** — 接入 20+ 个工具，让你直接跟 Claude 说「放点 lofi」「跳过这首」「现在在放啥」，全都好使。
 - **音乐源** — Apple Music（AppleScript 驱动，不用开 GUI）、本地文件（afplay）、QQ 音乐（搜索 + 预览）。
 - **像素 UI** — 专辑封面用半格 ANSI 字符渲染，支持 GameBoy 四色模式，复古边框，加一个「看起来很像真的」频谱均衡器。
 - **DJ Buddy** — 一个 5 行高的像素小人，会根据你的工作状态换表情。测试挂了它也跟着慌。
@@ -114,9 +114,9 @@ ssh -N -R 127.0.0.1:8765:127.0.0.1:8765 user@server
 ./install.sh --mcp-url http://127.0.0.1:8765/mcp
 ```
 
-之后服务器上的 Claude Code 会通过 HTTP MCP 直接调用本机 Mac 的 cc-jukebox tools。
+之后服务器上的 Claude Code 会通过 HTTP MCP 直接调用本机 Mac 的 cc-jukebox tools。远端的 `cc-jukebox np/play/pause/next/prev/like/mode/source/status/cover/lyrics/player/banner` 也会走同一个 MCP URL，所以只要 SSH 反向端口还在，它们就像本地命令一样控制 Mac 上的音乐客户端。
 
-如果还想让远端 statusline、hooks 和 `/juke` 也回到本机执行，可以继续使用 relay 模式。MCP tools 始终走上面的 HTTP MCP tunnel；relay 只负责远端 shell 入口，比如 statusline、hooks、`/juke` 和普通 `cc-jukebox` CLI。
+如果还想让远端 statusline 和 hooks 也回到本机执行，可以继续使用 relay 模式。MCP tools 和上面的音乐 CLI 命令始终走 HTTP MCP tunnel；relay 只负责 statusline/hook 这类 Claude Code 集成入口。
 
 推荐的 SSH attach 模式：
 
@@ -134,7 +134,7 @@ cc-jukebox relay agent-service
 cc-jukebox relay attach user@server
 ```
 
-之后在服务器上的 Claude Code 里，状态栏、hooks 和 `/juke` 会穿过 relay 回到本机 Mac 执行。MCP tools 仍需要使用上面的 `ssh -R` + `--mcp-url` HTTP MCP 配置。
+之后在服务器上的 Claude Code 里，状态栏和普通 hooks 会穿过 relay 回到本机 Mac 执行。`/juke` 最终会调用 `cc-jukebox` 音乐 CLI，因此也会走上面的 HTTP MCP tunnel。
 如果服务器上的 `cc-jukebox` 不在默认 `$HOME/.local/bin/cc-jukebox`，给 attach 加 `--remote-bin /path/to/cc-jukebox`。
 
 HTTP + SSH 反向端口转发也可以：
@@ -147,6 +147,8 @@ ssh -R 127.0.0.1:8765:127.0.0.1:8765 user@server
 # 服务器
 ./install.sh --relay-url http://127.0.0.1:8765
 ```
+
+上面的音乐控制/展示命令会调用已配置的 HTTP MCP endpoint，默认是 `http://127.0.0.1:8765/mcp`。`./install.sh --mcp-url ...` 会把这个 URL 同时写入 Claude Code 设置和 `~/.cc-jukebox/mcp-url`，供命令行使用。
 
 ---
 
@@ -233,7 +235,7 @@ QQ 音乐没有 AppleScript 接口，也没有公开 API，用的是非官方搜
 ```
 cc_jukebox/
 ├── __main__.py            # CLI 入口
-├── server.py              # MCP server（21 个工具）
+├── server.py              # MCP server（20+ 个工具）
 ├── statusline.py          # 单帧状态栏
 ├── vibe.py                # hook 接收器 + 分类器
 ├── focus.py               # 番茄钟

@@ -18,7 +18,7 @@ class RelayProtocolTest(unittest.TestCase):
         response = relay.execute_local_request({
             "id": "test-1",
             "kind": "cli",
-            "argv": ["banner"],
+            "argv": ["welcome"],
             "stdin": "",
             "env": {
                 relay.RELAY_SOCKET_ENV: "/tmp/should-not-be-forwarded.sock",
@@ -29,12 +29,17 @@ class RelayProtocolTest(unittest.TestCase):
         self.assertEqual(response["exit_code"], 0)
         self.assertIn("pixel companion", response["stdout"])
 
-    def test_cli_proxy_is_disabled_for_mcp_server_and_relay_commands(self):
+    def test_cli_proxy_is_limited_to_statusline(self):
         with mock.patch.dict(os.environ, {relay.RELAY_SOCKET_ENV: "/tmp/relay.sock"}, clear=False):
+            self.assertTrue(relay.should_proxy_cli(["statusline"]))
             self.assertFalse(relay.should_proxy_cli(["server"]))
             self.assertFalse(relay.should_proxy_cli(["relay", "agent-service"]))
             self.assertFalse(relay.should_proxy_cli(["hook"]))
-            self.assertTrue(relay.should_proxy_cli(["statusline"]))
+            self.assertFalse(relay.should_proxy_cli(["next"]))
+            self.assertFalse(relay.should_proxy_cli(["np"]))
+            self.assertFalse(relay.should_proxy_cli(["status"]))
+            self.assertFalse(relay.should_proxy_cli(["banner"]))
+            self.assertFalse(relay.should_proxy_cli(["player"]))
 
     def test_local_attach_uses_remote_default_control_socket(self):
         launched = {}
@@ -165,7 +170,7 @@ class RelayProtocolTest(unittest.TestCase):
                     response = relay.send_request({
                         "id": "round-trip",
                         "kind": "cli",
-                        "argv": ["banner"],
+                        "argv": ["welcome"],
                         "stdin": "",
                     })
 

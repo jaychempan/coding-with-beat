@@ -41,11 +41,11 @@ while [ "$#" -gt 0 ]; do
 Usage: ./install.sh [--relay-socket PATH | --relay-url URL] [--mcp-url URL]
 
 Options:
-  --relay-socket PATH  Configure Claude Code to send cc-jukebox commands to a
-                       remote relay agent request socket, usually
+  --relay-socket PATH  Configure Claude Code statusline/hooks to use a remote
+                       relay agent request socket, usually
                        ~/.cc-jukebox/run/agent-request.sock.
-  --relay-url URL      Configure Claude Code to send cc-jukebox commands to a
-                       local HTTP relay URL, usually http://127.0.0.1:8765.
+  --relay-url URL      Configure Claude Code statusline/hooks to use a local
+                       HTTP relay URL, usually http://127.0.0.1:8765.
   --mcp-url URL        Configure Claude Code to connect to cc-jukebox as an
                        HTTP MCP server, usually http://127.0.0.1:8765/mcp.
 EOF
@@ -155,6 +155,10 @@ ok "python: $PY ($($PY --version))"
 # 2. venv at ~/.cc-jukebox/venv
 VENV="$HOME/.cc-jukebox/venv"
 mkdir -p "$HOME/.cc-jukebox"
+if [ -n "$MCP_URL" ]; then
+  printf "%s\n" "$MCP_URL" > "$HOME/.cc-jukebox/mcp-url"
+  ok "saved MCP URL for CLI commands: $HOME/.cc-jukebox/mcp-url"
+fi
 if [ ! -d "$VENV" ]; then
   "$PY" -m venv "$VENV"
   ok "created venv at $VENV"

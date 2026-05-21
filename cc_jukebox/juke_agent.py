@@ -3,7 +3,7 @@
 The current Claude Code conversation should not spend context on music control.
 This module lets the UserPromptExpansion hook spin up a one-shot Claude process
 to interpret the user's /juke intent, then executes a validated cc-jukebox CLI
-command locally.
+command. Music commands go through the configured HTTP MCP endpoint.
 """
 from __future__ import annotations
 

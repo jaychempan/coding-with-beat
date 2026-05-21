@@ -10,6 +10,7 @@ LINK="$HOME/.local/bin/cc-jukebox"
 CMD_LINK="$HOME/.claude/commands/juke.md"
 MCP_LABEL="com.cc-jukebox.server"
 MCP_PLIST="$HOME/Library/LaunchAgents/$MCP_LABEL.plist"
+MCP_URL_FILE="$HOME/.cc-jukebox/mcp-url"
 
 # 1. drop ~/.claude/settings.json entries
 if [ -x "$VENV_PY" ]; then
@@ -68,7 +69,13 @@ if [ "$(uname -s)" = "Darwin" ]; then
   fi
 fi
 
-# 6. optional purge
+# 6. remove persisted MCP URL used by CLI commands
+if [ -f "$MCP_URL_FILE" ]; then
+  rm "$MCP_URL_FILE"
+  echo "✓ removed $MCP_URL_FILE"
+fi
+
+# 7. optional purge
 if [ "${1:-}" = "--purge" ]; then
   rm -rf "$HOME/.cc-jukebox"
   echo "✓ purged ~/.cc-jukebox/ (data + venv)"
