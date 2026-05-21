@@ -42,18 +42,31 @@ _ALLOWED_COMMANDS = {
     "volume",
     "seek",
     "bar",
+    "history",
+    "help",
+    "welcome",
 }
 _SOURCES = {
+    # English
     "apple": "apple_music",
     "apple_music": "apple_music",
     "apple music": "apple_music",
+    "am": "apple_music",
     "local": "local",
+    "files": "local",
     "qq": "qq_music",
     "qq_music": "qq_music",
     "qq music": "qq_music",
     "qqmusic": "qq_music",
+    # Chinese
+    "苹果": "apple_music",
+    "苹果音乐": "apple_music",
+    "本地": "local",
+    "本地文件": "local",
+    "qq音乐": "qq_music",
 }
 _MODES = {
+    # English
     "random": "shuffle",
     "shuffle": "shuffle",
     "sequential": "sequential",
@@ -63,7 +76,18 @@ _MODES = {
     "loop": "repeat",
     "repeat_one": "repeat_one",
     "single": "repeat_one",
+    # Chinese
+    "随机": "shuffle",
+    "随机播放": "shuffle",
+    "顺序": "sequential",
+    "顺序播放": "sequential",
+    "单曲循环": "repeat_one",
+    "单曲": "repeat_one",
+    "列表循环": "repeat",
+    "循环": "repeat",
+    "循环播放": "repeat",
 }
+_ZH_BAR = {"显示": "show", "开启": "show", "隐藏": "hide", "关闭": "hide", "自动": "auto"}
 
 _FAST_PATH: list[tuple] = [
     # (compiled_regex, command, args_fn)
@@ -75,27 +99,48 @@ def _fp(*patterns: str, cmd: str, args=None):
     for p in patterns:
         _FAST_PATH.append((_re.compile(p, _re.I | _re.U), cmd, args or (lambda m: ())))
 
-_fp(r"^(pause|暂停|停止|停止播放)$", cmd="pause")
-_fp(r"^(next|下一首|跳过|skip)$", cmd="next")
-_fp(r"^(prev|previous|back|上一首|前一首)$", cmd="prev")
-_fp(r"^(np|now\s*playing|当前|正在播放|在听什么|在听啥)$", cmd="np")
-_fp(r"^(status|状态)$", cmd="status")
-_fp(r"^(like|收藏|喜欢|favorite)$", cmd="like")
-_fp(r"^(lyrics|歌词)$", cmd="lyrics")
-_fp(r"^(player|播放器)$", cmd="player")
-_fp(r"^(play|播放|继续|resume)$", cmd="play")
-_fp(r"^(?:volume|音量)\s+(\d+)%?$", cmd="volume",
+# ── no-arg commands ───────────────────────────────────────────────────────────
+_fp(r"^(pause|暂停|停|停止|停止播放|暂停播放)$", cmd="pause")
+_fp(r"^(next|下一首|下首|跳过|跳下一首|skip)$", cmd="next")
+_fp(r"^(prev|previous|back|上一首|上首|回上一首|前一首)$", cmd="prev")
+_fp(r"^(np|now\s*playing|当前|正在播放|在听什么|在听啥|在放什么|现在放什么|现在在听)$", cmd="np")
+_fp(r"^(status|状态|当前状态)$", cmd="status")
+_fp(r"^(like|收藏|喜欢|favorite|添加喜欢)$", cmd="like")
+_fp(r"^(lyrics|歌词|显示歌词|看歌词)$", cmd="lyrics")
+_fp(r"^(player|播放器|显示播放器|打开播放器)$", cmd="player")
+_fp(r"^(play|播放|继续|继续播放|resume)$", cmd="play")
+_fp(r"^(history|播放历史|最近播放|听歌记录|历史)(?:\s+(\d+))?$", cmd="history",
+    args=lambda m: (m.group(2),) if m.group(2) else ())
+_fp(r"^(help|usage|commands)$", cmd="help", args=lambda m: ("en",))
+_fp(r"^(帮助|命令|命令列表|怎么用)$", cmd="help", args=lambda m: ("zh",))
+_fp(r"^(welcome|欢迎|欢迎界面|启动界面)$", cmd="welcome")
+
+# ── volume ─────────────────────────────────────────────────────────────────
+_fp(r"^(?:volume|音量|调音量(?:到)?|把音量(?:调)?(?:到)?|设置音量(?:为)?)\s*(\d+)%?$", cmd="volume",
     args=lambda m: (str(max(0, min(100, int(m.group(1))))),))
-_fp(r"^(?:seek|跳到|快进)\s+([\d:]+(?:\.\d+)?)$", cmd="seek",
+
+# ── seek ───────────────────────────────────────────────────────────────────
+_fp(r"^(?:seek|跳到|快进|跳至|进度跳到)\s*([\d:]+(?:\.\d+)?)$", cmd="seek",
     args=lambda m: (m.group(1),))
-_fp(r"^(?:source|切换|切到|switch\s+to)\s+(apple(?:_music)?|qq(?:_music)?|local)$", cmd="source",
+
+# ── source ─────────────────────────────────────────────────────────────────
+_SRC_PAT = r"(apple(?:_music)?|qq(?:_music)?|local|苹果(?:音乐)?|qq音乐|本地(?:文件)?|am)"
+_fp(rf"^(?:source|切换|切到|switch\s+to|换成|改用|换到|用)\s*{_SRC_PAT}$", cmd="source",
     args=lambda m: (_normalize_source(m.group(1)),))
-_fp(r"^(?:mode|模式)\s+(shuffle|random|sequential|repeat_one|repeat|single|随机|顺序|单曲循环|列表循环)$",
-    cmd="mode", args=lambda m: (_normalize_mode(m.group(1)),))
-_fp(r"^bar\s+(show|hide|auto)$", cmd="bar", args=lambda m: (m.group(1),))
+
+# ── mode ───────────────────────────────────────────────────────────────────
+_MODE_PAT = r"(shuffle|random|sequential|repeat_one|repeat|single|随机(?:播放)?|顺序(?:播放)?|单曲(?:循环)?|列表循环|循环(?:播放)?)"
+_fp(rf"^(?:mode|模式|播放模式|设置模式(?:为)?)\s*{_MODE_PAT}$", cmd="mode",
+    args=lambda m: (_normalize_mode(m.group(1)),))
+
+# ── bar ────────────────────────────────────────────────────────────────────
+_BAR_PAT = r"(show|hide|auto|显示|隐藏|自动|开启|关闭)"
+_fp(rf"^bar\s+{_BAR_PAT}$", cmd="bar",
+    args=lambda m: (_ZH_BAR.get(m.group(1), m.group(1)),))
 _fp(r"^(?:显示|开启)状态栏$", cmd="bar", args=lambda m: ("show",))
 _fp(r"^(?:隐藏|关闭)状态栏$", cmd="bar", args=lambda m: ("hide",))
 _fp(r"^状态栏自动$", cmd="bar", args=lambda m: ("auto",))
+_fp(r"^statusline\s+(show|hide|auto)$", cmd="bar", args=lambda m: (m.group(1),))
 
 
 def _fast_path_plan(intent: str) -> "Optional[CwbPlan]":
@@ -134,6 +179,7 @@ Valid commands and args:
 - volume: ["0".."100"] — set playback volume
 - seek: ["seconds" or "mm:ss"] — seek to position
 - bar: ["show" | "hide" | "auto"] — statusline visibility (auto = only when playing)
+- history: [] or ["n"] — show last n played tracks
 
 Choose status for an empty or ambiguous intent. Preserve Chinese song names and
 artist names verbatim. Put a play search query in args as one string when
@@ -271,6 +317,9 @@ def normalize_plan(data: dict[str, Any]) -> CwbPlan:
         if len(args) != 1 or args[0] not in ("show", "hide", "auto"):
             raise CwbAgentError("bar requires exactly one argument: show | hide | auto")
         return CwbPlan(command, args, note)
+    if command == "help":
+        lang = args[0] if args and args[0] in ("en", "zh") else "en"
+        return CwbPlan(command, (lang,), note)
     if command != "play" and args:
         raise CwbAgentError(f"{command} does not accept arguments")
     if command == "play" and any(len(arg) > 300 for arg in args):
@@ -287,18 +336,19 @@ def _clean_arg(value: Any) -> str:
 
 
 def _normalize_source(value: str) -> str:
-    key = value.strip().lower().replace("-", "_")
-    key = key.replace("_", " ") if key not in _SOURCES else key
-    if key not in _SOURCES:
-        raise CwbAgentError(f"Unsupported source: {value}")
-    return _SOURCES[key]
+    s = value.strip().lower()
+    for variant in (s, s.replace("-", "_"), s.replace("-", " "), s.replace("_", " ")):
+        if variant in _SOURCES:
+            return _SOURCES[variant]
+    raise CwbAgentError(f"Unsupported source: {value}")
 
 
 def _normalize_mode(value: str) -> str:
-    key = value.strip().lower().replace("-", "_").replace(" ", "_")
-    if key not in _MODES:
-        raise CwbAgentError(f"Unsupported mode: {value}")
-    return _MODES[key]
+    s = value.strip().lower()
+    for variant in (s, s.replace("-", "_"), s.replace(" ", "_"), s.replace("_", "")):
+        if variant in _MODES:
+            return _MODES[variant]
+    raise CwbAgentError(f"Unsupported mode: {value}")
 
 
 def run_child_claude(intent: str, *, timeout: Optional[int] = None) -> CwbPlan:
@@ -326,7 +376,66 @@ def run_child_claude(intent: str, *, timeout: Optional[int] = None) -> CwbPlan:
     return parse_claude_plan(proc.stdout)
 
 
-_PASSTHROUGH_COMMANDS = {"player", "status", "lyrics"}
+_PASSTHROUGH_COMMANDS = {"player", "status", "lyrics", "history", "help", "welcome"}
+
+_CJK_RE = re.compile(r"[　-鿿豈-﫿]")
+
+
+def _detect_lang(text: str) -> str:
+    """'zh' if the command keyword (first token) is CJK, else 'en'.
+    Arguments like song names are ignored — 'play 周杰伦' is an English command."""
+    first = (text or "").strip().split()[0] if (text or "").strip() else ""
+    return "zh" if _CJK_RE.search(first) else "en"
+
+
+_T: dict[str, dict[str, str]] = {
+    "zh": {
+        "play_resume": "▶  继续播放",
+        "play_now":    "▶  正在播放",
+        "next":        "⏭  下一首",
+        "prev":        "⏮  上一首",
+        "paused":      "❚❚  已暂停",
+        "liked":       "已收藏 ♥",
+        "no_track":    "当前没有正在播放的歌曲",
+        "not_found":   "找不到「{q}」",
+        "hint1":       "试试加上艺术家名",
+        "hint2":       "或换个搜索词",
+        "source":      "音源 → {v}",
+        "mode":        "播放模式 → {v}",
+        "volume":      "音量 → {v}%",
+        "seek":        "跳转至 {v}",
+        "bar_show":    "状态栏已开启",
+        "bar_hide":    "状态栏已隐藏",
+        "bar_auto":    "状态栏自动（有歌时显示）",
+        "done":        "完成",
+        "cmd_fail":    "{cmd} 失败",
+        "parse_fail":  "解析失败，请重试",
+        "error":       "出了点问题，请重试",
+    },
+    "en": {
+        "play_resume": "▶  Resumed",
+        "play_now":    "▶  Now Playing",
+        "next":        "⏭  Next Track",
+        "prev":        "⏮  Previous Track",
+        "paused":      "❚❚  Paused",
+        "liked":       "Liked ♥",
+        "no_track":    "Nothing is playing right now",
+        "not_found":   'Not found: "{q}"',
+        "hint1":       "Try adding the artist name",
+        "hint2":       "or use different search terms",
+        "source":      "Source → {v}",
+        "mode":        "Mode → {v}",
+        "volume":      "Volume → {v}%",
+        "seek":        "Seek to {v}",
+        "bar_show":    "Statusline visible",
+        "bar_hide":    "Statusline hidden",
+        "bar_auto":    "Statusline auto (shows when playing)",
+        "done":        "Done",
+        "cmd_fail":    "{cmd} failed",
+        "parse_fail":  "Parse error, please retry",
+        "error":       "Something went wrong, please retry",
+    },
+}
 
 
 def _spectrum_bar(width: int = 26) -> str:
@@ -366,39 +475,37 @@ def execute_plan(plan: CwbPlan, *, timeout: Optional[int] = None) -> tuple[int, 
     return proc.returncode, proc.stdout
 
 
-def _format_result(plan: CwbPlan, code: int, output: str) -> str:
+def _format_result(plan: CwbPlan, code: int, output: str, lang: str = "zh") -> str:
     from . import dj
+    t = _T[lang]
     clean = _clean_text(output).strip()
 
     if plan.command in _PASSTHROUGH_COMMANDS:
         if code != 0:
-            return _buddy_card("sad", [clean or f"{plan.command} 失败"])
-        return clean
+            return _buddy_card("sad", [clean or t["cmd_fail"].format(cmd=plan.command)])
+        return (output or "").strip()
 
     if code != 0:
         if plan.command == "play":
             query = " ".join(plan.args) if plan.args else ""
             if query:
                 return _buddy_card("sad", [
-                    f"找不到「{query}」",
-                    "试试加上艺术家名",
-                    "或换个搜索词",
+                    t["not_found"].format(q=query),
+                    t["hint1"],
+                    t["hint2"],
                     f'"{dj.quip("sad")}"',
                 ])
-            return _buddy_card("sad", ["没有正在播放的歌曲", f'"{dj.quip("sad")}"'])
+            return _buddy_card("sad", [t["no_track"], f'"{dj.quip("sad")}"'])
         if plan.command in ("np", "pause", "next", "prev", "like"):
-            return _buddy_card("neutral", [
-                "当前没有正在播放的歌曲",
-                f'"{dj.quip("neutral")}"',
-            ])
-        return _buddy_card("sad", [clean or f"{plan.command} 失败"])
+            return _buddy_card("neutral", [t["no_track"], f'"{dj.quip("neutral")}"'])
+        return _buddy_card("sad", [clean or t["cmd_fail"].format(cmd=plan.command)])
 
     track = clean or ""
     if plan.command in ("play", "next", "prev"):
         action = {
-            "next": "⏭  下一首",
-            "prev": "⏮  上一首",
-        }.get(plan.command, "▶  继续播放" if not plan.args else "▶  正在播放")
+            "next": t["next"],
+            "prev": t["prev"],
+        }.get(plan.command, t["play_resume"] if not plan.args else t["play_now"])
         lines = [action]
         if track:
             lines.append(f"   ♪ {track}")
@@ -408,41 +515,49 @@ def _format_result(plan: CwbPlan, code: int, output: str) -> str:
     if plan.command == "np":
         if track:
             return _buddy_card("groove", [
-                "▶  正在播放",
+                t["play_now"],
                 f"   ♪ {track}",
                 _spectrum_bar(26),
                 f'"{dj.quip("groove")}"',
             ])
-        return _buddy_card("neutral", ["当前没有正在播放的歌曲", f'"{dj.quip("neutral")}"'])
+        return _buddy_card("neutral", [t["no_track"], f'"{dj.quip("neutral")}"'])
     if plan.command == "pause":
-        lines = ["❚❚  已暂停"]
+        lines = [t["paused"]]
         if track:
             lines.append(f"   ♪ {track}")
         lines.append(f'"{dj.quip("neutral")}"')
         return _buddy_card("neutral", lines)
     if plan.command == "like":
-        return _buddy_card("happy", [f"已收藏 ♥", track, f'"{dj.quip("happy")}"'])
+        return _buddy_card("happy", [t["liked"], track, f'"{dj.quip("happy")}"'])
     if plan.command == "source":
-        return _buddy_card("neutral", [f"音源 → {track}"])
+        return _buddy_card("neutral", [t["source"].format(v=track)])
     if plan.command == "mode":
-        return _buddy_card("neutral", [f"播放模式 → {track}"])
+        return _buddy_card("neutral", [t["mode"].format(v=track)])
     if plan.command == "volume":
         vol = plan.args[0] if plan.args else "?"
-        return _buddy_card("neutral", [f"音量 → {vol}%"])
+        return _buddy_card("neutral", [t["volume"].format(v=vol)])
     if plan.command == "seek":
         pos = plan.args[0] if plan.args else "?"
-        return _buddy_card("neutral", [f"跳转至 {pos}"])
+        return _buddy_card("neutral", [t["seek"].format(v=pos)])
     if plan.command == "bar":
         mode = plan.args[0] if plan.args else "?"
-        label = {"show": "状态栏已开启", "hide": "状态栏已隐藏", "auto": "状态栏自动（有歌时显示）"}.get(mode, mode)
+        label = {"show": t["bar_show"], "hide": t["bar_hide"], "auto": t["bar_auto"]}.get(mode, mode)
         return _buddy_card("neutral", [label])
-    return _buddy_card("neutral", [track or "完成"])
+    return _buddy_card("neutral", [track or t["done"]])
 
 
 def run_intent(intent: str) -> str:
+    lang = _detect_lang(intent)
     plan = _fast_path_plan(intent) or run_child_claude(intent)
     code, output = execute_plan(plan)
-    return _format_result(plan, code, output)
+    return _format_result(plan, code, output, lang=lang)
+
+
+_CWB_HEADER = (
+    "\x1b[38;2;155;188;15m"
+    "♩ · · · coding  with  beat · · · ♩"
+    "\x1b[0m"
+)
 
 
 def handle_prompt_expansion(event: dict) -> Optional[dict]:
@@ -451,18 +566,18 @@ def handle_prompt_expansion(event: dict) -> Optional[dict]:
         return None
     if (event.get("command_name") or "").lower() != "cwb":
         return None
+    intent = event.get("command_args") or ""
+    lang = _detect_lang(intent)
+    t = _T[lang]
     try:
-        message = run_intent(event.get("command_args") or "")
+        message = run_intent(intent)
     except CwbAgentError as e:
         err = _clean_text(str(e), limit=200)
-        message = _buddy_card("panic", [
-            "解析失败，请重试",
-            err[:60] if err else "",
-        ])
+        message = _buddy_card("panic", [t["parse_fail"], err[:60] if err else ""])
     except Exception:
-        message = _buddy_card("panic", ["出了点问题，请重试"])
+        message = _buddy_card("panic", [t["error"]])
     return {
         "decision": "block",
-        "reason": message,
+        "reason": f"{_CWB_HEADER}\n{message}",
         "suppressOutput": True,
     }

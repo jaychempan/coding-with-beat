@@ -110,15 +110,13 @@ def welcome_screen() -> str:
 
     def colorize_vinyl(line: str, depth: int) -> str:
         color = [RING, GROVE, LABEL][min(depth, 2)]
-        hole  = HOLE
-        out = []
+        out = [color]
         for ch in line:
             if ch == "◉":
-                out.append(f"{hole}{ch}{R}")
-            elif ch in "╭╮╰╯─│":
-                out.append(f"{color}{ch}{R}")
+                out.append(f"{R}{HOLE}{ch}{R}{color}")
             else:
                 out.append(ch)
+        out.append(R)
         return "".join(out)
 
     # Depth 0 = outer ring, 1 = groove ring, 2 = label
@@ -126,7 +124,8 @@ def welcome_screen() -> str:
     vinyl_lines = [colorize_vinyl(ln, depths[i]) for i, ln in enumerate(_VINYL)]
 
     # Banner wordmark (1 space prefix, ~75 chars wide → 76 total visible)
-    banner = [f" {GRAD[i]}{ln}{R}" for i, ln in enumerate(_BANNER_LINES)]
+    coding_hdr = f" \x1b[1;38;2;200;200;230m{'C  O  D  I  N  G'.center(76)}{R}"
+    banner = [coding_hdr] + [f" {GRAD[i]}{ln}{R}" for i, ln in enumerate(_BANNER_LINES)]
 
     rule = f" {DIM}{'─' * 76}{R}"
 

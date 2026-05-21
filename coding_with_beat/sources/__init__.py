@@ -5,12 +5,12 @@ from .qq_music import QQMusic
 
 
 def get_source(name: str) -> MusicSource:
-    name = (name or "apple_music").lower()
-    if name in ("apple", "apple_music", "applemusic", "am"):
+    name = (name or "apple_music").strip().lower()
+    if name in ("apple", "apple_music", "applemusic", "am", "苹果", "苹果音乐"):
         return AppleMusic()
-    if name in ("local", "files"):
+    if name in ("local", "files", "本地", "本地文件"):
         return LocalFiles()
-    if name in ("qq", "qq_music", "qqmusic"):
+    if name in ("qq", "qq_music", "qqmusic", "qq音乐"):
         return QQMusic()
     raise ValueError(f"unknown source: {name}")
 

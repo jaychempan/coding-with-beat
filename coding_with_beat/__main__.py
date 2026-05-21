@@ -29,6 +29,7 @@ Commands:
     seek <t>     — seek to position: seconds (90) or mm:ss (1:30)
     history [n]  — show last n tracks played (default 10)
     bar [mode]   — statusline visibility: show | hide | auto (print current if no arg)
+    help         — show command reference (also: /cwb help, /cwb 帮助)
 """
 from __future__ import annotations
 
@@ -430,8 +431,15 @@ def cmd_mode() -> int:
     from .sources import get_source
     mode = sys.argv[2] if len(sys.argv) > 2 else ""
     if not mode:
-        print("error: mode is required")
+        print("error: mode is required  (shuffle | sequential | repeat | repeat_one)")
         return 2
+    _zh_modes = {
+        "随机": "shuffle", "随机播放": "shuffle",
+        "顺序": "sequential", "顺序播放": "sequential",
+        "单曲循环": "repeat_one", "单曲": "repeat_one",
+        "列表循环": "repeat", "循环": "repeat", "循环播放": "repeat",
+    }
+    mode = _zh_modes.get(mode, mode)
     src = get_source(state.load().source)
     try:
         ok = src.set_play_mode(mode)
@@ -440,6 +448,95 @@ def cmd_mode() -> int:
         return 2
     print(f"mode = {mode}  source={src.name}" if ok else f"error: mode failed  source={src.name}")
     return 0 if ok else 1
+
+
+def cmd_help() -> int:
+    G = "\x1b[1;38;2;255;230;100m"
+    C = "\x1b[38;2;100;195;210m"
+    W = "\x1b[38;2;200;200;230m"
+    D = "\x1b[38;2;120;130;130m"
+    R = "\x1b[0m"
+
+    def sec(title: str) -> str:
+        return f"{C}▸ {title}{R}"
+
+    def row(cmd: str, desc: str, pad: int = 22) -> str:
+        return f"  {W}{cmd:<{pad}}{R}{D}{desc}{R}"
+
+    lang = sys.argv[2] if len(sys.argv) > 2 and sys.argv[2] in ("en", "zh") else "en"
+
+    if lang == "zh":
+        lines = [
+            f"{G}/cwb — coding-with-beat 命令速查{R}",
+            "",
+            sec("播放控制"),
+            row("play [歌名 / song]",    "播放 / 搜索播放"),
+            row("pause / 暂停",           "暂停"),
+            row("next  / 下一首",         "下一首"),
+            row("prev  / 上一首",         "上一首"),
+            row("like  / 收藏",           "收藏当前曲目"),
+            row("np    / 当前",           "显示正在播放"),
+            "",
+            sec("音量 & 进度"),
+            row("volume <0-100>",         "音量 70  /  音量70"),
+            row("seek <T>",               "跳转 1:30  /  跳至90"),
+            "",
+            sec("来源 & 模式"),
+            row("source <来源>",          "apple_music  qq_music  local"),
+            row("",                       "苹果音乐  本地  qq音乐"),
+            row("mode <模式>",            "shuffle / sequential / repeat / repeat_one"),
+            row("",                       "随机 / 顺序 / 循环 / 单曲循环"),
+            "",
+            sec("界面"),
+            row("player / 播放器",        "像素播放器"),
+            row("watch",                  "实时 TUI  Space/n/p/l 控制  q 退出"),
+            row("karaoke",                "全屏卡拉 OK  同上快捷键"),
+            row("lyrics / 歌词",          "歌词窗口"),
+            row("cover [rgb|gameboy]",    "专辑封面"),
+            "",
+            sec("记录 & 设置"),
+            row("history [n]",            "最近 n 首播放记录（默认 10）"),
+            row("bar show|hide|auto",     "状态栏：始终显示 / 隐藏 / 仅播放时"),
+            row("status / 状态",          "当前完整状态"),
+            "",
+            f"  {D}中英文均可：/cwb 暂停  /cwb 下一首  /cwb 切换苹果音乐  /cwb help{R}",
+        ]
+    else:
+        lines = [
+            f"{G}/cwb — coding-with-beat command reference{R}",
+            "",
+            sec("Playback"),
+            row("play [query]",           "Resume or search & play"),
+            row("pause",                  "Pause playback"),
+            row("next",                   "Skip to next track"),
+            row("prev",                   "Go to previous track"),
+            row("like",                   "Like the current track"),
+            row("np",                     "Show now playing"),
+            "",
+            sec("Volume & Position"),
+            row("volume <0-100>",         "Set playback volume  (e.g. volume 70)"),
+            row("seek <T>",               "Seek to position  (90  or  1:30)"),
+            "",
+            sec("Source & Mode"),
+            row("source <name>",          "apple_music | qq_music | local"),
+            row("mode <mode>",            "shuffle | sequential | repeat | repeat_one"),
+            "",
+            sec("UI"),
+            row("player",                 "Pixel player"),
+            row("watch",                  "Live TUI  Space/n/p/l to control  q to quit"),
+            row("karaoke",                "Full-screen lyrics  (same shortcuts)"),
+            row("lyrics",                 "Lyrics window"),
+            row("cover [rgb|gameboy]",    "Album cover art"),
+            "",
+            sec("History & Settings"),
+            row("history [n]",            "Last n played tracks (default 10)"),
+            row("bar show|hide|auto",     "Statusline: always | hidden | when playing"),
+            row("status",                 "Full current state"),
+            "",
+            f"  {D}Chinese commands also work: /cwb 暂停  /cwb 下一首  /cwb 帮助{R}",
+        ]
+    print("\n".join(lines))
+    return 0
 
 
 def cmd_prefetch() -> int:
@@ -511,6 +608,22 @@ COMMANDS = {
     "seek": cmd_seek,
     "history": cmd_history,
     "bar": cmd_bar,
+    "help": cmd_help,
+    # ── Chinese aliases ────────────────────────────────────────────────────
+    "暂停": cmd_pause,
+    "下一首": cmd_next,
+    "上一首": cmd_prev,
+    "播放": cmd_play,
+    "收藏": cmd_like,
+    "歌词": cmd_lyrics,
+    "播放器": cmd_player,
+    "状态": cmd_status,
+    "历史": cmd_history,
+    "状态栏": cmd_bar,
+    "音量": cmd_volume,
+    "模式": cmd_mode,
+    "来源": cmd_source,
+    "帮助": cmd_help,
 }
 
 
