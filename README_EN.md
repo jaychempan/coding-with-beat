@@ -1,5 +1,12 @@
 # Coding With Beat
 
+![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white)
+![Platform](https://img.shields.io/badge/platform-macOS-000000?style=flat-square&logo=apple&logoColor=white)
+![Claude Code](https://img.shields.io/badge/Claude_Code-compatible-c85f41?style=flat-square)
+![MCP](https://img.shields.io/badge/MCP-21_tools-7c5cbf?style=flat-square)
+![Apple Music](https://img.shields.io/badge/Apple_Music-supported-FC3C44?style=flat-square)
+![Version](https://img.shields.io/badge/version-0.1.0-9bbc0f?style=flat-square)
+
 > **When was the last time you sang and danced while vibecoding?**
 >
 > Right. You can't remember.
