@@ -105,6 +105,31 @@ def render_led_time(seconds: float, color: str = "155;188;15",
     return "\n".join(out)
 
 
+def render_beat_wave(bpm: int, t: float, accent: tuple = (155, 188, 15),
+                     playing: bool = True, width: int = 5) -> str:
+    """Mini beat-pulse waveform: rises once per beat, bell-shaped across `width` cols."""
+    GLYPHS = " ▁▂▃▄▅▆▇█"
+    r, g, b = accent
+    if not playing or bpm <= 0:
+        dr, dg, db = max(40, r // 4), max(40, g // 4), max(30, b // 4)
+        return f"\x1b[38;2;{dr};{dg};{db}m{'▁' * width}\x1b[0m"
+    beat_period = 60.0 / bpm
+    phase = (t % beat_period) / beat_period          # 0..1 within one beat
+    amp = max(0.0, math.sin(phase * math.pi))        # smooth 0 → 1 → 0 pulse
+    center = (width - 1) / 2.0
+    bars = []
+    for i in range(width):
+        dist = abs(i - center) / center if center else 0.0
+        weight = 1.0 - dist * 0.65                  # 1.0 at centre, 0.35 at edges
+        h = 1 + amp * weight * 7.0
+        bars.append(GLYPHS[min(8, max(0, int(round(h))))])
+    intensity = 0.4 + 0.6 * amp
+    cr = min(255, int(r * intensity))
+    cg = min(255, int(g * intensity))
+    cb = min(255, int(b * intensity))
+    return f"\x1b[38;2;{cr};{cg};{cb}m{''.join(bars)}\x1b[0m"
+
+
 def render_hud_chip(track_key: str, vibe: str = "build", playing: bool = True) -> str:
     """Fake-audiophile readout: deterministic per-track BPM / sample-rate /
     bit-depth + a live REC/TX indicator. Stable across renders, looks legit."""

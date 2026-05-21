@@ -4,7 +4,7 @@ import unittest
 from types import SimpleNamespace
 from unittest import mock
 
-from cc_jukebox import state, statusline
+from coding_with_beat import state, statusline
 
 
 class StatuslineLyricsTest(unittest.TestCase):

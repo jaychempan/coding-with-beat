@@ -1,239 +1,193 @@
-# CC-Jukebox
+# Coding With Beat
 
-> **你上一次 vibecoding 的时候又唱又跳是什么时候？**
+![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white)
+![Platform](https://img.shields.io/badge/platform-macOS-000000?style=flat-square&logo=apple&logoColor=white)
+![Claude Code](https://img.shields.io/badge/Claude_Code-compatible-c85f41?style=flat-square)
+![MCP](https://img.shields.io/badge/MCP-21_tools-7c5cbf?style=flat-square)
+![Apple Music](https://img.shields.io/badge/Apple_Music-supported-FC3C44?style=flat-square)
+![Version](https://img.shields.io/badge/version-0.1.0-9bbc0f?style=flat-square)
+![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)
+
+> **When was the last time you sang and danced while vibecoding?**（上次 vibecoding 时又唱又跳是什么时候？）
 >
-> 对。你已经不记得了。
+> Right. You can't remember.（对，你已经不记得了。）
 
-```
- ██████╗ ██████╗     ██╗██╗   ██╗██╗  ██╗███████╗██████╗  ██████╗ ██╗  ██╗
-██╔════╝██╔════╝     ██║██║   ██║██║ ██╔╝██╔════╝██╔══██╗██╔═══██╗╚██╗██╔╝
-██║     ██║          ██║██║   ██║█████╔╝ █████╗  ██████╔╝██║   ██║ ╚███╔╝
-██║     ██║     ██   ██║██║   ██║██╔═██╗ ██╔══╝  ██╔══██╗██║   ██║ ██╔██╗
-╚██████╗╚██████╗╚█████╔╝╚██████╔╝██║  ██╗███████╗██████╔╝╚██████╔╝██╔╝ ██╗
- ╚═════╝ ╚═════╝ ╚════╝  ╚═════╝ ╚═╝  ╚═╝╚══════╝╚═════╝  ╚═════╝ ╚═╝  ╚═╝
-                   a pixel companion for vibecoding
-```
+![](assets/welcome_log.png)
 
-你只是在敲代码。Claude 在旁边静静地看着。终端里除了光标在闪，什么声音都没有。
-这个工具的存在，就是为了终结这种悲剧。
+A pixel-art DJ companion that lives inside Claude Code. It plays music, shows lyrics, celebrates when you commit, and panics with you when tests fail.
 
-**CC-Jukebox** 是一个住在 Claude Code 里的像素风 DJ 小伙伴。
-它帮你放音乐、看歌词、在你 commit 成功的时候庆祝，在测试挂掉的时候跟你一起崩溃。
+[中文文档](README_CN.md) ／ [日本語](README_JP.md)
 
 ---
 
-## 它能干什么
+## Features
 
-- **MCP server** — 接入 20+ 个工具，让你直接跟 Claude 说「放点 lofi」「跳过这首」「现在在放啥」，全都好使。
-- **音乐源** — Apple Music（AppleScript 驱动，不用开 GUI）、本地文件（afplay）、QQ 音乐（搜索 + 预览）。
-- **像素 UI** — 专辑封面用半格 ANSI 字符渲染，支持 GameBoy 四色模式，复古边框，加一个「看起来很像真的」频谱均衡器。
-- **DJ Buddy** — 一个 5 行高的像素小人，会根据你的工作状态换表情。测试挂了它也跟着慌。
-- **Vibe 引擎** — 通过 CC hooks（PreToolUse / PostToolUse / SessionStart / Stop）实时感知你在干什么，自动切换氛围。`git commit` 了？胜利音效。测试炸了？小人开始 panic。
-- **状态栏** — 一行小脸 + 当前曲目 + 进度条，随时知道放到哪了。
-- **专注模式** — 内置 25/5 番茄钟，显示在状态栏里，让你假装自己很自律。
-- **一键安装** — `bootstrap.sh` / `install.sh` 全局搞定，不需要手动配置任何东西。没有 Python？自动用 [uv](https://docs.astral.sh/uv/) 帮你下一个。
+- **MCP server** — 21 tools so you can tell Claude "play some lofi", "skip this", "what's playing" and it just works.
+- **Music sources** — Apple Music (AppleScript, no GUI needed), local files (afplay), QQ Music (search + preview).
+- **Pixel UI** — Album art in half-block ANSI, GameBoy retro border, pseudo-spectrum equalizer.
+- **DJ Buddy** — A headphones-wearing pixel character that reacts to your coding state. Tests failing? It panics with you.
+- **Vibe engine** — CC hooks track what you're doing in real time and shift the mood. `git commit`? Victory pose. Tests explode? Panic mode.
+- **Statusline** — One line: face + current track + progress bar.
+- **Focus mode** — Built-in 25/5 Pomodoro timer shown in the statusline.
 
 ---
 
-## 装上它
-
-### 一行搞定（推荐）
+## Installation
 
 ```bash
-curl -LsSf https://raw.githubusercontent.com/jaychempan/cc-jukebox/main/bootstrap.sh | sh
+curl -LsSf https://raw.githubusercontent.com/jaychempan/coding-with-beat/main/bootstrap.sh | sh
 ```
 
-克隆到 `~/.cc-jukebox/src`，然后自动跑 `install.sh`。想更新？再跑一次。
-
-### 手动装
+Or manually:
 
 ```bash
-git clone https://github.com/jaychempan/cc-jukebox.git
-cd cc-jukebox
+git clone https://github.com/jaychempan/coding-with-beat.git
+cd coding-with-beat
 ./install.sh
 ```
 
-安装脚本默认把 Claude Code 配成 HTTP MCP，并在 macOS 上安装/启动一个 LaunchAgent：
+The installer configures Claude Code to use the HTTP MCP endpoint at `http://127.0.0.1:8765/mcp`, saves that URL to `~/.coding-with-beat/mcp-url`, and on macOS starts a user LaunchAgent for the local MCP server. For debugging, you can run it by hand:
 
 ```bash
-./install.sh
+cwb server --host 127.0.0.1 --port 8765 --path /mcp
 ```
 
-MCP 地址是 `http://127.0.0.1:8765/mcp`。调试时也可以手动跑：
-
-```bash
-cc-jukebox server --host 127.0.0.1 --port 8765 --path /mcp
-```
-
-### `install.sh` 背后在干什么
-
-1. **找 Python** — 按顺序找 PATH 上的、Homebrew 的、conda 环境里的 Python ≥3.10。一个都没有？自动装 uv，再用 uv 下 Python 3.12。你的系统不会多出任何垃圾。想指定路径就 `CC_JUKEBOX_PYTHON=/path/to/python ./install.sh`。
-2. **建 venv** — 放在 `~/.cc-jukebox/venv`，不在项目目录里，删了源码也不影响。
-3. **`cc-jukebox` 命令** — symlink 进 `~/.local/bin/`，顺便往 `~/.zshrc` / `~/.bashrc` 写一条 `export PATH`。
-4. **`/juke` slash command** — symlink 进 `~/.claude/commands/`，指向仓库里的文件，`git pull` 自动更新。
-5. **Claude Code 配置** — 合并写入 `~/.claude/settings.json`：MCP server、状态栏、vibe hooks，以及 `/juke` 的 UserPromptExpansion hook。
-6. **状态目录** — `~/.cc-jukebox/` 存运行时 JSON。
-
-每项配置都打上 `_owner: "cc-jukebox"` 标签，卸载时精准清除，不动你自己的配置。
-
-装完开个新 shell、新 Claude Code 会话，状态栏里出现 `(•_•)` 就成了。然后试试：
-
-> 帮我打开播放器
-
-Claude 会调 `show_player`，把像素播放器画在终端里。或者直接 `/juke play 周杰伦`。
+Open a new shell and a new Claude Code session. When `(•_•)` appears in the statusline, you're good.
 
 ---
 
-## 项目级配置
+## Usage
 
-在任意项目目录：
+### Just talk to Claude
 
-```bash
-cc-jukebox init
+```
+play some lofi
+skip this track
+what's playing
+pause
 ```
 
-生成 `.cc-jukebox.toml`，可以给不同项目设不同的默认氛围、音源、启动歌单。
-写 Python 时放 lo-fi，写 Makefile 时放 city pop，完全合理。
+### `/cwb` command
+
+```
+/cwb play 周杰伦          # search and play
+/cwb play lofi beats
+/cwb next
+/cwb pause
+/cwb np                   # now playing
+/cwb like
+/cwb volume 70
+/cwb watch                # live player (q to quit)
+/cwb karaoke              # full-screen karaoke (q to quit)
+/cwb lyrics               # lyrics window
+/cwb bar auto             # statusline: auto / show / hide
+```
+
+Chinese works too — `下一首`, `暂停`, `在放什么`, `收藏` are all valid.
+
+### `watch` / `karaoke` shortcuts
+
+| Key | Action |
+|-----|--------|
+| `Space` | Play / pause |
+| `n` | Next |
+| `p` | Previous |
+| `l` | Like |
+| `q` | Quit |
 
 ---
 
-## SSH 远端 Claude Code
+## Statusline
 
-如果 Claude Code 跑在服务器上，而 Apple Music 跑在本机 Mac，MCP 工具推荐用 streamable HTTP：MCP server 直接跑在本机 Mac，服务器上的 Claude Code 通过 SSH 反向端口转发访问它。
+Once installed, a statusline appears at the bottom of Claude Code:
 
-MCP-over-HTTP 模式：
+```
+(•_•) ⚡  ▶ 雨爱 — 杨丞琳  ██████░░░░░░░░  [build]  ▃▆█▆▃  │ ♪ 不忍揭曉的劇情
+```
+
+| Element | Example | Description |
+|---------|---------|-------------|
+| DJ face | `(•_•)` `(^_^)` `(T_T)` | Buddy's mood, shifts with coding events |
+| Activity | `⚡` / `·` / _(none)_ | `⚡` = tool call in last 15 s; `·` = last 90 s |
+| Play icon | `▶` / `▷` / `❚❚` | Blinks while playing; ❚❚ when paused |
+| Track | `雨爱 — 杨丞琳  ██████░░░░░░░░` | Title + artist + progress bar |
+| Vibe | `[build]` `[focus]` etc. | Current coding vibe |
+| Pomodoro | `🍅 work 24:15` | Only shown when focus mode is active |
+| Beat wave | `▁▂▃▄▅` | Rises and falls each beat; dims when paused |
+| Lyrics | `│ ♪ lyrics here` | Current LRC lyric |
+
+---
+
+## SSH Remote Claude Code
+
+If Claude Code runs on a server while Apple Music runs on your local Mac, run the streamable HTTP MCP server on the Mac and reach it from the server through SSH reverse port forwarding:
 
 ```bash
-# 本机 Mac：安装会启动 HTTP MCP LaunchAgent
+# Local Mac: install and start the HTTP MCP LaunchAgent
 ./install.sh
 
-# 本机 Mac：另一个终端，暴露到服务器的 127.0.0.1:8765
+# Local Mac: expose it to the server's 127.0.0.1:8765
 ssh -N -R 127.0.0.1:8765:127.0.0.1:8765 user@server
 
-# 服务器：安装远端 hooks/statusline，并把 MCP 配成 HTTP URL
+# Server: install hooks/statusline and point them at the forwarded endpoint
 ./install.sh --mcp-url http://127.0.0.1:8765/mcp
 ```
 
-之后服务器上的 Claude Code 会通过 HTTP MCP 直接调用本机 Mac 的 cc-jukebox tools。远端的 `cc-jukebox np/play/pause/next/prev/like/mode/source/status/cover/lyrics/player/banner` 也会走同一个 MCP URL，所以只要 SSH 反向端口还在，它们就像本地命令一样控制 Mac 上的音乐客户端。
-
-statusline、hooks、`/juke` 和命令行都会使用同一个 HTTP MCP endpoint。`./install.sh --mcp-url ...` 会把这个 URL 同时写入 Claude Code 设置和 `~/.cc-jukebox/mcp-url`，供命令行使用。
+The remote Claude Code session, `/cwb`, statusline, hooks, and `cwb` CLI all use the same HTTP MCP URL. As long as the SSH tunnel is up, commands like `cwb play`, `cwb np`, `cwb next`, `cwb player`, and `cwb karaoke` control the Mac-side music client.
 
 ---
 
-## 命令行
+## CLI
 
 ```
-cc-jukebox status              # 当前状态
-cc-jukebox np                  # 一行：曲名 — 艺术家
-cc-jukebox play [query]        # 继续播放，或搜索并播
-cc-jukebox pause               # 暂停
-cc-jukebox next                # 下一首
-cc-jukebox prev                # 上一首
-cc-jukebox player              # 完整像素播放器
-cc-jukebox watch               # TUI 实时模式（Ctrl-C 退出）
-cc-jukebox cover [rgb|gameboy] # 只显示封面
-cc-jukebox lyrics              # 卡拉 OK 歌词窗口
-cc-jukebox karaoke             # 全屏歌词窗口
-cc-jukebox demo                # 视觉测试
-cc-jukebox banner              # 大横幅
-cc-jukebox init                # 生成 .cc-jukebox.toml
-cc-jukebox server              # MCP streamable HTTP server
-cc-jukebox statusline          # 输出一帧状态栏（CC 调用）
-cc-jukebox hook                # CC hook 接收器（stdin = JSON 事件）
-```
-
-### `play` 搜索逻辑
-
-Apple Music 搜索三段走，从快到慢：
-
-1. **本地库子串匹配** — `name` 或 `artist` 包含关键词，秒出。
-2. **多词 AND 匹配** — `"青花瓷 周杰伦"` → 每个词分别命中 `name` 或 `artist`，自然语言查询也能用。
-3. **iTunes Search API** — 本地找不到？走苹果公开搜索 API，拿到 catalog URL 让 Music.app 打开。需要有效的 Apple Music 订阅才能真正播放。
-
-### `/juke` slash command
-
-装完之后在 Claude Code 里直接用：
-
-```
-/juke status
-/juke play 稻香 周杰伦
-/juke next
-/juke pause
-/juke np
-```
-
-中英文自由输入，`下一首`、`暂停`、`在放什么` 都行。默认情况下 `/juke` 会先被 UserPromptExpansion hook 接住，启动一个一次性的 headless Claude 子会话来理解你的意图，再执行经过校验的 `cc-jukebox` 命令；主会话只看到短结果，不会把点歌过程塞进当前上下文。
-
----
-
-## 音源能力矩阵
-
-| 音源         | 当前曲目 | 播放/暂停 | 跳曲 | 进度 | 搜索        | 完整播放          | 封面 |
-|--------------|----------|-----------|------|------|-------------|-------------------|------|
-| apple_music  | ✓        | ✓         | ✓    | ✓    | ✓（本地库） | ✓                 | ✓    |
-| local        | ✓        | ✓         | ✓    | ⚠    | ✓（文件名） | ✓                 | ✓    |
-| qq_music     | 部分     | ✓（预览） | —    | —    | ✓（HTTP）   | ⚠ 仅 30 秒预览   | ✓    |
-
-QQ 音乐没有 AppleScript 接口，也没有公开 API，用的是非官方搜索接口配合 30 秒预览。想完整播放还是得开 QQ 音乐客户端，这不是我们能驱动的范围。
-
----
-
-## Vibe 规则（默认）
-
-| 事件                                      | 心情     | 氛围     |
-|-------------------------------------------|----------|----------|
-| `SessionStart`                            | happy    | focus    |
-| `Edit` / `Write` / `MultiEdit`            | focus    | 根据扩展名（py/ts → build，sql → focus，md → review） |
-| `Read` / `Grep` / `Glob`                  | thinking | review   |
-| `Bash` 含 `pytest` / `npm test` 等        | victory 或 sad | victory 或 fail |
-| `Bash` 含 `git commit`                    | victory  | victory  |
-| `Stop`                                    | sleep    | idle     |
-
-随时可以覆盖：
-
-> 切换到 debug 模式
-> DJ 说点鼓励的话
-
-这会触发 `vibe_set` 和 `dj_say` 工具。
-
----
-
-## 文件结构
-
-```
-cc_jukebox/
-├── __main__.py            # CLI 入口
-├── server.py              # MCP server（20+ 个工具）
-├── statusline.py          # 单帧状态栏
-├── vibe.py                # hook 接收器 + 分类器
-├── focus.py               # 番茄钟
-├── dj.py                  # DJ Buddy（表情、精灵、台词）
-├── state.py               # JSON 状态存取
-├── config.py              # 路径、调色板、vibe 映射
-├── sources/
-│   ├── apple_music.py     # AppleScript
-│   ├── local.py           # afplay + mutagen 标签
-│   └── qq_music.py        # HTTP 搜索 + 预览
-└── ui/
-    ├── pixel_cover.py     # 图片 → 半格 ANSI
-    ├── progress.py        # 进度条 + 伪频谱
-    ├── frame.py           # 复古像素边框 + 横幅
-    └── lyrics.py          # 卡拉 OK 窗口
+cwb play [query]        # search and play, or resume
+cwb pause               # pause
+cwb next                # next track
+cwb prev                # previous track
+cwb np                  # now playing
+cwb like                # like current track
+cwb volume <0-100>      # set volume
+cwb seek <t>            # seek: seconds (90) or mm:ss (1:30)
+cwb mode <mode>         # shuffle | sequential | repeat | repeat_one
+cwb player              # full pixel player
+cwb watch               # live TUI (q to quit)
+cwb karaoke             # full-screen karaoke (q to quit)
+cwb lyrics              # lyrics window
+cwb history [n]         # last n played tracks
+cwb bar <show|hide|auto> # statusline visibility
+cwb status              # current state
+cwb server              # MCP streamable HTTP server
 ```
 
 ---
 
-## 已知局限
+## Music sources
 
-- **仅限 macOS。** Apple Music 和 afplay 都是 macOS 独有的。Linux / Windows 需要换后端，目前没有计划。
-- **频谱是假的。** 终端里没法捕获系统音频，所以均衡器的柱子是根据播放进度用确定性算法生成的动画。好看，但不是真 FFT，不要误会。
-- **DJ Buddy 不会主动打扰你。** 它只在 CC 调用 `dj_say` 时说话，hooks 只更新状态，不会突然弹出来。
+| Feature | Apple Music | Local files | QQ Music |
+|---------|-------------|-------------|----------|
+| Now playing info | ✓ | ✓ | ⚠ preview only |
+| Play / pause | ✓ | ✓ | ✓ |
+| Next / prev | ✓ | ✓ | ✓ |
+| Seek | ✓ | ⚠ restart-based | ⚠ preview only |
+| Volume | ✓ | ✓ | ⚠ coarse steps |
+| Like / favorite | ✓ | ✗ | ✓ |
+| Cover art | ✓ | ✓ | ✓ |
+| Full playback | ✓ subscription req. | ✓ | ✗ 30 s preview |
+| Play modes | ✓ | ✗ | ✓ |
+
+> QQ Music has no official API. Search metadata comes from public endpoints; audio is played as 30-second preview clips via afplay. Full tracks require the QQ Music desktop app.
 
 ---
 
-## 卸载
+## Uninstall
 
 ```bash
-./uninstall.sh           # 移除 settings.json 条目、cc-jukebox 命令、/juke 命令、PATH 块
-./uninstall.sh --purge   # 同上，另外删除 ~/.cc-jukebox/（venv + 状态文件）
+./uninstall.sh           # remove config, commands, PATH
+./uninstall.sh --purge   # same + delete ~/.coding-with-beat/
 ```
+
+---
+
+## License
+
+MIT License — see [LICENSE](LICENSE) for details.

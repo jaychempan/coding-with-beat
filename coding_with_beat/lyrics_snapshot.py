@@ -112,5 +112,5 @@ def _prefetch_once(source: str, artist: str, album: str, title: str) -> bool:
                 else:
                     _ATTEMPTED_AT[key] = time.time()
 
-    threading.Thread(target=worker, name="cc-jukebox-lyrics-prefetch", daemon=True).start()
+    threading.Thread(target=worker, name="coding-with-beat-lyrics-prefetch", daemon=True).start()
     return True

@@ -1,8 +1,8 @@
-"""MCP server: exposes CC-Jukebox tools to Claude Code.
+"""MCP server: exposes coding-with-beat tools to Claude Code.
 
 Run with:
-    python -m cc_jukebox.server
-    python -m cc_jukebox server
+    python -m coding_with_beat.server
+    python -m coding_with_beat server
 """
 from __future__ import annotations
 
@@ -24,10 +24,17 @@ from .ui import (
 )
 
 
-MCP_HTTP_HOST_ENV = "CC_JUKEBOX_MCP_HOST"
-MCP_HTTP_PORT_ENV = "CC_JUKEBOX_MCP_PORT"
-MCP_HTTP_PATH_ENV = "CC_JUKEBOX_MCP_PATH"
+MCP_HTTP_HOST_ENV = "CWB_MCP_HOST"
+MCP_HTTP_PORT_ENV = "CWB_MCP_PORT"
+MCP_HTTP_PATH_ENV = "CWB_MCP_PATH"
+_LEGACY_MCP_HTTP_HOST_ENV = "CC_JUKEBOX_MCP_HOST"
+_LEGACY_MCP_HTTP_PORT_ENV = "CC_JUKEBOX_MCP_PORT"
+_LEGACY_MCP_HTTP_PATH_ENV = "CC_JUKEBOX_MCP_PATH"
 CONTROL_REFRESH_DELAY = 0.4
+
+
+def _env_first(name: str, legacy_name: str, default: str) -> str:
+    return os.environ.get(name) or os.environ.get(legacy_name) or default
 
 
 def _env_int(name: str, default: int) -> int:
@@ -45,10 +52,10 @@ def _normalize_path(path: str) -> str:
 
 
 mcp = FastMCP(
-    "cc-jukebox",
-    host=os.environ.get(MCP_HTTP_HOST_ENV, "127.0.0.1"),
-    port=_env_int(MCP_HTTP_PORT_ENV, 8765),
-    streamable_http_path=_normalize_path(os.environ.get(MCP_HTTP_PATH_ENV, "/mcp")),
+    "coding-with-beat",
+    host=_env_first(MCP_HTTP_HOST_ENV, _LEGACY_MCP_HTTP_HOST_ENV, "127.0.0.1"),
+    port=_env_int(MCP_HTTP_PORT_ENV, _env_int(_LEGACY_MCP_HTTP_PORT_ENV, 8765)),
+    streamable_http_path=_normalize_path(_env_first(MCP_HTTP_PATH_ENV, _LEGACY_MCP_HTTP_PATH_ENV, "/mcp")),
 )
 
 
@@ -337,7 +344,7 @@ def show_player(width: int = 36, with_lyrics: bool = True) -> str:
     lines.append(f"\x1b[38;2;155;188;15m{buddy}\x1b[0m")
     lines.append(f"\x1b[3;38;2;200;200;230m  “{quip}”\x1b[0m")
     body = "\n".join(lines)
-    return boxed(f"CC-JUKEBOX · {st.source}", body, width=max(width + 4, 40))
+    return boxed(f"CWB · {st.source}", body, width=max(width + 4, 40))
 
 
 @mcp.tool()
@@ -402,7 +409,7 @@ def focus_status() -> str:
 
 @mcp.tool()
 def banner() -> str:
-    """Print the giant CC-JUKEBOX retro banner. Use on SessionStart or when
+    """Print the giant CWB retro banner. Use on SessionStart or when
     the user wants the full intro."""
     return retro_banner("a pixel companion for vibecoding")
 
@@ -420,7 +427,7 @@ def session_intro() -> str:
 
 @mcp.tool()
 def status() -> str:
-    """Return a human-readable cc-jukebox status block."""
+    """Return a human-readable coding-with-beat status block."""
     st, np = _refresh_now_playing()
     f = focus.status()
     lines = [

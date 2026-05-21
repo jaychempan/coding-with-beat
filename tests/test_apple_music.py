@@ -1,9 +1,9 @@
 import unittest
 from unittest import mock
 
-from cc_jukebox.sources.apple_music import AppleMusic
-from cc_jukebox.sources.local import LocalFiles
-from cc_jukebox.sources import apple_music as am
+from coding_with_beat.sources.apple_music import AppleMusic
+from coding_with_beat.sources.local import LocalFiles
+from coding_with_beat.sources import apple_music as am
 
 
 class AppleMusicControlsTest(unittest.TestCase):

@@ -2,8 +2,8 @@ import unittest
 from types import SimpleNamespace
 from unittest import mock
 
-from cc_jukebox import lyrics_snapshot
-from cc_jukebox import server
+from coding_with_beat import lyrics_snapshot
+from coding_with_beat import server
 
 
 class ServerLyricsSnapshotTest(unittest.TestCase):
@@ -71,7 +71,7 @@ class ServerLyricsSnapshotTest(unittest.TestCase):
         source = SimpleNamespace(lyrics=lambda: None)
         with (
             mock.patch.object(lyrics_snapshot.threading, "Thread", ImmediateThread),
-            mock.patch("cc_jukebox.sources.get_source", return_value=source),
+            mock.patch("coding_with_beat.sources.get_source", return_value=source),
             mock.patch.object(lyrics_snapshot, "_read_cached", return_value=""),
         ):
             self.assertTrue(lyrics_snapshot._prefetch_once("apple_music", "Artist", "Album", "Song"))

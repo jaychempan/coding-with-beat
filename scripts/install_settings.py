@@ -1,10 +1,10 @@
 """Idempotent merger for Claude Code's ~/.claude/settings.json.
 
 Adds (or removes) entries for:
-  - mcpServers["cc-jukebox"]
+  - mcpServers["coding-with-beat"]
   - statusLine (only if unset, or already ours; we don't clobber other tools)
   - hooks: PreToolUse, PostToolUse, SessionStart, Stop  (with matcher: ".*")
-  - UserPromptExpansion hook for /juke, so music controls do not enter chat context
+  - UserPromptExpansion hook for /cwb, so music controls do not enter chat context
 
 Re-running is safe. Keys we don't own are never touched.
 """
@@ -15,11 +15,17 @@ import json
 import sys
 from pathlib import Path
 
-from cc_jukebox.juke_agent import HOOK_TIMEOUT
+from coding_with_beat.cwb_agent import HOOK_TIMEOUT
 
 
-TAG = "cc-jukebox"
+TAG = "coding-with-beat"
+LEGACY_TAGS = {"cc-jukebox"}
+OWNERS = {TAG, *LEGACY_TAGS}
 DEFAULT_MCP_URL = "http://127.0.0.1:8765/mcp"
+
+
+def _owned(entry: object) -> bool:
+    return isinstance(entry, dict) and entry.get("_owner") in OWNERS
 
 
 def hook_entry(python: str, repo: str) -> dict:
@@ -28,7 +34,7 @@ def hook_entry(python: str, repo: str) -> dict:
         "hooks": [
             {
                 "type": "command",
-                "command": f'{python} -m cc_jukebox hook',
+                "command": f'{python} -m coding_with_beat hook',
                 "timeout": 5,
             }
         ],
@@ -42,7 +48,7 @@ def session_hook_entry(python: str, repo: str) -> dict:
         "hooks": [
             {
                 "type": "command",
-                "command": f'{python} -m cc_jukebox hook',
+                "command": f'{python} -m coding_with_beat hook',
                 "timeout": 5,
             }
         ],
@@ -50,13 +56,13 @@ def session_hook_entry(python: str, repo: str) -> dict:
     }
 
 
-def juke_expansion_hook_entry(python: str, repo: str) -> dict:
+def cwb_expansion_hook_entry(python: str, repo: str) -> dict:
     return {
-        "matcher": "juke",
+        "matcher": "cwb",
         "hooks": [
             {
                 "type": "command",
-                "command": f'{python} -m cc_jukebox hook',
+                "command": f'{python} -m coding_with_beat hook',
                 "timeout": HOOK_TIMEOUT,
             }
         ],
@@ -90,6 +96,8 @@ def merge(
 
     # mcpServers
     servers = settings.setdefault("mcpServers", {})
+    for legacy in LEGACY_TAGS:
+        servers.pop(legacy, None)
     server = {
         "type": "http",
         "url": mcp_url,
@@ -98,10 +106,10 @@ def merge(
 
     # statusLine — only set if not present OR already ours
     sl = settings.get("statusLine")
-    if not sl or (isinstance(sl, dict) and sl.get("_owner") == TAG):
+    if not sl or _owned(sl):
         settings["statusLine"] = {
             "type": "command",
-            "command": f"{python} -m cc_jukebox statusline",
+            "command": f"{python} -m coding_with_beat statusline",
             "refreshInterval": 1,
             "_owner": TAG,
         }
@@ -111,17 +119,17 @@ def merge(
     for event in ("PreToolUse", "PostToolUse"):
         lst = hooks.setdefault(event, [])
         # remove any prior entries we own
-        lst[:] = [e for e in lst if not (isinstance(e, dict) and e.get("_owner") == TAG)]
+        lst[:] = [e for e in lst if not _owned(e)]
         lst.append(hook_entry(python, repo))
 
     for event in ("SessionStart", "Stop"):
         lst = hooks.setdefault(event, [])
-        lst[:] = [e for e in lst if not (isinstance(e, dict) and e.get("_owner") == TAG)]
+        lst[:] = [e for e in lst if not _owned(e)]
         lst.append(session_hook_entry(python, repo))
 
     lst = hooks.setdefault("UserPromptExpansion", [])
-    lst[:] = [e for e in lst if not (isinstance(e, dict) and e.get("_owner") == TAG)]
-    lst.append(juke_expansion_hook_entry(python, repo))
+    lst[:] = [e for e in lst if not _owned(e)]
+    lst.append(cwb_expansion_hook_entry(python, repo))
 
     return settings
 
@@ -129,17 +137,19 @@ def merge(
 def remove(settings: dict) -> dict:
     servers = settings.get("mcpServers", {})
     servers.pop(TAG, None)
+    for legacy in LEGACY_TAGS:
+        servers.pop(legacy, None)
     if not servers:
         settings.pop("mcpServers", None)
 
     sl = settings.get("statusLine")
-    if isinstance(sl, dict) and sl.get("_owner") == TAG:
+    if _owned(sl):
         settings.pop("statusLine", None)
 
     hooks = settings.get("hooks", {})
     for event, lst in list(hooks.items()):
         if isinstance(lst, list):
-            lst[:] = [e for e in lst if not (isinstance(e, dict) and e.get("_owner") == TAG)]
+            lst[:] = [e for e in lst if not _owned(e)]
             if not lst:
                 hooks.pop(event)
     if not hooks:

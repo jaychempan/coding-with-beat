@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Coding With Beat</title>
+  <meta name="description" content="A pixel-art DJ companion for Claude Code. Music while you vibe-code.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:      #0d0d0e;
+      --bg2:     #161618;
+      --bg3:     #1e1e21;
+      --text:    #c0b8a8;
+      --bright:  #e6ddd0;
+      --green:   #9bbc0f;
+      --amber:   #d6be32;
+      --coral:   #c85f41;
+      --ltgrn:   #78c850;
+      --yellow:  #ffe650;
+      --dim:     #52525f;
+      --border:  rgba(155,188,15,.18);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'JetBrains Mono', 'Courier New', monospace;
+      font-size: 13px;
+      line-height: 1.65;
+      min-height: 100vh;
+      -webkit-font-smoothing: none;
+      -moz-osx-font-smoothing: unset;
+    }
+
+    /* Grain overlay */
+    body::after {
+      content: '';
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+      opacity: 0.028;
+      mix-blend-mode: screen;
+      z-index: 9999;
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    /* ─── NAV ─── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 28px;
+      background: rgba(13,13,14,.88);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-logo {
+      color: var(--green);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .12em;
+    }
+
+    .nav-logo span { color: var(--amber); }
+
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .gh-link {
+      color: var(--dim);
+      font-size: 11px;
+      letter-spacing: .04em;
+      transition: color .2s;
+    }
+    .gh-link:hover { color: var(--text); }
+
+    .lang-toggle {
+      display: flex;
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 2px;
+      gap: 2px;
+    }
+
+    .lang-btn {
+      background: none;
+      border: none;
+      color: var(--dim);
+      font-family: inherit;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: .06em;
+      padding: 4px 10px;
+      border-radius: 3px;
+      cursor: pointer;
+      transition: background .15s, color .15s;
+    }
+    .lang-btn.active {
+      background: var(--green);
+      color: #0d0d0e;
+    }
+
+    /* ─── HERO ─── */
+    .hero {
+      padding: 130px 28px 56px;
+      max-width: 860px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 0;
+    }
+
+    /* Pixel buddy */
+    .buddy-wrap {
+      margin-bottom: 28px;
+      animation: groove 1.1s ease-in-out infinite;
+      display: inline-block;
+    }
+
+    @keyframes groove {
+      0%, 100% { transform: translateY(0); }
+      45%  { transform: translateY(-4px); }
+    }
+
+    .buddy-pre {
+      font-size: 13px;
+      line-height: 1.38;
+      text-align: left;
+      white-space: pre;
+    }
+
+    .c-amber  { color: var(--amber);  }
+    .c-coral  { color: var(--coral);  }
+    .c-green  { color: var(--green);  }
+    .c-ltgrn  { color: var(--ltgrn);  }
+    .c-yellow { color: var(--yellow); }
+    .c-cream  { color: #e6dcc8; }
+    .c-dim    { color: var(--dim);    }
+
+    .hero-eyebrow {
+      font-size: 10px;
+      letter-spacing: .18em;
+      color: var(--dim);
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    .hero-title {
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--bright);
+      letter-spacing: .06em;
+      line-height: 1.2;
+      margin-bottom: 12px;
+    }
+
+    .hero-title .hl { color: var(--green); }
+
+    .hero-sub {
+      font-size: 13px;
+      color: var(--dim);
+      letter-spacing: .02em;
+      margin-bottom: 48px;
+      max-width: 400px;
+    }
+
+    /* ─── TERMINAL CARD ─── */
+    .install-wrap {
+      width: 100%;
+      max-width: 860px;
+      margin: 0 auto 72px;
+      padding: 0 28px;
+    }
+
+    .term-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      overflow: hidden;
+      box-shadow: 0 16px 48px rgba(0,0,0,.55);
+    }
+
+    .term-bar {
+      background: var(--bg3);
+      padding: 9px 14px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .dot { width: 10px; height: 10px; border-radius: 50%; }
+    .dot-r { background: #ff5f56; }
+    .dot-y { background: #ffbd2e; }
+    .dot-g { background: #27c93f; }
+
+    .term-label {
+      color: var(--dim);
+      font-size: 10px;
+      letter-spacing: .06em;
+      margin-left: auto;
+    }
+
+    .term-body { padding: 20px 20px 16px; }
+
+    .cmd-row {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .prompt { color: var(--green); font-weight: 700; flex-shrink: 0; }
+    .cmd    { color: var(--bright); font-size: 12px; word-break: break-all; }
+
+    .cursor-blink {
+      display: inline-block;
+      color: var(--green);
+      animation: cur 1s step-end infinite;
+      margin-left: 2px;
+    }
+    @keyframes cur { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+    .copy-btn {
+      margin-top: 14px;
+      width: 100%;
+      padding: 9px 0;
+      background: var(--green);
+      color: #0d0d0e;
+      font-family: inherit;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .1em;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: opacity .2s, background .2s;
+    }
+    .copy-btn:hover { opacity: .85; }
+    .copy-btn.copied { background: var(--amber); }
+
+    .alt-install {
+      margin-top: 12px;
+      font-size: 11px;
+      color: var(--dim);
+      text-align: center;
+    }
+
+    .alt-install a {
+      color: var(--dim);
+      border-bottom: 1px solid rgba(155,188,15,.25);
+      transition: color .2s, border-color .2s;
+    }
+    .alt-install a:hover { color: var(--green); border-color: var(--green); }
+
+    /* ─── FEATURES ─── */
+    .features-wrap {
+      max-width: 860px;
+      margin: 0 auto 72px;
+      padding: 0 28px;
+    }
+
+    .section-head {
+      font-size: 10px;
+      letter-spacing: .18em;
+      color: var(--dim);
+      text-transform: uppercase;
+      margin-bottom: 18px;
+    }
+
+    .feature-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .feature-item {
+      display: flex;
+      gap: 12px;
+      padding: 11px 14px;
+      border-radius: 5px;
+      transition: background .15s;
+    }
+    .feature-item:hover { background: var(--bg2); }
+
+    .fi-icon {
+      color: var(--green);
+      flex-shrink: 0;
+      width: 14px;
+      margin-top: 1px;
+    }
+
+    .fi-body { display: flex; flex-direction: column; gap: 2px; }
+
+    .fi-title {
+      color: var(--bright);
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .fi-desc {
+      color: var(--dim);
+      font-size: 11px;
+    }
+
+    /* ─── STATUSLINE PREVIEW ─── */
+    .status-wrap {
+      max-width: 860px;
+      margin: 0 auto 72px;
+      padding: 0 28px;
+    }
+
+    .status-preview {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 18px 24px;
+      font-size: 13px;
+      color: var(--bright);
+      white-space: nowrap;
+      overflow-x: auto;
+    }
+
+    .sp-face    { color: var(--cream); }
+    .sp-bolt    { color: var(--yellow); }
+    .sp-play    { color: var(--green); }
+    .sp-track   { color: var(--bright); }
+    .sp-bar-f   { color: var(--green); }
+    .sp-bar-e   { color: var(--dim); }
+    .sp-vibe    { color: var(--amber); }
+    .sp-wave    { color: var(--ltgrn); }
+    .sp-pipe    { color: var(--dim); }
+    .sp-lyric   { color: #9090a0; }
+
+    /* ─── SOURCES ─── */
+    .sources-wrap {
+      max-width: 860px;
+      margin: 0 auto 72px;
+      padding: 0 28px;
+    }
+
+    .source-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+    }
+
+    .source-card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 16px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .sc-name {
+      color: var(--bright);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .04em;
+    }
+
+    .sc-tag {
+      font-size: 10px;
+      color: var(--dim);
+    }
+
+    .sc-tag.ok  { color: var(--green); }
+    .sc-tag.warn { color: var(--amber); }
+
+    /* ─── LINKS ─── */
+    .links-wrap {
+      max-width: 860px;
+      margin: 0 auto 72px;
+      padding: 0 28px;
+    }
+
+    .links-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 14px;
+    }
+
+    .link-card {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      text-decoration: none;
+      transition: background .15s, border-color .2s;
+    }
+    .link-card:hover {
+      background: var(--bg3);
+      border-color: rgba(155,188,15,.4);
+    }
+
+    .lc-icon { color: var(--green); flex-shrink: 0; }
+    .lc-body { display: flex; flex-direction: column; gap: 3px; flex: 1; }
+    .lc-title { color: var(--bright); font-size: 12px; font-weight: 600; }
+    .lc-desc  { color: var(--dim); font-size: 11px; }
+    .lc-arrow { color: var(--dim); font-size: 12px; flex-shrink: 0; transition: color .2s; }
+    .link-card:hover .lc-arrow { color: var(--green); }
+
+    /* ─── FOOTER ─── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 28px;
+      text-align: center;
+      color: var(--dim);
+      font-size: 11px;
+    }
+
+    footer a {
+      color: var(--dim);
+      border-bottom: 1px solid transparent;
+      transition: color .2s, border-color .2s;
+    }
+    footer a:hover { color: var(--text); border-color: var(--dim); }
+
+    footer .sep { margin: 0 10px; opacity: .4; }
+
+    /* ─── DIVIDER ─── */
+    .divider {
+      max-width: 860px;
+      margin: 0 auto 56px;
+      padding: 0 28px;
+      border: none;
+      border-top: 1px solid rgba(155,188,15,.08);
+    }
+
+    /* ─── MOBILE ─── */
+    @media (max-width: 520px) {
+      .hero-title { font-size: 22px; }
+      .source-grid { grid-template-columns: 1fr; }
+      .links-grid  { grid-template-columns: 1fr; }
+      .gh-link { display: none; }
+      .buddy-pre { font-size: 11px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">♪ <span>coding</span>-with-beat</div>
+  <div class="nav-right">
+    <a class="gh-link" href="https://github.com/jaychempan/coding-with-beat" target="_blank" rel="noopener">GitHub ↗</a>
+    <div class="lang-toggle">
+      <button class="lang-btn active" onclick="setLang('en')">EN</button>
+      <button class="lang-btn" onclick="setLang('zh')">中文</button>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="buddy-wrap" id="buddy">
+    <pre class="buddy-pre" id="buddy-pre">  <span class="c-amber">╔════╗</span>
+<span class="c-amber">═</span><span class="c-coral">[</span><span class="c-dim">│</span> <span class="c-yellow">♪♪</span> <span class="c-dim">│</span><span class="c-coral">]</span><span class="c-amber">═</span>
+  <span class="c-dim">│</span> <span class="c-cream">‿‿</span> <span class="c-dim">│</span>
+  <span class="c-amber">╚════╝</span>
+  <span class="c-ltgrn">▐</span><span class="c-green">████</span><span class="c-ltgrn">▌</span>
+ <span class="c-dim">╱</span><span class="c-ltgrn">▐</span><span class="c-green">█  █</span><span class="c-ltgrn">▌</span><span class="c-dim">╲</span>
+  <span class="c-ltgrn">▐</span><span class="c-green">█  █</span><span class="c-ltgrn">▌</span>  </pre>
+  </div>
+
+  <p class="hero-eyebrow" data-i18n="eyebrow">a pixel companion for vibecoding</p>
+  <h1 class="hero-title">Coding <span class="hl">With Beat</span></h1>
+  <p class="hero-sub" data-i18n="sub">Music, lyrics, and a dancing DJ inside Claude Code. No browser tab needed.</p>
+</section>
+
+<!-- INSTALL -->
+<div class="install-wrap">
+  <div class="term-card">
+    <div class="term-bar">
+      <div class="dot dot-r"></div>
+      <div class="dot dot-y"></div>
+      <div class="dot dot-g"></div>
+      <span class="term-label">install.sh</span>
+    </div>
+    <div class="term-body">
+      <div class="cmd-row">
+        <span class="prompt">$</span>
+        <span class="cmd" id="install-cmd">curl -LsSf https://raw.githubusercontent.com/jaychempan/coding-with-beat/main/bootstrap.sh | sh</span>
+        <span class="cursor-blink">▌</span>
+      </div>
+      <button class="copy-btn" id="copy-btn" onclick="copyInstall()">COPY COMMAND</button>
+    </div>
+  </div>
+  <p class="alt-install">
+    <span data-i18n="or-prefix">Or:</span> <a href="https://github.com/jaychempan/coding-with-beat" target="_blank" rel="noopener" data-i18n="manual">manual install →</a>
+  </p>
+</div>
+
+<!-- FEATURES -->
+<div class="features-wrap">
+  <p class="section-head" data-i18n="feat-head">features</p>
+  <ul class="feature-list" id="feature-list">
+    <li class="feature-item">
+      <span class="fi-icon">▸</span>
+      <div class="fi-body">
+        <span class="fi-title" data-i18n="f1t">MCP Server</span>
+        <span class="fi-desc" data-i18n="f1d">21 tools — just say "play some lofi" or "skip this" inside Claude Code.</span>
+      </div>
+    </li>
+    <li class="feature-item">
+      <span class="fi-icon">▸</span>
+      <div class="fi-body">
+        <span class="fi-title" data-i18n="f2t">Apple Music + Local + QQ</span>
+        <span class="fi-desc" data-i18n="f2d">AppleScript-driven, no GUI needed. Local afplay fallback. QQ Music 30s preview.</span>
+      </div>
+    </li>
+    <li class="feature-item">
+      <span class="fi-icon">▸</span>
+      <div class="fi-body">
+        <span class="fi-title" data-i18n="f3t">Vibe Engine</span>
+        <span class="fi-desc" data-i18n="f3d">Hooks track git commits, test runs, and tool calls — buddy reacts in real time.</span>
+      </div>
+    </li>
+    <li class="feature-item">
+      <span class="fi-icon">▸</span>
+      <div class="fi-body">
+        <span class="fi-title" data-i18n="f4t">Karaoke &amp; Live Player</span>
+        <span class="fi-desc" data-i18n="f4d">Full-screen LRC lyrics, album art in ANSI half-block, GameBoy retro border.</span>
+      </div>
+    </li>
+    <li class="feature-item">
+      <span class="fi-icon">▸</span>
+      <div class="fi-body">
+        <span class="fi-title" data-i18n="f5t">Statusline</span>
+        <span class="fi-desc" data-i18n="f5d">One line: mood face + track + progress bar + beat wave + current lyric.</span>
+      </div>
+    </li>
+  </ul>
+</div>
+
+<hr class="divider">
+
+<!-- STATUSLINE PREVIEW -->
+<div class="status-wrap">
+  <p class="section-head" data-i18n="status-head">statusline preview</p>
+  <div class="status-preview">
+    <span class="sp-face">(•_•)</span>&nbsp;
+    <span class="sp-bolt">⚡</span>&nbsp;&nbsp;
+    <span class="sp-play">▶</span>&nbsp;
+    <span class="sp-track">雨爱 — 杨丞琳</span>&nbsp;&nbsp;
+    <span class="sp-bar-f">██████</span><span class="sp-bar-e">░░░░░░░░</span>&nbsp;&nbsp;
+    <span class="sp-vibe">[build]</span>&nbsp;&nbsp;
+    <span class="sp-wave">▃▆█▆▃</span>&nbsp;&nbsp;
+    <span class="sp-pipe">│</span>&nbsp;
+    <span class="sp-lyric">♪ 不忍揭曉的劇情</span>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- MUSIC SOURCES -->
+<div class="sources-wrap">
+  <p class="section-head" data-i18n="src-head">music sources</p>
+  <div class="source-grid">
+    <div class="source-card">
+      <div class="sc-name">Apple Music</div>
+      <div class="sc-tag ok" data-i18n="src-am-1">✓ full playback</div>
+      <div class="sc-tag ok" data-i18n="src-am-2">✓ lyrics / art</div>
+      <div class="sc-tag ok" data-i18n="src-am-3">✓ like / seek</div>
+    </div>
+    <div class="source-card">
+      <div class="sc-name" data-i18n="src-local-name">Local Files</div>
+      <div class="sc-tag ok" data-i18n="src-lo-1">✓ afplay</div>
+      <div class="sc-tag warn" data-i18n="src-lo-2">⚠ no like</div>
+      <div class="sc-tag warn" data-i18n="src-lo-3">⚠ seek via restart</div>
+    </div>
+    <div class="source-card">
+      <div class="sc-name">QQ Music</div>
+      <div class="sc-tag warn" data-i18n="src-qq-1">⚠ 30s preview</div>
+      <div class="sc-tag ok" data-i18n="src-qq-2">✓ search</div>
+      <div class="sc-tag ok" data-i18n="src-qq-3">✓ like</div>
+    </div>
+  </div>
+</div>
+
+<!-- LINKS -->
+<hr class="divider">
+<div class="links-wrap">
+  <p class="section-head" data-i18n="links-head">related projects</p>
+  <div class="links-grid">
+    <a class="link-card" href="https://jianchengpan.space/ccf-ddl-tracker/" target="_blank" rel="noopener noreferrer">
+      <span class="lc-icon">▸</span>
+      <div class="lc-body">
+        <span class="lc-title">CCF DDL Tracker</span>
+        <span class="lc-desc" data-i18n="link-ccf">Academic deadline tracker for CCF conferences.</span>
+      </div>
+      <span class="lc-arrow">↗</span>
+    </a>
+    <a class="link-card" href="https://jianchengpan.space/citation-tracker/" target="_blank" rel="noopener noreferrer">
+      <span class="lc-icon">▸</span>
+      <div class="lc-body">
+        <span class="lc-title">Citation Tracker</span>
+        <span class="lc-desc" data-i18n="link-cit">Monitor citation counts for your papers in real time.</span>
+      </div>
+      <span class="lc-arrow">↗</span>
+    </a>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <span>MIT License</span>
+  <span class="sep">·</span>
+  <a href="https://github.com/jaychempan/coding-with-beat" target="_blank" rel="noopener">GitHub</a>
+  <span class="sep">·</span>
+  <a href="https://github.com/jaychempan/coding-with-beat/blob/main/README.md" target="_blank" rel="noopener" data-i18n="docs">Docs</a>
+  <span class="sep">·</span>
+  <span data-i18n="made">Made for Claude Code</span>
+</footer>
+
+<script>
+  /* ── i18n ── */
+  const I18N = {
+    en: {
+      eyebrow:       'a pixel companion for vibecoding',
+      sub:           'Music, lyrics, and a dancing DJ inside Claude Code. No browser tab needed.',
+      copy:          'COPY COMMAND',
+      'or-prefix':   'Or:',
+      manual:        'manual install →',
+      'feat-head':   'features',
+      f1t: 'MCP Server',
+      f1d: '21 tools — just say "play some lofi" or "skip this" inside Claude Code.',
+      f2t: 'Apple Music + Local + QQ',
+      f2d: 'AppleScript-driven, no GUI needed. Local afplay fallback. QQ Music 30s preview.',
+      f3t: 'Vibe Engine',
+      f3d: 'Hooks track git commits, test runs, and tool calls — buddy reacts in real time.',
+      f4t: 'Karaoke & Live Player',
+      f4d: 'Full-screen LRC lyrics, album art in ANSI half-block, GameBoy retro border.',
+      f5t: 'Statusline',
+      f5d: 'One line: mood face + track + progress bar + beat wave + current lyric.',
+      'status-head': 'statusline preview',
+      'src-head':    'music sources',
+      'src-am-1':    '✓ full playback',
+      'src-am-2':    '✓ lyrics / art',
+      'src-am-3':    '✓ like / seek',
+      'src-local-name': 'Local Files',
+      'src-lo-1':    '✓ afplay',
+      'src-lo-2':    '⚠ no like',
+      'src-lo-3':    '⚠ seek via restart',
+      'src-qq-1':    '⚠ 30s preview',
+      'src-qq-2':    '✓ search',
+      'src-qq-3':    '✓ like',
+      'links-head':  'related projects',
+      'link-ccf':    'Academic deadline tracker for CCF conferences.',
+      'link-cit':    'Monitor citation counts for your papers in real time.',
+      docs:          'Docs',
+      made:          'Made for Claude Code',
+    },
+    zh: {
+      eyebrow:       '振码时的像素 DJ 伴侣',
+      sub:           '在 Claude Code 里播音乐、看歌词、让 DJ Buddy 和你一起 vibe。',
+      copy:          '复制命令',
+      'or-prefix':   '或：',
+      manual:        '手动安装 →',
+      'feat-head':   '功能介绍',
+      f1t: 'MCP 服务器',
+      f1d: '21 个工具——直接说「放点 lofi」或「跳过这首」即可。',
+      f2t: 'Apple Music / 本地 / QQ 音乐',
+      f2d: 'AppleScript 驱动，无需打开 GUI。本地 afplay 兜底。QQ 音乐 30 秒试听。',
+      f3t: '氛围引擎',
+      f3d: 'Hooks 实时感知 git commit、测试运行、工具调用——Buddy 随之切换表情。',
+      f4t: '卡拉 OK & 实时播放器',
+      f4d: '全屏 LRC 歌词，ANSI 半格专辑封面，GameBoy 复古边框。',
+      f5t: '状态栏',
+      f5d: '一行：心情 + 曲目 + 进度条 + 律动波纹 + 当前歌词。',
+      'status-head': '状态栏预览',
+      'src-head':    '音乐来源',
+      'src-am-1':    '✓ 完整播放',
+      'src-am-2':    '✓ 歌词 / 封面',
+      'src-am-3':    '✓ 收藏 / 跳转',
+      'src-local-name': '本地文件',
+      'src-lo-1':    '✓ afplay',
+      'src-lo-2':    '⚠ 不支持收藏',
+      'src-lo-3':    '⚠ 跳转需重启',
+      'src-qq-1':    '⚠ 仅 30s 试听',
+      'src-qq-2':    '✓ 搜索',
+      'src-qq-3':    '✓ 收藏',
+      'links-head':  '友情链接',
+      'link-ccf':    'CCF 会议截稿日期追踪器。',
+      'link-cit':    '实时监控论文引用数量。',
+      docs:          '文档',
+      made:          '为 Claude Code 而生',
+    }
+  };
+
+  let currentLang = 'en';
+
+  function setLang(lang) {
+    currentLang = lang;
+    document.documentElement.lang = lang;
+    document.querySelectorAll('.lang-btn').forEach(b => {
+      b.classList.toggle('active', b.textContent.toLowerCase().replace('中文','zh') === lang ||
+        (lang === 'zh' && b.textContent === '中文') ||
+        (lang === 'en' && b.textContent === 'EN'));
+    });
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+      const k = el.getAttribute('data-i18n');
+      if (I18N[lang][k]) el.textContent = I18N[lang][k];
+    });
+    const copyBtn = document.getElementById('copy-btn');
+    if (copyBtn && !copyBtn.classList.contains('copied')) {
+      copyBtn.textContent = I18N[lang]['copy'];
+    }
+  }
+
+  /* ── Copy ── */
+  function copyInstall() {
+    const cmd = 'curl -LsSf https://raw.githubusercontent.com/jaychempan/coding-with-beat/main/bootstrap.sh | sh';
+    navigator.clipboard.writeText(cmd).then(() => {
+      const btn = document.getElementById('copy-btn');
+      btn.classList.add('copied');
+      btn.textContent = currentLang === 'zh' ? '已复制 ✓' : 'COPIED ✓';
+      setTimeout(() => {
+        btn.classList.remove('copied');
+        btn.textContent = I18N[currentLang]['copy'];
+      }, 2200);
+    });
+  }
+
+  /* ── Buddy animation: alternate arm frames ── */
+  const FRAMES = [
+    // groove 0 — arms wide
+    `  <span class="c-amber">╔════╗</span>  \n<span class="c-amber">═</span><span class="c-coral">[</span><span class="c-dim">│</span> <span class="c-yellow">♪♪</span> <span class="c-dim">│</span><span class="c-coral">]</span><span class="c-amber">═</span>\n  <span class="c-dim">│</span> <span class="c-cream">‿‿</span> <span class="c-dim">│</span>  \n  <span class="c-amber">╚════╝</span>  \n  <span class="c-ltgrn">▐</span><span class="c-green">████</span><span class="c-ltgrn">▌</span>  \n <span class="c-dim">╱</span><span class="c-ltgrn">▐</span><span class="c-green">█  █</span><span class="c-ltgrn">▌</span><span class="c-dim">╲</span>\n  <span class="c-ltgrn">▐</span><span class="c-green">█  █</span><span class="c-ltgrn">▌</span>  `,
+    // groove 1 — arms up
+    `  <span class="c-amber">╔════╗</span>  \n<span class="c-dim">╱</span><span class="c-coral">[</span><span class="c-dim">│</span> <span class="c-yellow">♫♪</span> <span class="c-dim">│</span><span class="c-coral">]</span><span class="c-dim">╲</span>\n  <span class="c-dim">│</span> <span class="c-cream">^‿^</span><span class="c-dim">│</span>  \n  <span class="c-amber">╚════╝</span>  \n  <span class="c-ltgrn">▐</span><span class="c-green">████</span><span class="c-ltgrn">▌</span>  \n  <span class="c-ltgrn">▐</span><span class="c-green">█  █</span><span class="c-ltgrn">▌</span>  \n <span class="c-dim">╱</span><span class="c-green">█  █</span><span class="c-dim">╲</span>  `,
+    // groove 2 — shimmy
+    `  <span class="c-amber">╔════╗</span>  \n<span class="c-amber">═</span><span class="c-coral">[</span><span class="c-dim">│</span> <span class="c-yellow">♪ </span> <span class="c-dim">│</span><span class="c-coral">]</span><span class="c-amber">═</span>\n  <span class="c-dim">│</span> <span class="c-cream">o‿o</span><span class="c-dim">│</span>  \n  <span class="c-amber">╚════╝</span>  \n <span class="c-ltgrn">▐</span><span class="c-green">████</span><span class="c-ltgrn">▌</span>   \n <span class="c-dim">╱</span><span class="c-ltgrn">▐</span><span class="c-green">█  █</span><span class="c-ltgrn">▌</span>  \n   <span class="c-green">█  █</span><span class="c-dim">╲</span>  `,
+  ];
+
+  let frameIdx = 0;
+  const buddyPre = document.getElementById('buddy-pre');
+
+  setInterval(() => {
+    frameIdx = (frameIdx + 1) % FRAMES.length;
+    buddyPre.innerHTML = FRAMES[frameIdx];
+  }, 600);
+</script>
+</body>
+</html>

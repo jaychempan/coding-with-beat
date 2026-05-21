@@ -13,7 +13,7 @@ import time
 from pathlib import Path
 from typing import Optional, Tuple
 
-from . import dj, juke_agent, state
+from . import dj, cwb_agent, state
 from .config import FILE_KIND_VIBES, LOG_FILE, ensure_dirs
 
 
@@ -22,6 +22,25 @@ def _file_kind(path: str) -> Optional[str]:
         return None
     suffix = Path(path).suffix.lstrip(".").lower()
     return FILE_KIND_VIBES.get(suffix)
+
+
+def _is_test_file(path: str) -> bool:
+    if not path:
+        return False
+    name = Path(path).name.lower()
+    return (
+        name.startswith("test_")
+        or name.endswith("_test.py")
+        or name.endswith("_test.ts")
+        or name.endswith(".test.ts")
+        or name.endswith(".test.js")
+        or name.endswith(".spec.ts")
+        or name.endswith(".spec.js")
+        or "/test/" in path
+        or "/tests/" in path
+        or "\\test\\" in path
+        or "\\tests\\" in path
+    )
 
 
 def classify(event: dict) -> Tuple[str, str]:
@@ -53,6 +72,8 @@ def classify(event: dict) -> Tuple[str, str]:
 
     if tool in ("edit", "write", "multiedit"):
         path = tool_input.get("file_path") or ""
+        if _is_test_file(path):
+            return ("focus", "debug")
         kind = _file_kind(path)
         return ("focus", kind or "build")
 
@@ -62,8 +83,8 @@ def classify(event: dict) -> Tuple[str, str]:
     return dj.mood_from_event(event)
 
 
-def handle_juke_prompt_expansion(event: dict) -> Optional[dict]:
-    return juke_agent.handle_prompt_expansion(event)
+def handle_cwb_prompt_expansion(event: dict) -> Optional[dict]:
+    return cwb_agent.handle_prompt_expansion(event)
 
 
 def handle_hook(event: dict) -> dict:
@@ -100,7 +121,7 @@ def _log(msg: str) -> None:
 
 def main() -> int:
     """Hook entry point. Reads JSON from stdin, updates state, exits 0."""
-    if os.environ.get("CC_JUKEBOX_DISABLE_HOOK") == "1":
+    if os.environ.get("CWB_DISABLE_HOOK") == "1":
         return 0
     raw = ""
     try:
@@ -108,9 +129,9 @@ def main() -> int:
         event = json.loads(raw) if raw.strip() else {}
     except Exception:
         event = {}
-    juke_response = handle_juke_prompt_expansion(event)
-    if juke_response is not None:
-        print(json.dumps(juke_response, ensure_ascii=False))
+    cwb_response = handle_cwb_prompt_expansion(event)
+    if cwb_response is not None:
+        print(json.dumps(cwb_response, ensure_ascii=False))
         return 0
     handle_hook(event)
     return 0

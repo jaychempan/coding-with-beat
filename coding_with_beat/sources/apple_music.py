@@ -38,7 +38,7 @@ def _lrclib_lyrics(title: str, artist: str, album: str, duration: float) -> Opti
             r = c.get(
                 "https://lrclib.net/api/get",
                 params=params,
-                headers={"Lrclib-Client": "cc-jukebox/1.0"},
+                headers={"Lrclib-Client": "coding-with-beat/1.0"},
             )
             if r.status_code != 200:
                 return None
@@ -173,7 +173,16 @@ end tell
         return False
 
 
-_CATALOG_STOREFRONTS = ("cn", "jp", "us", "hk", "tw")
+# Storefronts tried in priority order.  The list is intentionally broad so
+# CJK-region music is found even for users whose Apple ID is in a Western
+# storefront, and vice-versa.
+_ALL_CATALOG_STOREFRONTS = (
+    "cn", "hk", "tw", "jp", "kr",           # CJK — first for most users of this tool
+    "us", "gb", "au", "ca", "nz",            # English-speaking
+    "sg", "my", "th", "ph", "id", "vn",      # SE Asia
+    "de", "fr", "es", "it", "nl", "se",      # Europe
+    "in", "br", "mx", "sa", "ae",            # Global
+)
 
 # Descriptive suffixes that confuse iTunes Search (it does literal substring
 # matching on title/artist, not semantic search). When a query ends with one
@@ -196,75 +205,159 @@ def _catalog_query_variants(query: str):
                 yield stripped
 
 
+def _detect_storefront() -> Optional[str]:
+    """Infer the user's Apple Music storefront from the currently playing
+    track's store URL (e.g. music.apple.com/cn/album/…  →  'cn').
+    Returns None when Music.app isn't running or has no catalog track."""
+    try:
+        url = _osa("tell application \"Music\" to get store URL of current track")
+        m = re.search(r"music\.apple\.com/([a-z]{2,3})/", url or "")
+        if m:
+            return m.group(1)
+    except Exception:
+        pass
+    return None
+
+
+def _best_hit(results: list, query: str) -> Optional[dict]:
+    """Pick the most relevant result from an iTunes Search response list.
+    Prefers exact title matches; falls back to first result."""
+    if not results:
+        return None
+    q_lower = query.lower()
+    for hit in results:
+        name = (hit.get("trackName") or "").lower()
+        if name == q_lower or name.startswith(q_lower):
+            return hit
+    return results[0]
+
+
+def _play_preview(preview_url: str, title: str, artist: str) -> bool:
+    """Play a 30-second iTunes preview via afplay (works without subscription).
+    Pauses Music.app first so the audio doesn't clash."""
+    import sys
+    if not preview_url:
+        return False
+    try:
+        _osa_silent('tell application "Music" to pause')
+        subprocess.Popen(
+            ["afplay", preview_url],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        print(
+            f"♪ 30s preview: {title} — {artist}\n"
+            f"  (Apple Music 订阅可播完整版)",
+            file=sys.stderr,
+        )
+        return True
+    except Exception:
+        return False
+
+
 def _play_catalog(query: str) -> bool:
-    """Hit Apple's public iTunes Search API and ask Music.app to open the top
-    song hit. Tries multiple storefronts because the default US store often
-    misses CJK catalog entries. Returns True iff playback actually started
-    (Music.app reports 'playing' afterwards). If a song was found but Music
-    couldn't play it (typical when no Apple Music subscription), prints a
-    diagnostic to stderr and returns False."""
+    """Search the Apple Music catalog via the public iTunes Search API and ask
+    Music.app to open the best hit.
+
+    Strategy:
+    1. Auto-detect the user's storefront from the current track's store URL;
+       put it first in the attempt list so regional catalog content is found
+       immediately (important for CN/KR/JP users).
+    2. Try up to _ALL_CATALOG_STOREFRONTS until a hit is found.
+    3. Attempt full playback via `music.apple.com` URL (requires subscription).
+    4. If Music.app can't play the full track (no subscription / wrong Apple ID),
+       fall back to a 30-second afplay preview using the iTunes previewUrl.
+    """
     import sys, time
     try:
         import httpx
     except ImportError:
         return False
-    hit = None
+
+    # Build ordered storefront list: detected region first
+    detected = _detect_storefront()
+    storefronts: list[str] = list(_ALL_CATALOG_STOREFRONTS)
+    if detected and detected in storefronts:
+        storefronts.remove(detected)
+        storefronts.insert(0, detected)
+    elif detected:
+        storefronts.insert(0, detected)
+
+    hit: Optional[dict] = None
     storefront = "us"
     try:
         with httpx.Client(timeout=6.0) as c:
             for term in _catalog_query_variants(query):
-                for sf in _CATALOG_STOREFRONTS:
+                for sf in storefronts:
                     try:
                         r = c.get(
                             "https://itunes.apple.com/search",
-                            params={"term": term, "entity": "song", "limit": 1, "country": sf},
+                            params={"term": term, "entity": "song",
+                                    "limit": 5, "country": sf},
                         )
                         data = r.json()
                     except Exception:
                         continue
-                    hits = data.get("results") or []
-                    if hits and hits[0].get("trackId"):
-                        hit = hits[0]
+                    candidate = _best_hit(data.get("results") or [], term)
+                    if candidate and candidate.get("trackId"):
+                        hit = candidate
                         storefront = sf
                         break
                 if hit:
                     break
     except Exception:
         return False
+
     if not hit:
         return False
+
     tid = hit["trackId"]
     title = hit.get("trackName") or "?"
     artist = hit.get("artistName") or "?"
+    preview_url = hit.get("previewUrl") or ""
     url = f"https://music.apple.com/{storefront}/song/{tid}"
+
     _osa_silent(f'tell application "Music" to open location "{url}"')
-    time.sleep(1.4)
+    time.sleep(1.5)
     _osa_silent('tell application "Music" to play')
-    time.sleep(0.6)
-    try:
-        state = _osa('tell application "Music" to get player state as text')
-    except Exception:
-        state = ""
-    # When no Apple Music subscription, Music.app enters a degenerate state:
-    # player_state may read 'playing' but the "current track" is just a stub
-    # whose name is the numeric storeID and whose artist is empty. Detect
-    # that and report honest failure.
-    current_name = ""
-    try:
-        current_name = _osa('tell application "Music" to get name of current track')
-    except Exception:
-        pass
-    real_playback = (state == "playing" and current_name and current_name != str(tid))
-    if real_playback:
+
+    # Poll up to ~5s for Music.app to confirm real playback
+    real_playback = False
+    for _ in range(6):
+        time.sleep(0.8)
+        try:
+            st = _osa('tell application "Music" to get player state as text')
+        except Exception:
+            st = ""
+        try:
+            current_name = _osa('tell application "Music" to get name of current track')
+        except Exception:
+            current_name = ""
+        # A stub (no subscription) has the numeric trackId as the track name
+        real_playback = (st == "playing" and current_name and current_name != str(tid))
+        if real_playback:
+            return True
+        if st not in ("playing", "stopped", ""):
+            continue  # still buffering
+
+    # Full playback failed — clean up stub track
+    _osa_silent(f'''tell application "Music"
+        stop
+        try
+            set badTracks to (every track of library playlist 1 whose name is "{tid}")
+            repeat with t in badTracks
+                delete t
+            end repeat
+        end try
+    end tell''')
+
+    # Fallback: play 30-second preview if available
+    if preview_url and _play_preview(preview_url, title, artist):
         return True
-    # Stop the stub playback so the player doesn't keep "playing" garbage.
-    _osa_silent('tell application "Music" to stop')
+
     print(
         f"! catalog hit: {title} — {artist} ({url})\n"
-        f"  Music.app couldn't actually play it — "
-        f"this almost always means no active Apple Music subscription, "
-        f"or you're not signed in with the subscribing Apple ID.\n"
-        f"  Add the song to your library manually, or pick something local.",
+        f"  无法播放 — 请确认 Apple Music 订阅已激活且使用正确的 Apple ID 登录。",
         file=sys.stderr,
     )
     return False
@@ -491,6 +584,11 @@ end tell
             return self.now_playing()
         if _play_catalog(query):
             import time
-            time.sleep(0.6)
+            # Wait longer for Music.app to load the catalog track
+            for _ in range(5):
+                time.sleep(0.8)
+                np = self.now_playing()
+                if np.title:
+                    return np
             return self.now_playing()
         return None

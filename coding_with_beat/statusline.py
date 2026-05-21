@@ -9,6 +9,7 @@ and renders the program's stdout as the bottom bar. We must:
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -18,13 +19,14 @@ import time
 from . import state, focus, dj
 from .mcp_client import MCPClientError, call_tool
 from .lyrics_snapshot import line_from_text
-from .ui.progress import render_progress
+from .ui.progress import render_progress, render_beat_wave
 
 
 # If our cached position sample is older than this, do a fast re-poll
 # of the source before rendering. ~50–150ms for AppleScript; acceptable.
 _STALE_AFTER = 2.5
-_STATUSLINE_MCP_TIMEOUT_ENV = "CC_JUKEBOX_STATUSLINE_MCP_TIMEOUT"
+_STATUSLINE_MCP_TIMEOUT_ENV = "CWB_STATUSLINE_MCP_TIMEOUT"
+_LEGACY_STATUSLINE_MCP_TIMEOUT_ENV = "CC_JUKEBOX_STATUSLINE_MCP_TIMEOUT"
 _STATUSLINE_MCP_TIMEOUT_DEFAULT = 1.5
 _ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
 
@@ -40,7 +42,7 @@ def _mmss(seconds: float) -> str:
 
 
 def _statusline_mcp_timeout() -> float:
-    raw = os.environ.get(_STATUSLINE_MCP_TIMEOUT_ENV, "")
+    raw = os.environ.get(_STATUSLINE_MCP_TIMEOUT_ENV, "") or os.environ.get(_LEGACY_STATUSLINE_MCP_TIMEOUT_ENV, "")
     if not raw:
         return _STATUSLINE_MCP_TIMEOUT_DEFAULT
     try:
@@ -146,6 +148,7 @@ def _live_position(st) -> float:
     return pos
 
 
+_KEY_RE = re.compile(r"[^a-zA-Z0-9一-鿿]+")
 # Accent colour per vibe — tints the progress bar, play icon, vibe chip, and quip.
 _VIBE_ACCENT: dict[str, tuple[int, int, int]] = {
     "build":   (155, 188,  15),  # GameBoy green
@@ -164,8 +167,16 @@ _QUIP_TTL   = 4.0  # seconds to show DJ quip before falling back to lyric
 
 def render(term_width: int = 0) -> str:
     st = state.load()
+
+    mode = st.statusline_mode or "show"
+    if mode == "hide":
+        return ""
+
     st, unsupported_reason = _maybe_refresh(st)
     f = focus.status()
+
+    if mode == "auto" and not st.playing and not f.active:
+        return ""
 
     ar, ag, ab = _VIBE_ACCENT.get(st.vibe or "build", (155, 188, 15))
     pos = _live_position(st)
@@ -200,7 +211,7 @@ def render(term_width: int = 0) -> str:
     elif st.source == "qq_music":
         track = "\x1b[38;2;120;130;130mqq_music now-playing unsupported\x1b[0m"
     else:
-        track = "\x1b[38;2;120;130;130mno track loaded — try /juke play 周杰伦\x1b[0m"
+        track = "\x1b[38;2;120;130;130mno track loaded — try /cwb play 周杰伦\x1b[0m"
 
     focus_chip = ""
     if f.active:
@@ -211,10 +222,20 @@ def render(term_width: int = 0) -> str:
 
     line1 = f"{face_part}  {track}{vibe_chip}{focus_chip}"
 
+    # ── beat wave chip (far right) ─────────────────────────────
+    beat_chip = ""
+    beat_chip_visible = 0
+    if st.track.title:
+        _key = _KEY_RE.sub("_", f"{st.track.artist}_{st.track.album}_{st.track.title}").strip("_")[:160]
+        _h = int(hashlib.md5(_key.encode()).hexdigest()[:8], 16)
+        _bpm = 72 + (_h % 80)
+        beat_chip = f"  {render_beat_wave(_bpm, now, accent=(ar, ag, ab), playing=st.playing)}"
+        beat_chip_visible = _vlen(beat_chip)  # 2 spaces + 5 wave chars = 7
+
     # ── lyric / DJ quip chip (width-aware) ─────────────────────
-    # Available chars for chip text = terminal_width - visible(line1) - overhead.
+    # Available chars for chip text = terminal_width - visible(line1) - overhead - beat wave.
     # overhead: "  │ " = 4 visible chars; prefix "♪ " or "✦ " = 2 each.
-    avail = (term_width - _vlen(line1) - 4) if term_width > 0 else 999
+    avail = (term_width - _vlen(line1) - 4 - beat_chip_visible) if term_width > 0 else 999
 
     quip_age = now - (st.dj_quip_at or 0)
     if st.dj_quip and quip_age < _QUIP_TTL:
@@ -246,7 +267,7 @@ def render(term_width: int = 0) -> str:
     else:
         chip = f"  \x1b[38;2;55;58;72m♪\x1b[0m" if avail >= 3 else ""
 
-    return f"{line1}{chip}"
+    return f"{line1}{beat_chip}{chip}"
 
 
 def main() -> int:

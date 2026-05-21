@@ -5,7 +5,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
 
-from cc_jukebox import mcp_client
+from coding_with_beat import mcp_client
 
 
 class MCPClientConfigTest(unittest.TestCase):

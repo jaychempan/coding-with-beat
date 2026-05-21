@@ -4,12 +4,13 @@ import sys
 import unittest
 from unittest import mock
 
-from cc_jukebox import __main__ as cli
+from coding_with_beat import __main__ as cli
+from coding_with_beat import mcp_client
 
 
 class CliCommandTest(unittest.TestCase):
     def test_server_command_configures_streamable_http_server(self):
-        from cc_jukebox.server import mcp
+        from coding_with_beat.server import mcp
 
         old_host = mcp.settings.host
         old_port = mcp.settings.port
@@ -22,7 +23,7 @@ class CliCommandTest(unittest.TestCase):
                     sys,
                     "argv",
                     [
-                        "cc-jukebox",
+                        "cwb",
                         "server",
                         "--host",
                         "127.0.0.1",
@@ -63,8 +64,11 @@ class CliCommandTest(unittest.TestCase):
             (["prev"], "prev_track", {}),
             (["like"], "like_current", {}),
             (["mode", "shuffle"], "set_play_mode", {"mode": "shuffle"}),
+            (["mode", "随机"], "set_play_mode", {"mode": "shuffle"}),
             (["source"], "current_source", {}),
             (["source", "qq_music"], "set_source", {"name": "qq_music"}),
+            (["volume", "70"], "set_volume", {"percent": 70}),
+            (["seek", "1:30"], "seek", {"seconds": 90.0}),
             (["cover"], "show_cover", {"style": "rgb", "width": 40, "height": 20}),
             (["cover", "gameboy"], "show_cover", {"style": "gameboy", "width": 40, "height": 20}),
             (["lyrics"], "show_lyrics", {"window": 7}),
@@ -78,8 +82,8 @@ class CliCommandTest(unittest.TestCase):
             with self.subTest(argv=argv):
                 out = io.StringIO()
                 with (
-                    mock.patch.object(sys, "argv", ["cc-jukebox", *argv]),
-                    mock.patch("cc_jukebox.mcp_client.call_tool", return_value="ok") as call_tool,
+                    mock.patch.object(sys, "argv", ["cwb", *argv]),
+                    mock.patch.object(mcp_client, "call_tool", return_value="ok") as call_tool,
                     contextlib.redirect_stdout(out),
                 ):
                     code = cli.main()
@@ -89,14 +93,12 @@ class CliCommandTest(unittest.TestCase):
                 self.assertEqual(out.getvalue(), "ok\n")
 
     def test_music_cli_mcp_errors_do_not_fallback_to_local_source(self):
-        from cc_jukebox.mcp_client import MCPClientError
-
-        err = MCPClientError("server unavailable")
+        err = mcp_client.MCPClientError("server unavailable")
         out = io.StringIO()
         stderr = io.StringIO()
         with (
-            mock.patch.object(sys, "argv", ["cc-jukebox", "next"]),
-            mock.patch("cc_jukebox.mcp_client.call_tool", side_effect=err) as call_tool,
+            mock.patch.object(sys, "argv", ["cwb", "next"]),
+            mock.patch.object(mcp_client, "call_tool", side_effect=err) as call_tool,
             contextlib.redirect_stdout(out),
             contextlib.redirect_stderr(stderr),
         ):
