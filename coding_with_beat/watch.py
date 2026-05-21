@@ -19,6 +19,7 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 from . import dj, state
+from .state import write_history
 from .sources import get_source
 from .sources.base import NowPlaying
 from .ui import (
@@ -64,6 +65,7 @@ def _poll(src, cache: _Cache) -> None:
     key = _track_key(np)
     if key != cache.last_track_key:
         cache.last_track_key = key
+        write_history(np.title, np.artist, np.album)
         fn = getattr(src, "lyrics", None)
         if callable(fn) and np.title:
             try:
@@ -132,13 +134,15 @@ def _render_frame(cache: _Cache, width: int) -> str:
     if cache.lyrics:
         blocks.append("\x1b[38;2;90;90;105m─── lyrics ───\x1b[0m")
         blocks.append(render_lyrics_wave(
-            cache.lyrics, position=pos, duration=np.duration, window=5, t=t
+            cache.lyrics, position=pos, duration=np.duration, window=5, t=t,
+            width=width - 6,
         ))
     else:
         blocks.append("\x1b[38;2;120;130;130m  (no lyrics for this track)\x1b[0m")
 
     mood = st.dj_mood or ("groove" if np.playing else "neutral")
-    blocks.append(f"\x1b[38;2;155;188;15m{dj.sprite(mood)}\x1b[0m")
+    frame_idx = int(t * 2) % 3
+    blocks.append(dj.pixel_person_frame(mood, frame_idx, colored=True))
 
     return boxed(
         f"CWB · {np.source} · LIVE",
@@ -155,33 +159,104 @@ _HOME       = "\x1b[H"
 _CLEAR      = "\x1b[2J"
 
 
+def _setup_raw_tty():
+    """Switch stdin to raw mode; returns (fd, old_settings) or None if not a tty."""
+    try:
+        import termios, tty
+        fd = sys.stdin.fileno()
+        old = termios.tcgetattr(fd)
+        tty.setraw(fd)
+        return fd, old
+    except Exception:
+        return None
+
+
+def _restore_tty(raw_state) -> None:
+    if raw_state is None:
+        return
+    try:
+        import termios
+        fd, old = raw_state
+        termios.tcsetattr(fd, termios.TCSADRAIN, old)
+    except Exception:
+        pass
+
+
+def _read_key(raw_state) -> str:
+    """Non-blocking single-char read. Returns '' if no key is waiting."""
+    if raw_state is None:
+        return ""
+    try:
+        import select
+        if select.select([sys.stdin], [], [], 0)[0]:
+            return sys.stdin.read(1)
+    except Exception:
+        pass
+    return ""
+
+
 def run(width: int = DEFAULT_WIDTH) -> int:
+    import shutil
+    _width = [width if width > 0 else shutil.get_terminal_size((80, 24)).columns]
+
     cache = _Cache()
     st = state.load()
     src = get_source(st.source)
     _poll(src, cache)
 
+    raw_state = _setup_raw_tty()
+
     sys.stdout.write(_ENTER_ALT + _HIDE_CURSOR + _CLEAR)
     sys.stdout.flush()
 
     def _restore(*_):
+        _restore_tty(raw_state)
         sys.stdout.write(_SHOW_CURSOR + _EXIT_ALT)
         sys.stdout.flush()
         sys.exit(0)
 
+    def _resize(*_):
+        _width[0] = shutil.get_terminal_size((80, 24)).columns
+        sys.stdout.write(_CLEAR)
+
     signal.signal(signal.SIGINT, _restore)
     signal.signal(signal.SIGTERM, _restore)
+    signal.signal(signal.SIGWINCH, _resize)
 
     interval = 1.0 / FRAME_HZ
     try:
         while True:
+            key = _read_key(raw_state)
+            if key in ("q", "Q", "\x03"):   # q / Ctrl-C
+                break
+            elif key == " ":
+                src.toggle()
+                _poll(src, cache)
+            elif key in ("n", "N"):
+                src.next()
+                time.sleep(0.4)
+                _poll(src, cache)
+            elif key in ("p", "P"):
+                src.prev()
+                time.sleep(0.4)
+                _poll(src, cache)
+            elif key in ("l", "L"):
+                try:
+                    src.like_current()
+                except Exception:
+                    pass
+
             if time.time() - cache.last_poll >= POLL_EVERY:
                 _poll(src, cache)
-            frame = _render_frame(cache, width)
-            sys.stdout.write(_HOME + frame + "\n")
+            term_h = shutil.get_terminal_size((80, 24)).lines
+            frame = _render_frame(cache, _width[0])
+            lines = frame.split("\n")
+            clipped = "\n".join(lines[:term_h - 1])
+            sys.stdout.write(_HOME + clipped + "\x1b[J")
             sys.stdout.flush()
             time.sleep(interval)
     finally:
+        _restore_tty(raw_state)
         sys.stdout.write(_SHOW_CURSOR + _EXIT_ALT)
         sys.stdout.flush()
     return 0

@@ -19,6 +19,42 @@ DIM       = "\x1b[38;2;120;130;130m"
 EDGE      = "\x1b[38;2;90;90;105m"
 RESET     = "\x1b[0m"
 
+_PREFIX_W = 2  # "▶ " / "  " prefix display width
+
+
+def _char_width(ch: str) -> int:
+    cp = ord(ch)
+    if (0x1100 <= cp <= 0x115F or 0x2E80 <= cp <= 0x303E or
+            0x3040 <= cp <= 0x33FF or 0x3400 <= cp <= 0x4DBF or
+            0x4E00 <= cp <= 0x9FFF or 0xA000 <= cp <= 0xA4CF or
+            0xAC00 <= cp <= 0xD7AF or 0xF900 <= cp <= 0xFAFF or
+            0xFE10 <= cp <= 0xFE6F or 0xFF01 <= cp <= 0xFF60 or
+            0xFFE0 <= cp <= 0xFFE6):
+        return 2
+    return 1
+
+
+def _display_width(s: str) -> int:
+    return sum(_char_width(c) for c in s)
+
+
+def _wrap_text(line: str, max_w: int) -> List[str]:
+    """Split line into chunks that each fit within max_w display columns."""
+    if max_w <= 0 or _display_width(line) <= max_w:
+        return [line]
+    chunks, cur, cur_w = [], "", 0
+    for ch in line:
+        cw = _char_width(ch)
+        if cur_w + cw > max_w:
+            chunks.append(cur)
+            cur, cur_w = ch, cw
+        else:
+            cur += ch
+            cur_w += cw
+    if cur:
+        chunks.append(cur)
+    return chunks or [line]
+
 
 _LRC_RE = re.compile(r"\[(\d+):(\d+(?:\.\d+)?)\]")
 
@@ -58,6 +94,7 @@ def render_lyrics_window(
     duration: float = 0.0,
     window: int = 5,
     current_index: int = -1,
+    width: Optional[int] = None,
 ) -> str:
     """Render a window of lyrics with the active line highlighted.
 
@@ -99,15 +136,27 @@ def render_lyrics_window(
     end = min(len(lines), start + window)
     start = max(0, end - window)
 
+    if width is None:
+        import shutil
+        width = shutil.get_terminal_size((80, 24)).columns
+    text_w = max(1, width - _PREFIX_W)
+
     out = []
     for i in range(start, end):
-        line = lines[i] or "·"
+        raw = lines[i] or "·"
+        chunks = _wrap_text(raw, text_w)
         if i == current_index:
-            out.append(f"{HIGHLIGHT}▶ {line}{RESET}")
+            out.append(f"{HIGHLIGHT}▶ {chunks[0]}{RESET}")
+            for chunk in chunks[1:]:
+                out.append(f"{HIGHLIGHT}  {chunk}{RESET}")
         elif i == current_index + 1:
-            out.append(f"{NEXT}  {line}{RESET}")
+            out.append(f"{NEXT}  {chunks[0]}{RESET}")
+            for chunk in chunks[1:]:
+                out.append(f"{NEXT}  {chunk}{RESET}")
         else:
-            out.append(f"{DIM}  {line}{RESET}")
+            out.append(f"{DIM}  {chunks[0]}{RESET}")
+            for chunk in chunks[1:]:
+                out.append(f"{DIM}  {chunk}{RESET}")
     return "\n".join(out)
 
 
@@ -138,6 +187,7 @@ def render_lyrics_wave(
     duration: float = 0.0,
     window: int = 5,
     t: float = 0.0,
+    width: Optional[int] = None,
 ) -> str:
     """Like render_lyrics_window but the active line has a per-character wave
     animation driven by wall-clock time t, plus a brief white flash on entry."""
@@ -179,13 +229,25 @@ def render_lyrics_wave(
     end = min(len(lines), start + window)
     start = max(0, end - window)
 
+    if width is None:
+        import shutil
+        width = shutil.get_terminal_size((80, 24)).columns
+    text_w = max(1, width - _PREFIX_W)
+
     out = []
     for i in range(start, end):
-        line = lines[i] or "·"
+        raw = lines[i] or "·"
+        chunks = _wrap_text(raw, text_w)
         if i == current_index:
-            out.append(f"▶ {_wave_line(line, t, flash)}")
+            out.append(f"▶ {_wave_line(chunks[0], t, flash)}")
+            for chunk in chunks[1:]:
+                out.append(f"  {_wave_line(chunk, t, 0.0)}")
         elif i == current_index + 1:
-            out.append(f"{NEXT}  {line}{RESET}")
+            out.append(f"{NEXT}  {chunks[0]}{RESET}")
+            for chunk in chunks[1:]:
+                out.append(f"{NEXT}  {chunk}{RESET}")
         else:
-            out.append(f"{DIM}  {line}{RESET}")
+            out.append(f"{DIM}  {chunks[0]}{RESET}")
+            for chunk in chunks[1:]:
+                out.append(f"{DIM}  {chunk}{RESET}")
     return "\n".join(out)

@@ -1,10 +1,11 @@
+import datetime
 import json
 import os
 import time
 from dataclasses import asdict, dataclass, field
 from typing import Optional
 
-from .config import STATE_FILE, ensure_dirs
+from .config import DATA_DIR, STATE_FILE, ensure_dirs
 
 
 @dataclass
@@ -37,6 +38,7 @@ class JukeboxState:
     dj_quip: str = ""
     dj_quip_at: float = 0.0
     last_tool_at: float = 0.0
+    statusline_mode: str = "show"   # show | hide | auto
 
 
 def load() -> JukeboxState:
@@ -57,6 +59,19 @@ def save(state: JukeboxState) -> None:
     tmp = STATE_FILE.with_suffix(".tmp")
     tmp.write_text(json.dumps(asdict(state), ensure_ascii=False, indent=2))
     os.replace(tmp, STATE_FILE)
+
+
+def write_history(title: str, artist: str, album: str) -> None:
+    if not title:
+        return
+    ensure_dirs()
+    ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    entry = f"{ts} | {title} | {artist or '?'} | {album or '?'}\n"
+    try:
+        with open(DATA_DIR / "history.log", "a", encoding="utf-8") as f:
+            f.write(entry)
+    except Exception:
+        pass
 
 
 def update(**fields) -> JukeboxState:

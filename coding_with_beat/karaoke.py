@@ -18,10 +18,11 @@ from dataclasses import dataclass, field
 from typing import List, Optional, Tuple
 
 from . import state
+from .state import write_history
 from .sources import get_source
 from .sources.base import NowPlaying
 from .ui.frame import _strip_ansi
-from .ui.lyrics import parse_lrc, _index_for_position
+from .ui.lyrics import parse_lrc, _index_for_position, _display_width
 from .ui.progress import render_progress, render_spectrum_color
 
 
@@ -64,6 +65,7 @@ def _poll(src, cache: _Cache) -> None:
     key = f"{np.title}\x1f{np.artist}"
     if key != cache.last_track_key:
         cache.last_track_key = key
+        write_history(np.title, np.artist, "")
         fn = getattr(src, "lyrics", None)
         txt: Optional[str] = None
         if callable(fn) and np.title:
@@ -106,14 +108,14 @@ def _wave_line(line: str, t: float, flash: float = 0.0) -> str:
 
 
 def _centre(text: str, width: int) -> str:
-    vis = len(_strip_ansi(text))
+    vis = _display_width(_strip_ansi(text))
     pad = max(0, (width - vis) // 2)
     return " " * pad + text
 
 
 def _pad_line(text: str, width: int) -> str:
     """Return text padded with spaces to fill `width` visible chars (clears old content)."""
-    vis = len(_strip_ansi(text))
+    vis = _display_width(_strip_ansi(text))
     return text + " " * max(0, width - vis)
 
 
@@ -217,38 +219,102 @@ _NORM = "\x1b[?1049l"
 _HOME = "\x1b[H"
 
 
+def _setup_raw_tty():
+    try:
+        import termios, tty
+        fd = sys.stdin.fileno()
+        old = termios.tcgetattr(fd)
+        tty.setraw(fd)
+        return fd, old
+    except Exception:
+        return None
+
+
+def _restore_tty(raw_state) -> None:
+    if raw_state is None:
+        return
+    try:
+        import termios
+        fd, old = raw_state
+        termios.tcsetattr(fd, termios.TCSADRAIN, old)
+    except Exception:
+        pass
+
+
+def _read_key(raw_state) -> str:
+    if raw_state is None:
+        return ""
+    try:
+        import select
+        if select.select([sys.stdin], [], [], 0)[0]:
+            return sys.stdin.read(1)
+    except Exception:
+        pass
+    return ""
+
+
 def run(width: int = 0) -> int:
     import shutil
-    if width <= 0:
-        width = shutil.get_terminal_size((80, 24)).columns
+    _width = [width if width > 0 else shutil.get_terminal_size((80, 24)).columns]
 
     cache = _Cache()
     st = state.load()
     src = get_source(st.source)
     _poll(src, cache)
 
+    raw_state = _setup_raw_tty()
+
     sys.stdout.write(_ALT + _HIDE)
     sys.stdout.flush()
 
     def _restore(*_):
+        _restore_tty(raw_state)
         sys.stdout.write(_SHOW + _NORM)
         sys.stdout.flush()
         sys.exit(0)
 
+    def _resize(*_):
+        _width[0] = shutil.get_terminal_size((80, 24)).columns
+
     signal.signal(signal.SIGINT, _restore)
     signal.signal(signal.SIGTERM, _restore)
+    signal.signal(signal.SIGWINCH, _resize)
 
     interval = 1.0 / FRAME_HZ
     try:
         while True:
+            key = _read_key(raw_state)
+            if key in ("q", "Q", "\x03"):
+                break
+            elif key == " ":
+                src.toggle()
+                _poll(src, cache)
+            elif key in ("n", "N"):
+                src.next()
+                time.sleep(0.4)
+                _poll(src, cache)
+            elif key in ("p", "P"):
+                src.prev()
+                time.sleep(0.4)
+                _poll(src, cache)
+            elif key in ("l", "L"):
+                try:
+                    src.like_current()
+                except Exception:
+                    pass
+
             t = time.time()
             if t - cache.last_poll >= POLL_EVERY:
                 _poll(src, cache)
-            frame = _render(cache, width, t)
-            sys.stdout.write(_HOME + frame)
+            term_h = shutil.get_terminal_size((80, 24)).lines
+            frame = _render(cache, _width[0], t)
+            lines = frame.split("\n")
+            clipped = "\n".join(lines[:term_h - 1])
+            sys.stdout.write(_HOME + clipped + "\x1b[J")
             sys.stdout.flush()
             time.sleep(interval)
     finally:
+        _restore_tty(raw_state)
         sys.stdout.write(_SHOW + _NORM)
         sys.stdout.flush()
     return 0

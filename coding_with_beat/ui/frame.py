@@ -64,10 +64,14 @@ _BANNER_LINES = [
 
 
 def retro_banner(subtitle: str = "press any key to play") -> str:
-    out = []
+    # "CODING" in spaced small caps above the big "WITH BEAT" wordmark
+    coding = "C  O  D  I  N  G"
+    out = [f"\x1b[1;38;2;200;200;230m{coding.center(70)}{RESET}"]
     for line in _BANNER_LINES:
         out.append(f"{GB_GREEN}{line}{RESET}")
-    out.append(f"\x1b[38;2;200;200;230m{subtitle.center(70)}{RESET}")
+    out.append(f"\x1b[38;2;155;188;15m{'· · · coding  with  beat · · ·'.center(70)}{RESET}")
+    if subtitle not in ("press any key to play",):
+        out.append(f"\x1b[38;2;180;180;200m{subtitle.center(70)}{RESET}")
     return "\n".join(out)
 
 

@@ -72,6 +72,31 @@ Claude 会调 `show_player`，把像素播放器画在终端里。或者直接 `
 
 ---
 
+## 状态栏解读
+
+装好之后，Claude Code 底部会出现一行状态栏，长这样：
+
+```
+(•_•) ⚡  ▶ 雨爱 — 杨丞琳  ██████░░░░░░░░  [build]  ▃▆█▆▃  │ ♪ 不忍揭曉的劇情
+```
+
+从左到右：
+
+| 元素 | 示例 | 说明 |
+|------|------|------|
+| DJ 表情 | `(•_•)` `(^_^)` `(T_T)` | Buddy 当前心情，随编码事件变化 |
+| 热度指示 | `⚡` / `·` / _(无)_ | `⚡` = 15 秒内有工具调用；`·` = 90 秒内；空 = 已冷却 |
+| 播放图标 | `▶` / `▷` (每秒闪烁) / `❚❚` | 播放中每秒在 ▶ ▷ 之间切换；暂停显示 ❚❚ |
+| 曲目 | `雨爱 — 杨丞琳  ██████░░░░░░░░` | 曲名 + 艺术家 + 14 格进度条 |
+| Vibe | `[build]` `[focus]` 等 | 当前编码氛围，颜色随心情变化 |
+| 番茄钟 | `🍅 work 24:15` `☕ break 04:30` | 仅专注模式激活时出现 |
+| 律动波纹 | `▁▂▃▄▅` | BPM 由曲目哈希派生，每拍涨落一次；暂停时显示暗色平线 |
+| 歌词 / 台词 | `│ ♪ 不忍揭曉的劇情` / `│ ✦ 台词` | 当前 LRC 歌词；收到 DJ 台词时短暂替换为 ✦ 版本 |
+
+终端宽度不足时，歌词自动截断；更窄时波纹和歌词依次隐藏，曲目信息始终可见。
+
+---
+
 ## 项目级配置
 
 在任意项目目录：
@@ -94,10 +119,17 @@ cwb play [query]        # 继续播放，或搜索并播
 cwb pause               # 暂停
 cwb next                # 下一首
 cwb prev                # 上一首
+cwb like                # 收藏当前曲目
+cwb mode <mode>         # 播放模式：shuffle | sequential | repeat | repeat_one
+cwb volume <0-100>      # 调整音量（0-100）
+cwb seek <t>            # 跳转进度：秒数（90）或 mm:ss（1:30）
 cwb player              # 完整像素播放器
-cwb watch               # TUI 实时模式（Ctrl-C 退出）
+cwb watch               # TUI 实时模式（支持键盘控制，q 退出）
+cwb karaoke             # 全屏卡拉 OK 模式（支持键盘控制，q 退出）
 cwb cover [rgb|gameboy] # 只显示封面
-cwb lyrics              # 卡拉 OK 歌词窗口
+cwb lyrics              # 歌词窗口
+cwb history [n]         # 显示最近播放的 n 首歌（默认 10）
+cwb bar <show|hide|auto> # 状态栏显示模式：show = 始终显示，hide = 隐藏，auto = 仅播放时显示
 cwb demo                # 视觉测试
 cwb banner              # 大横幅
 cwb init                # 生成 .coding-with-beat.toml
@@ -105,6 +137,18 @@ cwb server              # MCP server（CC 会自动启动）
 cwb statusline          # 输出一帧状态栏（CC 调用）
 cwb hook                # CC hook 接收器（stdin = JSON 事件）
 ```
+
+### `watch` / `karaoke` 键盘快捷键
+
+进入实时 TUI 模式后，无需退出就能控制播放：
+
+| 按键     | 动作           |
+|----------|----------------|
+| `Space`  | 播放 / 暂停    |
+| `n`      | 下一首         |
+| `p`      | 上一首         |
+| `l`      | 收藏当前曲目   |
+| `q`      | 退出           |
 
 ### `play` 搜索逻辑
 
@@ -122,11 +166,24 @@ Apple Music 搜索三段走，从快到慢：
 /cwb status
 /cwb play 稻香 周杰伦
 /cwb next
+/cwb 下一首
 /cwb pause
+/cwb 暂停
 /cwb np
+/cwb volume 70
+/cwb seek 1:30
+/cwb like
+/cwb 收藏
+/cwb bar show           # 始终显示状态栏
+/cwb bar hide           # 隐藏状态栏
+/cwb bar auto           # 仅播放时显示（有歌才出现）
+/cwb 隐藏状态栏
+/cwb 显示状态栏
 ```
 
-中英文自由输入，`下一首`、`暂停`、`在放什么` 都行。默认情况下 `/cwb` 会先被 UserPromptExpansion hook 接住，启动一个一次性的 headless Claude 子会话来理解你的意图，再执行经过校验的 `cwb` 命令；主会话只看到短结果，不会把点歌过程塞进当前上下文。
+中英文自由输入，`下一首`、`暂停`、`在放什么`、`收藏` 都行。
+
+**快速路径**：常见命令（pause、next、prev、np、like、volume、seek 等）直接在本地匹配，无需启动 Claude 子进程，响应时间从 ~5s 降到 <0.1s。只有模糊的自然语言搜索（"播放一首 city pop"）才会走 headless Claude 子会话。主会话只看到短结果，不会把点歌过程塞进当前上下文。
 
 ---
 
@@ -147,6 +204,7 @@ QQ 音乐没有 AppleScript 接口，也没有公开 API，用的是非官方搜
 | 事件                                      | 心情     | 氛围     |
 |-------------------------------------------|----------|----------|
 | `SessionStart`                            | happy    | focus    |
+| `Edit` / `Write` 测试文件（`test_*.py`、`*.spec.ts` 等） | focus | debug |
 | `Edit` / `Write` / `MultiEdit`            | focus    | 根据扩展名（py/ts → build，sql → focus，md → review） |
 | `Read` / `Grep` / `Glob`                  | thinking | review   |
 | `Bash` 含 `pytest` / `npm test` 等        | victory 或 sad | victory 或 fail |

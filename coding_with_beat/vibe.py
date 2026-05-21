@@ -24,6 +24,25 @@ def _file_kind(path: str) -> Optional[str]:
     return FILE_KIND_VIBES.get(suffix)
 
 
+def _is_test_file(path: str) -> bool:
+    if not path:
+        return False
+    name = Path(path).name.lower()
+    return (
+        name.startswith("test_")
+        or name.endswith("_test.py")
+        or name.endswith("_test.ts")
+        or name.endswith(".test.ts")
+        or name.endswith(".test.js")
+        or name.endswith(".spec.ts")
+        or name.endswith(".spec.js")
+        or "/test/" in path
+        or "/tests/" in path
+        or "\\test\\" in path
+        or "\\tests\\" in path
+    )
+
+
 def classify(event: dict) -> Tuple[str, str]:
     """Return (mood, vibe). Pure function for testability."""
     hook = (event.get("hook_event_name") or "").lower()
@@ -53,6 +72,8 @@ def classify(event: dict) -> Tuple[str, str]:
 
     if tool in ("edit", "write", "multiedit"):
         path = tool_input.get("file_path") or ""
+        if _is_test_file(path):
+            return ("focus", "debug")
         kind = _file_kind(path)
         return ("focus", kind or "build")
 

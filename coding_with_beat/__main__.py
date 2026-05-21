@@ -25,6 +25,10 @@ Commands:
     np           — print current track (title — artist)
     like         — like/favorite the current track on the active source
     mode <mode>  — set play mode: shuffle | sequential | repeat | repeat_one
+    volume <n>   — set playback volume 0-100
+    seek <t>     — seek to position: seconds (90) or mm:ss (1:30)
+    history [n]  — show last n tracks played (default 10)
+    bar [mode]   — statusline visibility: show | hide | auto (print current if no arg)
 """
 from __future__ import annotations
 
@@ -210,7 +214,8 @@ def cmd_player() -> int:
         if text:
             blocks.append("\x1b[38;2;90;90;105m─── lyrics ───\x1b[0m")
             blocks.append(render_lyrics_window(
-                text, position=np.position, duration=np.duration, window=5
+                text, position=np.position, duration=np.duration, window=5,
+                width=width - 4,
             ))
 
     blocks.append(f"\x1b[38;2;155;188;15m{dj.sprite(st.dj_mood or 'neutral')}\x1b[0m")
@@ -337,6 +342,89 @@ def cmd_like() -> int:
     return 0 if ok else 1
 
 
+def cmd_volume() -> int:
+    from . import state
+    from .sources import get_source
+    if len(sys.argv) < 3:
+        print("error: usage: volume <0-100>")
+        return 2
+    try:
+        vol = int(sys.argv[2])
+    except ValueError:
+        print("error: volume must be an integer 0-100")
+        return 2
+    vol = max(0, min(100, vol))
+    src = get_source(state.load().source)
+    try:
+        src.set_volume(vol)
+    except NotImplementedError as e:
+        print(f"not implemented: {e}")
+        return 2
+    print(f"volume = {vol}%  source={src.name}")
+    return 0
+
+
+def cmd_seek() -> int:
+    from . import state
+    from .sources import get_source
+    if len(sys.argv) < 3:
+        print("error: usage: seek <seconds> or seek <mm:ss>")
+        return 2
+    arg = sys.argv[2]
+    try:
+        if ":" in arg:
+            mm, ss = arg.split(":", 1)
+            seconds = int(mm) * 60 + float(ss)
+        else:
+            seconds = float(arg)
+    except (ValueError, IndexError):
+        print("error: invalid time — use seconds (e.g. 90) or mm:ss (e.g. 1:30)")
+        return 2
+    src = get_source(state.load().source)
+    try:
+        src.seek(seconds)
+    except NotImplementedError as e:
+        print(f"not implemented: {e}")
+        return 2
+    m, s = divmod(int(seconds), 60)
+    print(f"seeked to {m:02d}:{s:02d}  source={src.name}")
+    return 0
+
+
+def cmd_bar() -> int:
+    from . import state
+    st = state.load()
+    if len(sys.argv) < 3:
+        print(f"statusline mode: {st.statusline_mode or 'show'}")
+        return 0
+    mode = sys.argv[2].lower()
+    if mode not in ("show", "hide", "auto"):
+        print("error: mode must be show | hide | auto")
+        return 2
+    st.statusline_mode = mode
+    state.save(st)
+    labels = {
+        "show": "statusline on",
+        "hide": "statusline hidden",
+        "auto": "statusline auto (shows when playing)",
+    }
+    print(labels[mode])
+    return 0
+
+
+def cmd_history() -> int:
+    from .config import DATA_DIR
+    hist_file = DATA_DIR / "history.log"
+    if not hist_file.exists():
+        print("(no history yet — run 'watch' or 'karaoke' to start recording)")
+        return 0
+    n = int(sys.argv[2]) if len(sys.argv) > 2 else 10
+    lines = hist_file.read_text(encoding="utf-8").splitlines()
+    for line in lines[-n:]:
+        print(line)
+    return 0
+
+
 def cmd_mode() -> int:
     from . import state
     from .sources import get_source
@@ -419,6 +507,10 @@ COMMANDS = {
     "like": cmd_like,
     "favorite": cmd_like,
     "mode": cmd_mode,
+    "volume": cmd_volume,
+    "seek": cmd_seek,
+    "history": cmd_history,
+    "bar": cmd_bar,
 }
 
 

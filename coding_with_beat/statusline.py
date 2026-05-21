@@ -9,6 +9,7 @@ and renders the program's stdout as the bottom bar. We must:
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import subprocess
@@ -19,7 +20,7 @@ from . import state, focus, dj
 from .config import DATA_DIR, LYRICS_CACHE
 from .sources import get_source
 from .ui.lyrics import parse_lrc, _index_for_position
-from .ui.progress import render_progress
+from .ui.progress import render_progress, render_beat_wave
 
 
 # If our cached position sample is older than this, do a fast re-poll
@@ -171,8 +172,16 @@ _QUIP_TTL   = 4.0  # seconds to show DJ quip before falling back to lyric
 
 def render(term_width: int = 0) -> str:
     st = state.load()
+
+    mode = st.statusline_mode or "show"
+    if mode == "hide":
+        return ""
+
     st, unsupported_reason = _maybe_refresh(st)
     f = focus.status()
+
+    if mode == "auto" and not st.playing and not f.active:
+        return ""
 
     ar, ag, ab = _VIBE_ACCENT.get(st.vibe or "build", (155, 188, 15))
     pos = _live_position(st)
@@ -215,10 +224,20 @@ def render(term_width: int = 0) -> str:
 
     line1 = f"{face_part}  {track}{vibe_chip}{focus_chip}"
 
+    # ── beat wave chip (far right) ─────────────────────────────
+    beat_chip = ""
+    beat_chip_visible = 0
+    if st.track.title:
+        _key = _KEY_RE.sub("_", f"{st.track.artist}_{st.track.album}_{st.track.title}").strip("_")[:160]
+        _h = int(hashlib.md5(_key.encode()).hexdigest()[:8], 16)
+        _bpm = 72 + (_h % 80)
+        beat_chip = f"  {render_beat_wave(_bpm, now, accent=(ar, ag, ab), playing=st.playing)}"
+        beat_chip_visible = _vlen(beat_chip)  # 2 spaces + 5 wave chars = 7
+
     # ── lyric / DJ quip chip (width-aware) ─────────────────────
-    # Available chars for chip text = terminal_width - visible(line1) - overhead.
+    # Available chars for chip text = terminal_width - visible(line1) - overhead - beat wave.
     # overhead: "  │ " = 4 visible chars; prefix "♪ " or "✦ " = 2 each.
-    avail = (term_width - _vlen(line1) - 4) if term_width > 0 else 999
+    avail = (term_width - _vlen(line1) - 4 - beat_chip_visible) if term_width > 0 else 999
 
     quip_age = now - (st.dj_quip_at or 0)
     if st.dj_quip and quip_age < _QUIP_TTL:
@@ -251,7 +270,7 @@ def render(term_width: int = 0) -> str:
     else:
         chip = f"  \x1b[38;2;55;58;72m♪\x1b[0m" if avail >= 3 else ""
 
-    return f"{line1}{chip}"
+    return f"{line1}{beat_chip}{chip}"
 
 
 def main() -> int:
