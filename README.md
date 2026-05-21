@@ -28,41 +28,68 @@ vibe as you code.
   Buddy panics. Commit lands → victory chip.
 - **Statusline** — compact one-liner with face + current track + progress.
 - **Focus Loop** — 25/5 pomodoro that shows in the statusline.
-- **One-click install** — `install.sh` patches `~/.claude/settings.json` for
-  you (idempotent; safe to re-run).
+- **One-click install** — `bootstrap.sh` / `install.sh` set up everything
+  globally (venv, PATH, slash command, MCP server, hooks). No system Python
+  required — falls back to [uv](https://docs.astral.sh/uv/) to fetch one if
+  your machine doesn't have Python ≥3.10.
 
 ## Install
 
+### One-liner (recommended)
+
 ```bash
+curl -LsSf https://raw.githubusercontent.com/jaychempan/cc-jukebox/main/bootstrap.sh | sh
+```
+
+That clones cc-jukebox into `~/.cc-jukebox/src`, then runs `install.sh`.
+Re-run anytime to update.
+
+### Manual
+
+```bash
+git clone https://github.com/jaychempan/cc-jukebox.git
 cd cc-jukebox
 ./install.sh
 ```
 
-This will:
-1. Create `.venv/` using the best Python ≥3.10 it can find.
-2. Install `mcp`, `Pillow`, `rich`, `mutagen`, `httpx`.
-3. Merge entries into `~/.claude/settings.json`:
+### What install.sh does
+
+1. **Python** — finds a Python ≥3.10 on PATH, in `/opt/homebrew/bin`,
+   `/usr/local/bin`, or any conda env under `~/miniconda3/envs` etc.
+   If none of those exist, **automatically installs uv and uses it to
+   download Python 3.12** (no system pollution; lives under `~/.local/`).
+   Override with `CC_JUKEBOX_PYTHON=/path/to/python ./install.sh`.
+2. **venv** at `~/.cc-jukebox/venv` (not in the repo dir, so the install
+   survives moving / deleting the source).
+3. **`cc-jukebox` CLI** symlinked into `~/.local/bin/` and (idempotently)
+   appends a marked `export PATH=…` block to `~/.zshrc` (and `~/.bashrc`)
+   so the command is reachable from any new shell.
+4. **`/juke` slash command** symlinked from `commands/juke.md` into
+   `~/.claude/commands/` — the repo is the source of truth, so a
+   `git pull` updates the command without re-running install.
+5. **Claude Code settings** — merges entries into `~/.claude/settings.json`:
    - `mcpServers["cc-jukebox"]`
    - `statusLine` (only if you don't already have one)
    - hooks for `PreToolUse`, `PostToolUse`, `SessionStart`, `Stop`
-4. Create `~/.cc-jukebox/` for state.
+6. **State dir** `~/.cc-jukebox/` for runtime JSON.
 
 Each entry is tagged with `_owner: "cc-jukebox"` so `./uninstall.sh` can
 remove only what we added.
 
-Start a new Claude Code session after installing and you should see a `(•_•)`
-face in the statusline. Try saying:
+Start a new shell (so PATH picks up the new entry) and a new Claude Code
+session. You should see a `(•_•)` face in the statusline. Try saying:
 
 > show me the player
 
-…and Claude will call `show_player`, painting the pixel frame inline.
+…and Claude will call `show_player`, painting the pixel frame inline. Or
+type `/juke play 周杰伦` to drive it directly.
 
 ## Project-level config
 
 In any project directory:
 
 ```bash
-python -m cc_jukebox init
+cc-jukebox init
 ```
 
 …writes `.cc-jukebox.toml` so different projects can default to different
@@ -70,16 +97,55 @@ vibes / sources / starter queries.
 
 ## CLI
 
+After `install.sh`, the `cc-jukebox` command is on your PATH.
+
 ```
-python -m cc_jukebox server       # the MCP server (CC starts this for you)
-python -m cc_jukebox statusline   # one statusline frame (CC calls this)
-python -m cc_jukebox hook         # CC hook receiver (stdin = JSON event)
-python -m cc_jukebox init         # write project config
-python -m cc_jukebox status       # print current state
-python -m cc_jukebox demo         # render a demo player (visual smoke test)
-python -m cc_jukebox banner       # print the giant banner
-python -m cc_jukebox cover [style]  # render current cover (rgb|gameboy)
+cc-jukebox status              # current state
+cc-jukebox np                  # one-line: title — artist
+cc-jukebox play [query]        # resume, or search & play (see below)
+cc-jukebox pause
+cc-jukebox next
+cc-jukebox prev
+cc-jukebox player              # full pixel player frame
+cc-jukebox watch               # ticking TUI (Ctrl-C to exit)
+cc-jukebox cover [rgb|gameboy] # current cover only
+cc-jukebox lyrics              # karaoke window
+cc-jukebox demo                # visual smoke test
+cc-jukebox banner              # the giant banner
+cc-jukebox init                # write .cc-jukebox.toml
+cc-jukebox server              # MCP server (CC starts this for you)
+cc-jukebox statusline          # one statusline frame (CC calls this)
+cc-jukebox hook                # CC hook receiver (stdin = JSON event)
 ```
+
+### `cc-jukebox play` search behaviour
+
+Apple Music search is three-tiered (cheapest first):
+
+1. **Local-library substring** — `every track of library playlist 1 whose
+   name contains "Q" or artist contains "Q"`. Fast, exact.
+2. **Multi-token AND** — `"青花瓷 周杰伦"` → tracks where each token hits
+   `name` or `artist`. Lets natural "song artist" queries work even when no
+   single field contains the whole string.
+3. **iTunes Search API** — if nothing local matches, hit Apple's public
+   search endpoint and ask Music.app to open the top hit's catalog URL
+   (`music://music.apple.com/song/<id>`). Requires an active Apple Music
+   subscription to actually play; otherwise Music will just show the page.
+
+### `/juke` slash command
+
+Installed at `~/.claude/commands/juke.md` (symlinked to this repo). Inside
+Claude Code:
+
+```
+/juke status
+/juke play 稻香 周杰伦
+/juke next
+/juke pause
+/juke np
+```
+
+Accepts free-form Chinese or English intents (`下一首`, `暂停`, `在放什么`).
 
 ## Source capability matrix
 
@@ -148,6 +214,8 @@ cc_jukebox/
 ## Uninstall
 
 ```bash
-./uninstall.sh           # remove from ~/.claude/settings.json
-./uninstall.sh --purge   # also delete ~/.cc-jukebox/
+./uninstall.sh           # drops settings.json entries, the cc-jukebox bin
+                         # symlink, the /juke command, and the PATH block
+                         # in ~/.zshrc / ~/.bashrc.
+./uninstall.sh --purge   # also deletes ~/.cc-jukebox/ (venv + state).
 ```

@@ -103,6 +103,77 @@ def _osa_silent(script: str) -> None:
         pass
 
 
+def _play_local_match(query: str) -> bool:
+    q = query.replace('"', '\\"')
+    script = f'''
+tell application "Music"
+    set candidates to (every track of library playlist 1 whose name contains "{q}" or artist contains "{q}")
+    if (count of candidates) > 0 then
+        play item 1 of candidates
+        return "ok"
+    end if
+    return "none"
+end tell
+'''
+    try:
+        return _osa(script) == "ok"
+    except Exception:
+        return False
+
+
+def _play_local_tokens(tokens: List[str]) -> bool:
+    conds = []
+    for t in tokens:
+        te = t.replace('"', '\\"')
+        conds.append(f'(name contains "{te}" or artist contains "{te}")')
+    where = " and ".join(conds)
+    script = f'''
+tell application "Music"
+    set candidates to (every track of library playlist 1 whose {where})
+    if (count of candidates) > 0 then
+        play item 1 of candidates
+        return "ok"
+    end if
+    return "none"
+end tell
+'''
+    try:
+        return _osa(script) == "ok"
+    except Exception:
+        return False
+
+
+def _play_catalog(query: str) -> bool:
+    """Hit Apple's public iTunes Search API and ask Music.app to open the top
+    song hit. Returns True iff we successfully sent the open command; whether
+    playback actually starts depends on the user's Apple Music subscription."""
+    try:
+        import httpx
+    except ImportError:
+        return False
+    try:
+        with httpx.Client(timeout=6.0) as c:
+            r = c.get(
+                "https://itunes.apple.com/search",
+                params={"term": query, "entity": "song", "limit": 1},
+            )
+            data = r.json()
+    except Exception:
+        return False
+    hits = data.get("results") or []
+    if not hits:
+        return False
+    tid = hits[0].get("trackId")
+    if not tid:
+        return False
+    url = f"https://music.apple.com/song/{tid}"
+    _osa_silent(f'tell application "Music" to open location "{url}"')
+    import time
+    time.sleep(1.2)
+    _osa_silent('tell application "Music" to play')
+    return True
+
+
 class AppleMusic:
     name = "apple_music"
 
@@ -251,22 +322,23 @@ end tell
         return raw
 
     def play_query(self, query: str) -> Optional[NowPlaying]:
-        q = query.replace('"', '\\"')
-        script = f'''
-tell application "Music"
-    set candidates to (every track of library playlist 1 whose name contains "{q}" or artist contains "{q}")
-    if (count of candidates) > 0 then
-        play item 1 of candidates
-        return "ok"
-    else
-        return "none"
-    end if
-end tell
-'''
-        try:
-            r = _osa(script)
-        except Exception:
-            return None
-        if r == "ok":
+        """Three-tier search:
+          1. Full-string substring match in local library (fast).
+          2. If query has multiple whitespace-separated tokens, AND-match each
+             token against name OR artist (so '青花瓷 周杰伦' matches a track
+             named 青花瓷 by 周杰伦 even though no single field contains the
+             whole string).
+          3. Fall back to the public iTunes Search API and ask Music to open
+             the top hit's catalog URL. Requires an active Apple Music
+             subscription for actual playback.
+        """
+        if _play_local_match(query):
+            return self.now_playing()
+        tokens = [t for t in query.split() if t.strip()]
+        if len(tokens) > 1 and _play_local_tokens(tokens):
+            return self.now_playing()
+        if _play_catalog(query):
+            import time
+            time.sleep(0.6)
             return self.now_playing()
         return None

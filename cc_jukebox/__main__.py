@@ -204,9 +204,15 @@ def cmd_play() -> int:
     """play [query] — resume if no query, otherwise search and play."""
     from . import state
     from .sources import get_source
+    import time
     src = get_source(state.load().source)
     query = " ".join(sys.argv[2:]).strip()
-    np = src.play_query(query) if query else src.play()
+    if query:
+        np = src.play_query(query)
+    else:
+        src.play()
+        time.sleep(0.4)
+        np = src.now_playing()
     return _print_np(np)
 
 
@@ -214,7 +220,9 @@ def cmd_pause() -> int:
     from . import state
     from .sources import get_source
     src = get_source(state.load().source)
-    return _print_np(src.pause())
+    src.pause()
+    np = src.now_playing()
+    return _print_np(np)
 
 
 def cmd_next() -> int:
