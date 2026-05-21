@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import shlex
 import sys
 from pathlib import Path
 
@@ -23,29 +22,13 @@ TAG = "cc-jukebox"
 DEFAULT_MCP_URL = "http://127.0.0.1:8765/mcp"
 
 
-def _relay_env(relay_socket: str = "", relay_url: str = "") -> dict[str, str]:
-    env = {}
-    if relay_socket:
-        env["CC_JUKEBOX_RELAY_SOCKET"] = relay_socket
-    if relay_url:
-        env["CC_JUKEBOX_RELAY_URL"] = relay_url
-    return env
-
-
-def _with_env(command: str, env: dict[str, str]) -> str:
-    if not env:
-        return command
-    prefix = " ".join(f"{key}={shlex.quote(value)}" for key, value in sorted(env.items()))
-    return f"{prefix} {command}"
-
-
-def hook_entry(python: str, repo: str, relay_env: dict[str, str] | None = None) -> dict:
+def hook_entry(python: str, repo: str) -> dict:
     return {
         "matcher": ".*",
         "hooks": [
             {
                 "type": "command",
-                "command": _with_env(f'{python} -m cc_jukebox hook', relay_env or {}),
+                "command": f'{python} -m cc_jukebox hook',
                 "timeout": 5,
             }
         ],
@@ -54,12 +37,12 @@ def hook_entry(python: str, repo: str, relay_env: dict[str, str] | None = None) 
     }
 
 
-def session_hook_entry(python: str, repo: str, relay_env: dict[str, str] | None = None) -> dict:
+def session_hook_entry(python: str, repo: str) -> dict:
     return {
         "hooks": [
             {
                 "type": "command",
-                "command": _with_env(f'{python} -m cc_jukebox hook', relay_env or {}),
+                "command": f'{python} -m cc_jukebox hook',
                 "timeout": 5,
             }
         ],
@@ -67,13 +50,13 @@ def session_hook_entry(python: str, repo: str, relay_env: dict[str, str] | None 
     }
 
 
-def juke_expansion_hook_entry(python: str, repo: str, relay_env: dict[str, str] | None = None) -> dict:
+def juke_expansion_hook_entry(python: str, repo: str) -> dict:
     return {
         "matcher": "juke",
         "hooks": [
             {
                 "type": "command",
-                "command": _with_env(f'{python} -m cc_jukebox hook', relay_env or {}),
+                "command": f'{python} -m cc_jukebox hook',
                 "timeout": HOOK_TIMEOUT,
             }
         ],
@@ -101,11 +84,8 @@ def merge(
     settings: dict,
     python: str,
     repo: str,
-    relay_socket: str = "",
-    relay_url: str = "",
     mcp_url: str = DEFAULT_MCP_URL,
 ) -> dict:
-    relay_env = _relay_env(relay_socket, relay_url)
     mcp_url = mcp_url or DEFAULT_MCP_URL
 
     # mcpServers
@@ -121,7 +101,7 @@ def merge(
     if not sl or (isinstance(sl, dict) and sl.get("_owner") == TAG):
         settings["statusLine"] = {
             "type": "command",
-            "command": _with_env(f"{python} -m cc_jukebox statusline", relay_env),
+            "command": f"{python} -m cc_jukebox statusline",
             "refreshInterval": 1,
             "_owner": TAG,
         }
@@ -132,16 +112,16 @@ def merge(
         lst = hooks.setdefault(event, [])
         # remove any prior entries we own
         lst[:] = [e for e in lst if not (isinstance(e, dict) and e.get("_owner") == TAG)]
-        lst.append(hook_entry(python, repo, relay_env))
+        lst.append(hook_entry(python, repo))
 
     for event in ("SessionStart", "Stop"):
         lst = hooks.setdefault(event, [])
         lst[:] = [e for e in lst if not (isinstance(e, dict) and e.get("_owner") == TAG)]
-        lst.append(session_hook_entry(python, repo, relay_env))
+        lst.append(session_hook_entry(python, repo))
 
     lst = hooks.setdefault("UserPromptExpansion", [])
     lst[:] = [e for e in lst if not (isinstance(e, dict) and e.get("_owner") == TAG)]
-    lst.append(juke_expansion_hook_entry(python, repo, relay_env))
+    lst.append(juke_expansion_hook_entry(python, repo))
 
     return settings
 
@@ -172,8 +152,6 @@ def main() -> int:
     ap.add_argument("--settings", required=True)
     ap.add_argument("--python", required=True)
     ap.add_argument("--repo", required=True)
-    ap.add_argument("--relay-socket", default="")
-    ap.add_argument("--relay-url", default="")
     ap.add_argument("--mcp-url", default=DEFAULT_MCP_URL)
     ap.add_argument("--remove", action="store_true")
     args = ap.parse_args()
@@ -184,7 +162,7 @@ def main() -> int:
     if args.remove:
         settings = remove(settings)
     else:
-        settings = merge(settings, args.python, args.repo, args.relay_socket, args.relay_url, args.mcp_url)
+        settings = merge(settings, args.python, args.repo, args.mcp_url)
 
     save_settings(path, settings)
     return 0

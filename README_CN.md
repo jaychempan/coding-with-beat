@@ -103,39 +103,7 @@ ssh -N -R 127.0.0.1:8765:127.0.0.1:8765 user@server
 
 之后服务器上的 Claude Code 会通过 HTTP MCP 直接调用本机 Mac 的 cc-jukebox tools。远端的 `cc-jukebox np/play/pause/next/prev/like/mode/source/status/cover/lyrics/player/banner` 也会走同一个 MCP URL，所以只要 SSH 反向端口还在，它们就像本地命令一样控制 Mac 上的音乐客户端。
 
-如果还想让远端 statusline 和 hooks 也回到本机执行，可以继续使用 relay 模式。MCP tools 和上面的音乐 CLI 命令始终走 HTTP MCP tunnel；relay 只负责 statusline/hook 这类 Claude Code 集成入口。
-
-推荐使用 SSH attach 模式：
-
-```bash
-# 本机 Mac：正常安装
-./install.sh
-
-# 服务器：安装并把 Claude Code 配到远端 request socket
-./install.sh --relay-socket ~/.cc-jukebox/run/agent-request.sock
-
-# 服务器：启动远端 relay agent
-cc-jukebox relay agent-service
-
-# 本机 Mac：建立长期 SSH attach
-cc-jukebox relay attach user@server
-```
-
-之后在服务器上的 Claude Code 中，状态栏和普通 hooks 会通过 relay 回到本机 Mac 执行。`/juke` 最终会调用 `cc-jukebox` 音乐 CLI，因此也会走上面的 HTTP MCP tunnel。
-如果服务器上的 `cc-jukebox` 不在默认 `$HOME/.local/bin/cc-jukebox`，给 attach 加 `--remote-bin /path/to/cc-jukebox`。
-
-也可以使用 HTTP + SSH 反向端口转发：
-
-```bash
-# 本机 Mac
-cc-jukebox relay serve --host 127.0.0.1 --port 8765
-ssh -R 127.0.0.1:8765:127.0.0.1:8765 user@server
-
-# 服务器
-./install.sh --relay-url http://127.0.0.1:8765
-```
-
-上面的音乐控制/展示命令会调用已配置的 HTTP MCP endpoint，默认是 `http://127.0.0.1:8765/mcp`。`./install.sh --mcp-url ...` 会把这个 URL 同时写入 Claude Code 设置和 `~/.cc-jukebox/mcp-url`，供命令行使用。
+statusline、hooks、`/juke` 和命令行都会使用同一个 HTTP MCP endpoint。`./install.sh --mcp-url ...` 会把这个 URL 同时写入 Claude Code 设置和 `~/.cc-jukebox/mcp-url`，供命令行使用。
 
 ## 命令行工具
 
@@ -157,7 +125,6 @@ cc-jukebox demo                # 视觉冒烟测试
 cc-jukebox banner              # 大型横幅
 cc-jukebox init                # 写入 .cc-jukebox.toml
 cc-jukebox server              # MCP streamable HTTP 服务器
-cc-jukebox relay               # SSH/HTTP 远端 relay
 cc-jukebox statusline          # 单帧状态栏（CC 调用）
 cc-jukebox hook                # CC 钩子接收器（stdin = JSON 事件）
 ```

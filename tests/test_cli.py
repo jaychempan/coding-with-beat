@@ -1,6 +1,5 @@
 import contextlib
 import io
-import os
 import sys
 import unittest
 from unittest import mock
@@ -80,7 +79,6 @@ class CliCommandTest(unittest.TestCase):
                 out = io.StringIO()
                 with (
                     mock.patch.object(sys, "argv", ["cc-jukebox", *argv]),
-                    mock.patch.dict(os.environ, {"CC_JUKEBOX_RELAY_SOCKET": "/tmp/relay.sock"}, clear=False),
                     mock.patch("cc_jukebox.mcp_client.call_tool", return_value="ok") as call_tool,
                     contextlib.redirect_stdout(out),
                 ):
