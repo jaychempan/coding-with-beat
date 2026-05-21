@@ -8,6 +8,7 @@ PROJECTS_DIR = DATA_DIR / "projects"
 LOG_FILE = DATA_DIR / "cwb.log"
 COVER_CACHE = DATA_DIR / "covers"
 LYRICS_CACHE = DATA_DIR / "lyrics"
+MCP_URL_FILE = DATA_DIR / "mcp-url"
 
 DEFAULT_SOURCE = os.environ.get("CWB_SOURCE", "apple_music")
 

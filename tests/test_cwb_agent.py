@@ -93,10 +93,10 @@ class CwbAgentTest(unittest.TestCase):
             response = cwb_agent.handle_prompt_expansion(event)
 
         self.assertEqual(response["decision"], "block")
-        self.assertEqual(response["reason"], "正在播放")
+        self.assertEqual(response["reason"], f"{cwb_agent._CWB_HEADER}\n正在播放")
         self.assertTrue(response["suppressOutput"])
 
-    def test_non_juke_prompt_expansion_is_ignored(self):
+    def test_non_cwb_prompt_expansion_is_ignored(self):
         event = {
             "hook_event_name": "UserPromptExpansion",
             "command_name": "other",

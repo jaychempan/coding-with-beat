@@ -1,2 +1,0 @@
-[console_scripts]
-cwb = coding_with_beat.__main__:main
