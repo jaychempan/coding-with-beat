@@ -8,18 +8,17 @@ from __future__ import annotations
 
 import json
 import os
-import sys
 import time
 from typing import Optional
 
 from mcp.server.fastmcp import FastMCP
 
-from . import dj, focus, state, vibe
+from . import dj, focus, state
 from .lyrics_snapshot import current_text as current_lyrics_text, track_key
 from .sources import get_source
 from .ui import (
     boxed, render_cover, render_cover_gameboy,
-    render_progress, render_spectrum, render_spectrum_color,
+    render_progress, render_spectrum_color,
     retro_banner, render_lyrics_window,
 )
 
@@ -55,7 +54,9 @@ mcp = FastMCP(
     "coding-with-beat",
     host=_env_first(MCP_HTTP_HOST_ENV, _LEGACY_MCP_HTTP_HOST_ENV, "127.0.0.1"),
     port=_env_int(MCP_HTTP_PORT_ENV, _env_int(_LEGACY_MCP_HTTP_PORT_ENV, 8765)),
-    streamable_http_path=_normalize_path(_env_first(MCP_HTTP_PATH_ENV, _LEGACY_MCP_HTTP_PATH_ENV, "/mcp")),
+    streamable_http_path=_normalize_path(
+        _env_first(MCP_HTTP_PATH_ENV, _LEGACY_MCP_HTTP_PATH_ENV, "/mcp"),
+    ),
 )
 
 

@@ -21,7 +21,10 @@ class MCPClientError(RuntimeError):
 
 
 def configured_url() -> str:
-    env_url = os.environ.get(MCP_URL_ENV, "").strip() or os.environ.get(LEGACY_MCP_URL_ENV, "").strip()
+    env_url = (
+        os.environ.get(MCP_URL_ENV, "").strip()
+        or os.environ.get(LEGACY_MCP_URL_ENV, "").strip()
+    )
     if env_url:
         return env_url
     try:

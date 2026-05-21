@@ -42,7 +42,10 @@ def _mmss(seconds: float) -> str:
 
 
 def _statusline_mcp_timeout() -> float:
-    raw = os.environ.get(_STATUSLINE_MCP_TIMEOUT_ENV, "") or os.environ.get(_LEGACY_STATUSLINE_MCP_TIMEOUT_ENV, "")
+    raw = (
+        os.environ.get(_STATUSLINE_MCP_TIMEOUT_ENV, "")
+        or os.environ.get(_LEGACY_STATUSLINE_MCP_TIMEOUT_ENV, "")
+    )
     if not raw:
         return _STATUSLINE_MCP_TIMEOUT_DEFAULT
     try:

@@ -137,15 +137,24 @@ if [ -n "$MCP_URL" ]; then
   printf "%s\n" "$MCP_URL" > "$HOME/.coding-with-beat/mcp-url"
   ok "saved MCP URL for CLI commands: $HOME/.coding-with-beat/mcp-url"
 fi
+if [ -d "$VENV" ] && { [ ! -x "$VENV/bin/python" ] || [ ! -x "$VENV/bin/pip" ]; }; then
+  warn "incomplete venv at $VENV — recreating it."
+  rm -rf "$VENV"
+fi
 if [ ! -d "$VENV" ]; then
-  "$PY" -m venv "$VENV"
+  if ! "$PY" -m venv "$VENV"; then
+    warn "could not create venv with $PY; trying uv-managed Python."
+    rm -rf "$VENV"
+    bootstrap_via_uv
+    "$PY" -m venv "$VENV" || die "could not create venv at $VENV"
+  fi
   ok "created venv at $VENV"
 else
   ok "venv exists at $VENV"
 fi
 VENV_PY="$VENV/bin/python"
-"$VENV/bin/pip" install --quiet --upgrade pip
-"$VENV/bin/pip" install --quiet -e "$REPO"
+"$VENV_PY" -m pip install --quiet --upgrade pip
+"$VENV_PY" -m pip install --quiet -e "$REPO"
 ok "installed coding-with-beat (editable) + deps"
 
 # 3. symlink ~/.local/bin/cwb

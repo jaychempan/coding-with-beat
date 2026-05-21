@@ -48,6 +48,10 @@ def _env_int(name: str, default: int) -> int:
         return default
 
 
+def _env_first(name: str, legacy_name: str, default: str) -> str:
+    return os.environ.get(name) or os.environ.get(legacy_name) or default
+
+
 def _mcp_print(tool: str, kwargs: dict | None = None) -> int:
     from .mcp_client import MCPClientError, call_tool
     try:
@@ -393,11 +397,24 @@ def cmd_server() -> int:
     from .server import main
 
     ap = argparse.ArgumentParser(prog="cwb server")
-    ap.add_argument("--host", default=os.environ.get("CWB_MCP_HOST") or os.environ.get("CC_JUKEBOX_MCP_HOST", "127.0.0.1"))
-    ap.add_argument("--port", type=int, default=_env_int("CWB_MCP_PORT", _env_int("CC_JUKEBOX_MCP_PORT", 8765)))
-    ap.add_argument("--path", default=os.environ.get("CWB_MCP_PATH") or os.environ.get("CC_JUKEBOX_MCP_PATH", "/mcp"))
+    ap.add_argument(
+        "--host",
+        default=_env_first("CWB_MCP_HOST", "CC_JUKEBOX_MCP_HOST", "127.0.0.1"),
+    )
+    ap.add_argument(
+        "--port",
+        type=int,
+        default=_env_int("CWB_MCP_PORT", _env_int("CC_JUKEBOX_MCP_PORT", 8765)),
+    )
+    ap.add_argument(
+        "--path",
+        default=_env_first("CWB_MCP_PATH", "CC_JUKEBOX_MCP_PATH", "/mcp"),
+    )
     ap.add_argument("--stateless", action="store_true")
-    ap.add_argument("--log-level", default=os.environ.get("CWB_MCP_LOG_LEVEL") or os.environ.get("CC_JUKEBOX_MCP_LOG_LEVEL", "info"))
+    ap.add_argument(
+        "--log-level",
+        default=_env_first("CWB_MCP_LOG_LEVEL", "CC_JUKEBOX_MCP_LOG_LEVEL", "info"),
+    )
     args = ap.parse_args(sys.argv[2:])
 
     main(
