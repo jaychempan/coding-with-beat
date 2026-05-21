@@ -138,6 +138,7 @@ def welcome_screen() -> str:
     hint   = f" {DIM}   open Claude Code and say: \"play some lofi\"  ·  or /cwb play 周杰伦{R}"
 
     return "\n".join([
+        rule,
         "",
         vinyl_block,
         "",

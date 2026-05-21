@@ -1,8 +1,8 @@
 # Coding With Beat
 
-> **你上一次 vibecoding 的时候又唱又跳是什么时候？**
->
-> 对。你已经不记得了。
+Claude Code 的像素艺术音乐伴侣。无需离开终端即可听歌，享受响应式复古 UI，让小巧的 DJ Buddy 随你的编码节奏改变氛围。
+
+[English README](README_EN.md)
 
 ```
                             ╭─────────────────╮
@@ -31,38 +31,28 @@
     open Claude Code and say: "play some lofi"  ·  or /cwb play 周杰伦
 ```
 
-你只是在敲代码。Claude 在旁边静静地看着。终端里除了光标在闪，什么声音都没有。
-这个工具的存在，就是为了终结这种悲剧。
+## 功能介绍
 
-**Coding With Beat** 是一个住在 Claude Code 里的像素风 DJ 小伙伴。
-它帮你放音乐、看歌词、在你 commit 成功的时候庆祝，在测试挂掉的时候跟你一起崩溃。
+- **MCP 服务器** — 向 Claude Code 暴露 21 个工具，让你可以直接说"播放 lofi"、"跳过这首"、"显示播放器"、"正在播放什么？"等自然语言指令。
+- **音乐来源** — Apple Music（通过 AppleScript，无需 GUI）、本地文件（afplay）、QQ音乐（通过公开 API 搜索 + 试听）。
+- **像素 UI** — 专辑封面以半块 ANSI 字符渲染，GameBoy 4 色调模式，复古边框，响应式（基于播放位置确定性生成）频谱。
+- **DJ Buddy** — 一个 5 行像素角色，随你的工作状态改变心情。
+- **氛围引擎** — CC 钩子（PreToolUse/PostToolUse/SessionStart/Stop）监听你的活动并实时更新心情/氛围。测试失败 → Buddy 惊慌。提交成功 → 跳胜利舞。
+- **状态栏** — 紧凑的单行显示：表情 + 当前曲目 + 进度条。
+- **专注循环** — 25/5 番茄钟，显示在状态栏中。
+- **一键安装** — `bootstrap.sh` / `install.sh` 全局配置一切（venv、PATH、斜杠命令、MCP 服务器、钩子）。无需系统 Python — 如果机器没有 Python ≥3.10，会自动使用 [uv](https://docs.astral.sh/uv/) 下载一个。
 
----
+## 安装
 
-## 它能干什么
-
-- **MCP server** — 接入 21 个工具，让你直接跟 Claude 说「放点 lofi」「跳过这首」「现在在放啥」，全都好使。
-- **音乐源** — Apple Music（AppleScript 驱动，不用开 GUI）、本地文件（afplay）、QQ 音乐（搜索 + 预览）。
-- **像素 UI** — 专辑封面用半格 ANSI 字符渲染，支持 GameBoy 四色模式，复古边框，加一个「看起来很像真的」频谱均衡器。
-- **DJ Buddy** — 一个 5 行高的像素小人，会根据你的工作状态换表情。测试挂了它也跟着慌。
-- **Vibe 引擎** — 通过 CC hooks（PreToolUse / PostToolUse / SessionStart / Stop）实时感知你在干什么，自动切换氛围。`git commit` 了？胜利音效。测试炸了？小人开始 panic。
-- **状态栏** — 一行小脸 + 当前曲目 + 进度条，随时知道放到哪了。
-- **专注模式** — 内置 25/5 番茄钟，显示在状态栏里，让你假装自己很自律。
-- **一键安装** — `bootstrap.sh` / `install.sh` 全局搞定，不需要手动配置任何东西。没有 Python？自动用 [uv](https://docs.astral.sh/uv/) 帮你下一个。
-
----
-
-## 装上它
-
-### 一行搞定（推荐）
+### 一行命令安装（推荐）
 
 ```bash
 curl -LsSf https://raw.githubusercontent.com/jaychempan/coding-with-beat/main/bootstrap.sh | sh
 ```
 
-克隆到 `~/.coding-with-beat/src`，然后自动跑 `install.sh`。想更新？再跑一次。
+这会将 coding-with-beat 克隆到 `~/.coding-with-beat/src`，然后运行 `install.sh`。随时重新运行即可更新。
 
-### 手动装
+### 手动安装
 
 ```bash
 git clone https://github.com/jaychempan/coding-with-beat.git
@@ -70,24 +60,26 @@ cd coding-with-beat
 ./install.sh
 ```
 
-### `install.sh` 背后在干什么
+### install.sh 做了什么
 
-1. **找 Python** — 按顺序找 PATH 上的、Homebrew 的、conda 环境里的 Python ≥3.10。一个都没有？自动装 uv，再用 uv 下 Python 3.12。你的系统不会多出任何垃圾。想指定路径就 `CWB_PYTHON=/path/to/python ./install.sh`。
-2. **建 venv** — 放在 `~/.coding-with-beat/venv`，不在项目目录里，删了源码也不影响。
-3. **`cwb` 命令** — symlink 进 `~/.local/bin/`，顺便往 `~/.zshrc` / `~/.bashrc` 写一条 `export PATH`。
-4. **`/juke` slash command** — symlink 进 `~/.claude/commands/`，指向仓库里的文件，`git pull` 自动更新。
-5. **Claude Code 配置** — 合并写入 `~/.claude/settings.json`：MCP server、状态栏、vibe hooks，以及 `/juke` 的 UserPromptExpansion hook。
-6. **状态目录** — `~/.coding-with-beat/` 存运行时 JSON。
+1. **Python** — 在 PATH、`/opt/homebrew/bin`、`/usr/local/bin` 或 `~/miniconda3/envs` 等路径下查找 Python ≥3.10。如果都不存在，**自动安装 uv 并用它下载 Python 3.12**（不污染系统，安装在 `~/.local/` 下）。可通过 `CWB_PYTHON=/path/to/python ./install.sh` 覆盖。
+2. **venv** — 创建于 `~/.coding-with-beat/venv`（不在仓库目录中，所以移动/删除源码不影响安装）。
+3. **`cwb` CLI** — 符号链接到 `~/.local/bin/`，并（幂等地）向 `~/.zshrc`（和 `~/.bashrc`）追加带标记的 `export PATH=…` 块，使命令在任何新 shell 中可用。
+4. **`/cwb` 斜杠命令** — 从 `commands/cwb.md` 符号链接到 `~/.claude/commands/` — 仓库是真实来源，所以 `git pull` 即可更新命令，无需重新运行安装脚本。
+5. **Claude Code 设置** — 合并条目到 `~/.claude/settings.json`：
+   - `mcpServers["coding-with-beat"]`
+   - `statusLine`（仅当你没有配置时才添加）
+   - `PreToolUse`、`PostToolUse`、`SessionStart`、`Stop` 钩子
+   - `/cwb` 的 `UserPromptExpansion` 钩子，用一次性 headless Claude 子会话理解音乐指令，避免污染主上下文
+6. **状态目录** `~/.coding-with-beat/` 用于运行时 JSON。
 
-每项配置都打上 `_owner: "coding-with-beat"` 标签，卸载时精准清除，不动你自己的配置。
+每个条目都标记 `_owner: "coding-with-beat"`，以便 `./uninstall.sh` 只删除我们添加的内容。
 
-装完开个新 shell、新 Claude Code 会话，状态栏里出现 `(•_•)` 就成了。然后试试：
+启动一个新 shell（让 PATH 生效）和一个新的 Claude Code 会话。你应该能在状态栏看到 `(•_•)` 表情。试着说：
 
-> 帮我打开播放器
+> 显示播放器
 
-Claude 会调 `show_player`，把像素播放器画在终端里。或者直接 `/cwb play 周杰伦`。
-
----
+……Claude 会调用 `show_player`，在终端内绘制像素边框。或者输入 `/cwb play 周杰伦` 直接驱动。
 
 ## 状态栏解读
 
@@ -112,27 +104,24 @@ Claude 会调 `show_player`，把像素播放器画在终端里。或者直接 `
 
 终端宽度不足时，歌词自动截断；更窄时波纹和歌词依次隐藏，曲目信息始终可见。
 
----
-
 ## 项目级配置
 
-在任意项目目录：
+在任何项目目录下：
 
 ```bash
 cwb init
 ```
 
-生成 `.coding-with-beat.toml`，可以给不同项目设不同的默认氛围、音源、启动歌单。
-写 Python 时放 lo-fi，写 Makefile 时放 city pop，完全合理。
+……会写入 `.coding-with-beat.toml`，让不同项目可以默认不同的氛围/来源/起始查询。
 
----
+## 命令行工具
 
-## 命令行
+安装后，`cwb` 命令已在 PATH 中。
 
 ```
 cwb status              # 当前状态
-cwb np                  # 一行：曲名 — 艺术家
-cwb play [query]        # 继续播放，或搜索并播
+cwb np                  # 单行：标题 — 艺术家
+cwb play [query]        # 恢复播放，或搜索并播放
 cwb pause               # 暂停
 cwb next                # 下一首
 cwb prev                # 上一首
@@ -141,23 +130,23 @@ cwb mode <mode>         # 播放模式：shuffle | sequential | repeat | repeat_
 cwb volume <0-100>      # 调整音量（0-100）
 cwb seek <t>            # 跳转进度：秒数（90）或 mm:ss（1:30）
 cwb player              # 完整像素播放器
-cwb watch               # TUI 实时模式（支持键盘控制，q 退出）
-cwb karaoke             # 全屏卡拉 OK 模式（支持键盘控制，q 退出）
-cwb cover [rgb|gameboy] # 只显示封面
+cwb watch               # 实时 TUI（支持键盘控制，q 退出）
+cwb karaoke             # 全屏卡拉 OK（支持键盘控制，q 退出）
+cwb cover [rgb|gameboy] # 仅显示当前封面
 cwb lyrics              # 歌词窗口
 cwb history [n]         # 显示最近播放的 n 首歌（默认 10）
 cwb bar <show|hide|auto> # 状态栏显示模式：show = 始终显示，hide = 隐藏，auto = 仅播放时显示
-cwb demo                # 视觉测试
-cwb banner              # 大横幅
-cwb init                # 生成 .coding-with-beat.toml
-cwb server              # MCP server（CC 会自动启动）
-cwb statusline          # 输出一帧状态栏（CC 调用）
-cwb hook                # CC hook 接收器（stdin = JSON 事件）
+cwb demo                # 视觉冒烟测试
+cwb banner              # 大型横幅
+cwb init                # 写入 .coding-with-beat.toml
+cwb server              # MCP 服务器（CC 会自动启动）
+cwb statusline          # 单帧状态栏（CC 调用）
+cwb hook                # CC 钩子接收器（stdin = JSON 事件）
 ```
 
 ### `watch` / `karaoke` 键盘快捷键
 
-进入实时 TUI 模式后，无需退出就能控制播放：
+进入实时 TUI 后无需退出即可控制播放：
 
 | 按键     | 动作           |
 |----------|----------------|
@@ -167,17 +156,17 @@ cwb hook                # CC hook 接收器（stdin = JSON 事件）
 | `l`      | 收藏当前曲目   |
 | `q`      | 退出           |
 
-### `play` 搜索逻辑
+### `cwb play` 搜索行为
 
-Apple Music 搜索三段走，从快到慢：
+Apple Music 搜索是三层级的（优先最便宜的）：
 
-1. **本地库子串匹配** — `name` 或 `artist` 包含关键词，秒出。
-2. **多词 AND 匹配** — `"青花瓷 周杰伦"` → 每个词分别命中 `name` 或 `artist`，自然语言查询也能用。
-3. **iTunes Search API** — 本地找不到？走苹果公开搜索 API，拿到 catalog URL 让 Music.app 打开。需要有效的 Apple Music 订阅才能真正播放。
+1. **本地库子串匹配** — `every track of library playlist 1 whose name contains "Q" or artist contains "Q"`。快速、精确。
+2. **多词 AND 匹配** — `"青花瓷 周杰伦"` → 每个词都匹配 `name` 或 `artist` 的曲目。让自然的"歌曲 艺术家"查询即使没有单个字段包含完整字符串也能工作。
+3. **iTunes Search API** — 如果本地无匹配，访问 Apple 公开搜索端点，让 Music.app 打开排名第一的曲目目录 URL（`music://music.apple.com/song/<id>`）。需要有效的 Apple Music 订阅才能实际播放；否则 Music 只会显示页面。
 
-### `/cwb` slash command
+### `/cwb` 斜杠命令
 
-装完之后在 Claude Code 里直接用：
+安装于 `~/.claude/commands/cwb.md`（符号链接到此仓库）。在 Claude Code 内：
 
 ```
 /cwb status
@@ -198,81 +187,73 @@ Apple Music 搜索三段走，从快到慢：
 /cwb 显示状态栏
 ```
 
-中英文自由输入，`下一首`、`暂停`、`在放什么`、`收藏` 都行。
+接受自由格式的中文或英文意图（`下一首`、`暂停`、`在放什么`、`收藏`）。
 
-**快速路径**：常见命令（pause、next、prev、np、like、volume、seek 等）直接在本地匹配，无需启动 Claude 子进程，响应时间从 ~5s 降到 <0.1s。只有模糊的自然语言搜索（"播放一首 city pop"）才会走 headless Claude 子会话。主会话只看到短结果，不会把点歌过程塞进当前上下文。
+**快速路径**：常见命令（pause、next、prev、np、like、volume、seek 等）本地直接匹配，无需启动 Claude 子进程，响应从 ~5s 降到 <0.1s。只有模糊的自然语言搜索才走 headless Claude 子会话，主会话只收到短结果，不污染当前上下文。
 
----
+## 音乐来源能力矩阵
 
-## 音源能力矩阵
+| 来源         | now_playing | play/pause | skip | seek | search       | full playback | cover art |
+|--------------|-------------|------------|------|------|--------------|---------------|-----------|
+| apple_music  | ✓ (osascript) | ✓          | ✓    | ✓    | ✓ (library)  | ✓             | ✓         |
+| local        | ✓ (PID + clock) | ✓ (kill/respawn) | ✓ (next file) | ⚠ 尽力而为 | ✓ (filename) | ✓        | ✓ (id3)   |
+| qq_music     | partial       | ✓ (仅试听) | —    | —    | ✓ (HTTP API) | ⚠ 仅 30s 试听 | ✓ |
 
-| 音源         | 当前曲目 | 播放/暂停 | 跳曲 | 进度 | 搜索        | 完整播放          | 封面 |
-|--------------|----------|-----------|------|------|-------------|-------------------|------|
-| apple_music  | ✓        | ✓         | ✓    | ✓    | ✓（本地库） | ✓                 | ✓    |
-| local        | ✓        | ✓         | ✓    | ⚠    | ✓（文件名） | ✓                 | ✓    |
-| qq_music     | 部分     | ✓（预览） | —    | —    | ✓（HTTP）   | ⚠ 仅 30 秒预览   | ✓    |
+QQ音乐没有 AppleScript 钩子也没有官方公开 API。我们使用非官方搜索端点获取元数据，并尝试播放 30 秒试听。完整付费曲目播放需要 QQ 音乐桌面应用，无法在无头模式下驱动。
 
-QQ 音乐没有 AppleScript 接口，也没有公开 API，用的是非官方搜索接口配合 30 秒预览。想完整播放还是得开 QQ 音乐客户端，这不是我们能驱动的范围。
+## 氛围规则（默认）
 
----
-
-## Vibe 规则（默认）
-
-| 事件                                      | 心情     | 氛围     |
-|-------------------------------------------|----------|----------|
-| `SessionStart`                            | happy    | focus    |
+| 事件                                       | Mood       | Vibe     |
+|-------------------------------------------|------------|----------|
+| `SessionStart`                            | happy      | focus    |
 | `Edit` / `Write` 测试文件（`test_*.py`、`*.spec.ts` 等） | focus | debug |
-| `Edit` / `Write` / `MultiEdit`            | focus    | 根据扩展名（py/ts → build，sql → focus，md → review） |
-| `Read` / `Grep` / `Glob`                  | thinking | review   |
-| `Bash` 含 `pytest` / `npm test` 等        | victory 或 sad | victory 或 fail |
-| `Bash` 含 `git commit`                    | victory  | victory  |
-| `Stop`                                    | sleep    | idle     |
+| `Edit` / `Write` / `MultiEdit`            | focus      | 根据扩展名（py/ts → build，sql → focus，md → review） |
+| `Read` / `Grep` / `Glob`                  | thinking   | review   |
+| `Bash` 包含 `pytest`/`npm test`/etc       | victory 或 sad | victory 或 fail |
+| `Bash` 包含 `git commit`                  | victory    | victory  |
+| `Stop`                                    | sleep      | idle     |
 
-随时可以覆盖：
+随时覆盖：
 
-> 切换到 debug 模式
-> DJ 说点鼓励的话
+> 设置氛围为 debug
+> DJ 说点开心的
 
-这会触发 `vibe_set` 和 `dj_say` 工具。
-
----
+（这些触发 `vibe_set` 和 `dj_say` MCP 工具。）
 
 ## 文件结构
 
 ```
 coding_with_beat/
-├── __main__.py            # CLI 入口
-├── server.py              # MCP server（21 个工具）
+├── __main__.py            # CLI 分发器
+├── server.py              # MCP 服务器（21 个工具）
 ├── statusline.py          # 单帧状态栏
-├── vibe.py                # hook 接收器 + 分类器
-├── focus.py               # 番茄钟
-├── dj.py                  # DJ Buddy（表情、精灵、台词）
-├── state.py               # JSON 状态存取
-├── config.py              # 路径、调色板、vibe 映射
+├── vibe.py                # 钩子接收器 + 分类器
+├── focus.py               # 番茄钟循环
+├── dj.py                  # DJ Buddy 角色（表情、精灵图、台词）
+├── state.py               # JSON 后端共享状态
+├── config.py              # 路径 + 调色板 + 氛围映射
 ├── sources/
 │   ├── apple_music.py     # AppleScript
 │   ├── local.py           # afplay + mutagen 标签
-│   └── qq_music.py        # HTTP 搜索 + 预览
+│   └── qq_music.py        # HTTP 搜索 + 试听
 └── ui/
-    ├── pixel_cover.py     # 图片 → 半格 ANSI
+    ├── pixel_cover.py     # 图像 → 半块 ANSI
     ├── progress.py        # 进度条 + 伪频谱
     ├── frame.py           # 复古像素边框 + 横幅
-    └── lyrics.py          # 卡拉 OK 窗口
+    └── lyrics.py          # 卡拉OK风格窗口
 ```
 
----
+## 注意事项
 
-## 已知局限
-
-- **仅限 macOS。** Apple Music 和 afplay 都是 macOS 独有的。Linux / Windows 需要换后端，目前没有计划。
-- **频谱是假的。** 终端里没法捕获系统音频，所以均衡器的柱子是根据播放进度用确定性算法生成的动画。好看，但不是真 FFT，不要误会。
-- **DJ Buddy 不会主动打扰你。** 它只在 CC 调用 `dj_say` 时说话，hooks 只更新状态，不会突然弹出来。
-
----
+- **仅支持 macOS。** Apple Music + afplay 是 macOS 特有的。Linux/Windows 需要替换后端。
+- **"频谱"是假的。** 我们无法从终端捕获系统音频，所以条形图从 `position` 确定性动画。看起来有活力，但不是真正的 FFT。
+- **DJ Buddy 不会自己闭嘴。** 它只在 CC 调用 `dj_say` 时说话。钩子只是更新状态。
 
 ## 卸载
 
 ```bash
-./uninstall.sh           # 移除 settings.json 条目、cwb 命令、/cwb 命令、PATH 块
-./uninstall.sh --purge   # 同上，另外删除 ~/.coding-with-beat/（venv + 状态文件）
+./uninstall.sh           # 删除 settings.json 条目、cwb bin
+                         # 符号链接、/cwb 命令，以及 ~/.zshrc / ~/.bashrc
+                         # 中的 PATH 块。
+./uninstall.sh --purge   # 同时删除 ~/.coding-with-beat/（venv + 状态）。
 ```
