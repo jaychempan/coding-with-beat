@@ -4,7 +4,7 @@ Usage:
     python -m cc_jukebox <command>
 
 Commands:
-    server       — start the MCP server (used by CC)
+    server       — start the MCP server over streamable HTTP
     relay        — run or attach the remote relay bridge
     statusline   — emit one statusline frame (used by CC)
     hook         — receive a CC hook event JSON on stdin and update vibe
@@ -41,6 +41,16 @@ def _unsupported(source: str, feature: str, reason: str) -> str:
 
 def _unsupported_reason(obj) -> str:
     return getattr(obj, "unsupported_reason", None) or ""
+
+
+def _env_int(name: str, default: int) -> int:
+    value = os.environ.get(name, "")
+    if not value:
+        return default
+    try:
+        return int(value)
+    except ValueError:
+        return default
 
 
 def cmd_init() -> int:
@@ -381,8 +391,24 @@ def cmd_prefetch() -> int:
 
 
 def cmd_server() -> int:
+    import argparse
     from .server import main
-    main()
+
+    ap = argparse.ArgumentParser(prog="cc-jukebox server")
+    ap.add_argument("--host", default=os.environ.get("CC_JUKEBOX_MCP_HOST", "127.0.0.1"))
+    ap.add_argument("--port", type=int, default=_env_int("CC_JUKEBOX_MCP_PORT", 8765))
+    ap.add_argument("--path", default=os.environ.get("CC_JUKEBOX_MCP_PATH", "/mcp"))
+    ap.add_argument("--stateless", action="store_true")
+    ap.add_argument("--log-level", default=os.environ.get("CC_JUKEBOX_MCP_LOG_LEVEL", "info"))
+    args = ap.parse_args(sys.argv[2:])
+
+    main(
+        host=args.host,
+        port=args.port,
+        path=args.path,
+        stateless_http=args.stateless,
+        log_level=args.log_level,
+    )
     return 0
 
 

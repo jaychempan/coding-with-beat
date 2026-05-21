@@ -41,6 +41,18 @@ cd cc-jukebox
 ./install.sh
 ```
 
+安装脚本默认把 Claude Code 配成 HTTP MCP，并在 macOS 上安装/启动一个 LaunchAgent：
+
+```bash
+./install.sh
+```
+
+MCP 地址是 `http://127.0.0.1:8765/mcp`。调试时也可以手动跑：
+
+```bash
+cc-jukebox server --host 127.0.0.1 --port 8765 --path /mcp
+```
+
 ### install.sh 做了什么
 
 1. **Python** — 在 PATH、`/opt/homebrew/bin`、`/usr/local/bin` 或 `~/miniconda3/envs` 等路径下查找 Python ≥3.10。如果都不存在，**自动安装 uv 并用它下载 Python 3.12**（不污染系统，安装在 `~/.local/` 下）。可通过 `CC_JUKEBOX_PYTHON=/path/to/python ./install.sh` 覆盖。
@@ -74,7 +86,24 @@ cc-jukebox init
 
 ## SSH 远端 Claude Code
 
-如果 Claude Code 在服务器上运行，而 Apple Music 在本机 Mac 上运行，可以使用 relay 模式。远端 `cc-jukebox` 负责接入 Claude Code 的 MCP、hooks、statusline 和 `/juke`，实际音乐控制仍由本机 Mac 执行。
+如果 Claude Code 在服务器上运行，而 Apple Music 在本机 Mac 上运行，MCP 工具推荐使用 streamable HTTP：MCP 服务器直接跑在本机 Mac 上，服务器上的 Claude Code 通过 SSH 反向端口转发访问它。
+
+MCP-over-HTTP 模式：
+
+```bash
+# 本机 Mac：安装会启动 HTTP MCP LaunchAgent
+./install.sh
+
+# 本机 Mac：另一个终端，暴露到服务器的 127.0.0.1:8765
+ssh -N -R 127.0.0.1:8765:127.0.0.1:8765 user@server
+
+# 服务器：安装远端 hooks/statusline，并把 MCP 配成 HTTP URL
+./install.sh --mcp-url http://127.0.0.1:8765/mcp
+```
+
+之后服务器上的 Claude Code 会通过 HTTP MCP 直接调用本机 Mac 的 cc-jukebox tools。
+
+如果还想让远端 statusline、hooks 和 `/juke` 也回到本机执行，可以继续使用 relay 模式。MCP tools 始终走上面的 HTTP MCP tunnel；relay 只负责远端 shell 入口，比如 statusline、hooks、`/juke` 和普通 `cc-jukebox` CLI。
 
 推荐使用 SSH attach 模式：
 
@@ -92,7 +121,7 @@ cc-jukebox relay agent-service
 cc-jukebox relay attach user@server
 ```
 
-之后在服务器上的 Claude Code 中，MCP 工具、状态栏、hooks 和 `/juke` 都会通过 relay 回到本机 Mac 执行。
+之后在服务器上的 Claude Code 中，状态栏、hooks 和 `/juke` 会通过 relay 回到本机 Mac 执行。MCP tools 仍需要使用上面的 `ssh -R` + `--mcp-url` HTTP MCP 配置。
 如果服务器上的 `cc-jukebox` 不在默认 `$HOME/.local/bin/cc-jukebox`，给 attach 加 `--remote-bin /path/to/cc-jukebox`。
 
 也可以使用 HTTP + SSH 反向端口转发：
@@ -124,7 +153,7 @@ cc-jukebox lyrics              # 卡拉OK窗口
 cc-jukebox demo                # 视觉冒烟测试
 cc-jukebox banner              # 大型横幅
 cc-jukebox init                # 写入 .cc-jukebox.toml
-cc-jukebox server              # MCP 服务器（CC 会自动启动）
+cc-jukebox server              # MCP streamable HTTP 服务器
 cc-jukebox relay               # SSH/HTTP 远端 relay
 cc-jukebox statusline          # 单帧状态栏（CC 调用）
 cc-jukebox hook                # CC 钩子接收器（stdin = JSON 事件）

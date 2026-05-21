@@ -9,13 +9,15 @@
 #   3. Symlinks `cc-jukebox` into ~/.local/bin/ and makes sure that dir
 #      is on your PATH (writes a marked block into ~/.zshrc / ~/.bashrc).
 #   4. Symlinks the /juke slash command into ~/.claude/commands/.
-#   5. Registers MCP server, statusline, vibe hooks, and the /juke
+#   5. Registers HTTP MCP server, statusline, vibe hooks, and the /juke
 #      UserPromptExpansion hook with Claude Code via ~/.claude/settings.json.
 set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RELAY_SOCKET="${CC_JUKEBOX_RELAY_SOCKET:-}"
 RELAY_URL="${CC_JUKEBOX_RELAY_URL:-}"
+DEFAULT_MCP_URL="http://127.0.0.1:8765/mcp"
+MCP_URL="${CC_JUKEBOX_MCP_URL:-$DEFAULT_MCP_URL}"
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -29,9 +31,14 @@ while [ "$#" -gt 0 ]; do
       RELAY_URL="$2"
       shift 2
       ;;
+    --mcp-url)
+      [ "$#" -ge 2 ] || { echo "--mcp-url requires a value" >&2; exit 2; }
+      MCP_URL="$2"
+      shift 2
+      ;;
     -h|--help)
       cat <<'EOF'
-Usage: ./install.sh [--relay-socket PATH | --relay-url URL]
+Usage: ./install.sh [--relay-socket PATH | --relay-url URL] [--mcp-url URL]
 
 Options:
   --relay-socket PATH  Configure Claude Code to send cc-jukebox commands to a
@@ -39,6 +46,8 @@ Options:
                        ~/.cc-jukebox/run/agent-request.sock.
   --relay-url URL      Configure Claude Code to send cc-jukebox commands to a
                        local HTTP relay URL, usually http://127.0.0.1:8765.
+  --mcp-url URL        Configure Claude Code to connect to cc-jukebox as an
+                       HTTP MCP server, usually http://127.0.0.1:8765/mcp.
 EOF
       exit 0
       ;;
@@ -63,6 +72,9 @@ if [ -n "$RELAY_SOCKET" ]; then
   echo "  relay:   socket $RELAY_SOCKET"
 elif [ -n "$RELAY_URL" ]; then
   echo "  relay:   url $RELAY_URL"
+fi
+if [ -n "$MCP_URL" ]; then
+  echo "  mcp:     url $MCP_URL"
 fi
 
 # 1. find a Python ≥3.10
@@ -218,9 +230,115 @@ SETTINGS_ARGS=(
 )
 [ -z "$RELAY_SOCKET" ] || SETTINGS_ARGS+=(--relay-socket "$RELAY_SOCKET")
 [ -z "$RELAY_URL" ] || SETTINGS_ARGS+=(--relay-url "$RELAY_URL")
+[ -z "$MCP_URL" ] || SETTINGS_ARGS+=(--mcp-url "$MCP_URL")
 "$VENV_PY" "$REPO/scripts/install_settings.py" "${SETTINGS_ARGS[@]}"
 
 ok "Claude Code settings patched: $SETTINGS_FILE"
+
+start_mcp_service() {
+  [ -n "$MCP_URL" ] || return 0
+  if [ "$(uname -s)" != "Darwin" ]; then
+    warn "HTTP MCP configured at $MCP_URL. Auto-start is macOS-only; make sure the Mac-side server is reachable."
+    return 0
+  fi
+
+  local parts host port path
+  parts="$("$VENV_PY" - "$MCP_URL" <<'PY'
+import sys
+from urllib.parse import urlparse
+
+url = sys.argv[1]
+parsed = urlparse(url)
+if parsed.scheme not in ("http", "https"):
+    raise SystemExit(f"unsupported MCP URL scheme: {parsed.scheme or '(missing)'}")
+host = parsed.hostname or "127.0.0.1"
+port = parsed.port or (443 if parsed.scheme == "https" else 80)
+path = parsed.path or "/mcp"
+print(f"{host}\t{port}\t{path}")
+PY
+)"
+  host="$(printf "%s" "$parts" | cut -f1)"
+  port="$(printf "%s" "$parts" | cut -f2)"
+  path="$(printf "%s" "$parts" | cut -f3)"
+
+  case "$host" in
+    127.0.0.1|localhost|::1) ;;
+    *)
+      warn "HTTP MCP URL is not localhost ($MCP_URL); not starting a local LaunchAgent."
+      return 0
+      ;;
+  esac
+
+  local label="com.cc-jukebox.server"
+  local plist="$HOME/Library/LaunchAgents/$label.plist"
+  local old_label="com.cc-jukebox.mcp-http"
+  local old_plist="$HOME/Library/LaunchAgents/$old_label.plist"
+  local log_dir="$HOME/.cc-jukebox/logs"
+  mkdir -p "$(dirname "$plist")" "$log_dir"
+
+  "$VENV_PY" - "$plist" "$TARGET" "$host" "$port" "$path" "$log_dir" <<'PY'
+import plistlib
+import sys
+from pathlib import Path
+
+plist, program, host, port, path, log_dir = sys.argv[1:]
+data = {
+    "Label": "com.cc-jukebox.server",
+    "ProgramArguments": [
+        program,
+        "server",
+        "--host",
+        host,
+        "--port",
+        str(port),
+        "--path",
+        path,
+    ],
+    "RunAtLoad": True,
+    "KeepAlive": True,
+    "StandardOutPath": str(Path(log_dir) / "server.log"),
+    "StandardErrorPath": str(Path(log_dir) / "server.err.log"),
+    "EnvironmentVariables": {
+        "PATH": "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin",
+    },
+}
+with open(plist, "wb") as f:
+    plistlib.dump(data, f)
+PY
+
+  local domain="gui/$(id -u)"
+  launchctl bootout "$domain" "$old_plist" >/dev/null 2>&1 || true
+  rm -f "$old_plist"
+  launchctl bootout "$domain" "$plist" >/dev/null 2>&1 || true
+  if launchctl bootstrap "$domain" "$plist" >/dev/null 2>&1; then
+    launchctl kickstart -k "$domain/$label" >/dev/null 2>&1 || true
+    if "$VENV_PY" - "$host" "$port" <<'PY'
+import socket
+import sys
+import time
+
+host, port = sys.argv[1], int(sys.argv[2])
+for _ in range(40):
+    try:
+        with socket.create_connection((host, port), timeout=0.2):
+            raise SystemExit(0)
+    except OSError:
+        time.sleep(0.1)
+raise SystemExit(1)
+PY
+    then
+      ok "HTTP MCP LaunchAgent started: $MCP_URL"
+      ok "MCP logs: $log_dir/server.log"
+    else
+      warn "LaunchAgent loaded, but HTTP MCP is not listening at $MCP_URL."
+      warn "Check logs: $log_dir/server.err.log"
+    fi
+  else
+    warn "Could not start LaunchAgent. Run manually: cc-jukebox server --host $host --port $port --path $path"
+  fi
+}
+
+start_mcp_service
 
 # 7. Make sure data dir exists
 "$VENV_PY" -c "from cc_jukebox.config import ensure_dirs; ensure_dirs()"
@@ -230,6 +348,10 @@ echo
 "$VENV/bin/cc-jukebox" welcome 2>/dev/null || true
 echo
 bold "From a new shell (or after 'source ~/.zshrc'):"
+if [ -n "$MCP_URL" ]; then
+  echo "  # MCP endpoint configured at $MCP_URL"
+  echo "  cc-jukebox server      — manually run the HTTP MCP server for debugging"
+fi
 echo "  cc-jukebox player       — open the pixel player"
 echo "  cc-jukebox watch        — live TUI"
 echo "  /juke play 周杰伦        — drive it from Claude Code"

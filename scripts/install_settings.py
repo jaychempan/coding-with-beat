@@ -20,6 +20,7 @@ from cc_jukebox.juke_agent import HOOK_TIMEOUT
 
 
 TAG = "cc-jukebox"
+DEFAULT_MCP_URL = "http://127.0.0.1:8765/mcp"
 
 
 def _relay_env(relay_socket: str = "", relay_url: str = "") -> dict[str, str]:
@@ -96,18 +97,23 @@ def save_settings(path: Path, data: dict) -> None:
     path.write_text(json.dumps(data, indent=2, ensure_ascii=False))
 
 
-def merge(settings: dict, python: str, repo: str, relay_socket: str = "", relay_url: str = "") -> dict:
+def merge(
+    settings: dict,
+    python: str,
+    repo: str,
+    relay_socket: str = "",
+    relay_url: str = "",
+    mcp_url: str = DEFAULT_MCP_URL,
+) -> dict:
     relay_env = _relay_env(relay_socket, relay_url)
+    mcp_url = mcp_url or DEFAULT_MCP_URL
 
     # mcpServers
     servers = settings.setdefault("mcpServers", {})
     server = {
-        "command": python,
-        "args": ["-m", "cc_jukebox.server"],
-        "cwd": repo,
+        "type": "http",
+        "url": mcp_url,
     }
-    if relay_env:
-        server["env"] = relay_env
     servers[TAG] = server
 
     # statusLine — only set if not present OR already ours
@@ -168,6 +174,7 @@ def main() -> int:
     ap.add_argument("--repo", required=True)
     ap.add_argument("--relay-socket", default="")
     ap.add_argument("--relay-url", default="")
+    ap.add_argument("--mcp-url", default=DEFAULT_MCP_URL)
     ap.add_argument("--remove", action="store_true")
     args = ap.parse_args()
 
@@ -177,7 +184,7 @@ def main() -> int:
     if args.remove:
         settings = remove(settings)
     else:
-        settings = merge(settings, args.python, args.repo, args.relay_socket, args.relay_url)
+        settings = merge(settings, args.python, args.repo, args.relay_socket, args.relay_url, args.mcp_url)
 
     save_settings(path, settings)
     return 0

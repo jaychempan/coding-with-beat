@@ -2,6 +2,7 @@
 
 Run with:
     python -m cc_jukebox.server
+    python -m cc_jukebox server
 """
 from __future__ import annotations
 
@@ -22,7 +23,31 @@ from .ui import (
 )
 
 
-mcp = FastMCP("cc-jukebox")
+MCP_HTTP_HOST_ENV = "CC_JUKEBOX_MCP_HOST"
+MCP_HTTP_PORT_ENV = "CC_JUKEBOX_MCP_PORT"
+MCP_HTTP_PATH_ENV = "CC_JUKEBOX_MCP_PATH"
+
+
+def _env_int(name: str, default: int) -> int:
+    value = os.environ.get(name, "")
+    if not value:
+        return default
+    try:
+        return int(value)
+    except ValueError:
+        return default
+
+
+def _normalize_path(path: str) -> str:
+    return path if path.startswith("/") else f"/{path}"
+
+
+mcp = FastMCP(
+    "cc-jukebox",
+    host=os.environ.get(MCP_HTTP_HOST_ENV, "127.0.0.1"),
+    port=_env_int(MCP_HTTP_PORT_ENV, 8765),
+    streamable_http_path=_normalize_path(os.environ.get(MCP_HTTP_PATH_ENV, "/mcp")),
+)
 
 
 def _relay_tool(name: str, **kwargs) -> str | None:
@@ -386,8 +411,24 @@ def session_intro() -> str:
     return "\n".join(parts)
 
 
-def main() -> None:
-    mcp.run()
+def main(
+    host: str | None = None,
+    port: int | None = None,
+    path: str | None = None,
+    stateless_http: bool | None = None,
+    log_level: str | None = None,
+) -> None:
+    if host is not None:
+        mcp.settings.host = host
+    if port is not None:
+        mcp.settings.port = int(port)
+    if path is not None:
+        mcp.settings.streamable_http_path = _normalize_path(path)
+    if stateless_http is not None:
+        mcp.settings.stateless_http = stateless_http
+    if log_level is not None:
+        mcp.settings.log_level = log_level.upper()
+    mcp.run(transport="streamable-http")
 
 
 if __name__ == "__main__":

@@ -87,8 +87,8 @@ def relay_is_local() -> bool:
 def should_proxy_cli(argv: list[str]) -> bool:
     if relay_is_local() or not relay_configured() or not argv:
         return False
-    # "server" must stay remote so Claude Code can speak MCP over stdio. The
-    # individual MCP tool functions forward through the relay when invoked.
+    # "server" starts the HTTP MCP transport and must not be proxied as an
+    # ordinary CLI call.
     # "hook" stays remote long enough to handle /juke UserPromptExpansion with
     # the remote Claude CLI; ordinary hook events are forwarded by vibe.main.
     return argv[0] not in {"server", "relay", "hook"}

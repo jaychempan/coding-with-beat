@@ -8,6 +8,8 @@ VENV_PY="$HOME/.cc-jukebox/venv/bin/python"
 SETTINGS_FILE="$HOME/.claude/settings.json"
 LINK="$HOME/.local/bin/cc-jukebox"
 CMD_LINK="$HOME/.claude/commands/juke.md"
+MCP_LABEL="com.cc-jukebox.server"
+MCP_PLIST="$HOME/Library/LaunchAgents/$MCP_LABEL.plist"
 
 # 1. drop ~/.claude/settings.json entries
 if [ -x "$VENV_PY" ]; then
@@ -51,7 +53,22 @@ strip_path_block() {
 strip_path_block "$HOME/.zshrc"
 strip_path_block "$HOME/.bashrc"
 
-# 5. optional purge
+# 5. stop and remove the macOS HTTP MCP LaunchAgent
+if [ "$(uname -s)" = "Darwin" ]; then
+  launchctl bootout "gui/$(id -u)" "$MCP_PLIST" >/dev/null 2>&1 || true
+  if [ -f "$MCP_PLIST" ]; then
+    rm "$MCP_PLIST"
+    echo "✓ removed $MCP_PLIST"
+  fi
+  OLD_MCP_PLIST="$HOME/Library/LaunchAgents/com.cc-jukebox.mcp-http.plist"
+  launchctl bootout "gui/$(id -u)" "$OLD_MCP_PLIST" >/dev/null 2>&1 || true
+  if [ -f "$OLD_MCP_PLIST" ]; then
+    rm "$OLD_MCP_PLIST"
+    echo "✓ removed $OLD_MCP_PLIST"
+  fi
+fi
+
+# 6. optional purge
 if [ "${1:-}" = "--purge" ]; then
   rm -rf "$HOME/.cc-jukebox"
   echo "✓ purged ~/.cc-jukebox/ (data + venv)"

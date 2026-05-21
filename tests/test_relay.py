@@ -71,13 +71,34 @@ class RelayProtocolTest(unittest.TestCase):
         )
 
         server = settings["mcpServers"]["cc-jukebox"]
-        self.assertEqual(
-            server["env"][relay.RELAY_SOCKET_ENV],
-            "/home/dev/.cc-jukebox/run/agent-request.sock",
-        )
+        self.assertEqual(server["type"], "http")
+        self.assertEqual(server["url"], install_settings.DEFAULT_MCP_URL)
         self.assertIn(relay.RELAY_SOCKET_ENV, settings["statusLine"]["command"])
         hook_command = settings["hooks"]["SessionStart"][0]["hooks"][0]["command"]
         self.assertIn(relay.RELAY_SOCKET_ENV, hook_command)
+
+    def test_install_settings_defaults_to_http_mcp_server(self):
+        settings = install_settings.merge({}, "python3", "/remote/repo")
+
+        server = settings["mcpServers"]["cc-jukebox"]
+        self.assertEqual(server, {
+            "type": "http",
+            "url": install_settings.DEFAULT_MCP_URL,
+        })
+
+    def test_install_settings_can_write_http_mcp_server(self):
+        settings = install_settings.merge(
+            {},
+            "python3",
+            "/remote/repo",
+            mcp_url="http://127.0.0.1:8765/mcp",
+        )
+
+        server = settings["mcpServers"]["cc-jukebox"]
+        self.assertEqual(server, {
+            "type": "http",
+            "url": "http://127.0.0.1:8765/mcp",
+        })
 
     def test_agent_service_round_trips_through_stdio_attach(self):
         with tempfile.TemporaryDirectory() as tmpdir:
