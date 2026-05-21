@@ -12,32 +12,7 @@
 >
 > Right. You can't remember.（对，你已经不记得了。）
 
-```
-                            ╭─────────────────╮
-                            │ ╭─────────────╮ │
-                            │ │  ╭───────╮  │ │
-                            │ │  │   ◉   │  │ │
-                            │ │  ╰───────╯  │ │
-                            │ ╰─────────────╯ │
-                            ╰─────────────────╯
-
-               (♪‿♪)   a pixel companion for vibecoding   (♪‿♪)
-
-                               C  O  D  I  N  G
- ██╗    ██╗██╗████████╗██╗  ██╗    ██████╗ ███████╗ █████╗ ████████╗
- ██║    ██║██║╚══██╔══╝██║  ██║    ██╔══██╗██╔════╝██╔══██╗╚══██╔══╝
- ██║ █╗ ██║██║   ██║   ███████║    ██████╔╝█████╗  ███████║   ██║
- ██║███╗██║██║   ██║   ██╔══██║    ██╔══██╗██╔══╝  ██╔══██║   ██║
- ╚███╔███╔╝██║   ██║   ██║  ██║    ██████╔╝███████╗██║  ██║   ██║
-  ╚══╝╚══╝ ╚═╝   ╚═╝   ╚═╝  ╚═╝    ╚═════╝ ╚══════╝╚═╝  ╚═╝   ╚═╝
-
- ────────────────────────────────────────────────────────────────────────────
-    ✓  MCP server registered                ✓  /cwb command installed
-    ✓  CC hooks active                      ✓  statusline ready
- ────────────────────────────────────────────────────────────────────────────
-
-    open Claude Code and say: "play some lofi"  ·  or /cwb play 周杰伦
-```
+![](assets/welcome_log.png)
 
 A pixel-art DJ companion that lives inside Claude Code. It plays music, shows lyrics, celebrates when you commit, and panics with you when tests fail.
 
