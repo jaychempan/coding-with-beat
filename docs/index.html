@@ -389,6 +389,42 @@
     .sc-tag.ok  { color: var(--green); }
     .sc-tag.warn { color: var(--amber); }
 
+    /* ─── LINKS ─── */
+    .links-wrap {
+      max-width: 860px;
+      margin: 0 auto 72px;
+      padding: 0 28px;
+    }
+
+    .links-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 14px;
+    }
+
+    .link-card {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      text-decoration: none;
+      transition: background .15s, border-color .2s;
+    }
+    .link-card:hover {
+      background: var(--bg3);
+      border-color: rgba(155,188,15,.4);
+    }
+
+    .lc-icon { color: var(--green); flex-shrink: 0; }
+    .lc-body { display: flex; flex-direction: column; gap: 3px; flex: 1; }
+    .lc-title { color: var(--bright); font-size: 12px; font-weight: 600; }
+    .lc-desc  { color: var(--dim); font-size: 11px; }
+    .lc-arrow { color: var(--dim); font-size: 12px; flex-shrink: 0; transition: color .2s; }
+    .link-card:hover .lc-arrow { color: var(--green); }
+
     /* ─── FOOTER ─── */
     footer {
       border-top: 1px solid var(--border);
@@ -420,6 +456,7 @@
     @media (max-width: 520px) {
       .hero-title { font-size: 22px; }
       .source-grid { grid-template-columns: 1fr; }
+      .links-grid  { grid-template-columns: 1fr; }
       .gh-link { display: none; }
       .buddy-pre { font-size: 11px; }
     }
@@ -566,6 +603,30 @@
   </div>
 </div>
 
+<!-- LINKS -->
+<hr class="divider">
+<div class="links-wrap">
+  <p class="section-head" data-i18n="links-head">related projects</p>
+  <div class="links-grid">
+    <a class="link-card" href="https://jianchengpan.space/ccf-ddl-tracker/" target="_blank" rel="noopener noreferrer">
+      <span class="lc-icon">▸</span>
+      <div class="lc-body">
+        <span class="lc-title">CCF DDL Tracker</span>
+        <span class="lc-desc" data-i18n="link-ccf">Academic deadline tracker for CCF conferences.</span>
+      </div>
+      <span class="lc-arrow">↗</span>
+    </a>
+    <a class="link-card" href="https://jianchengpan.space/citation-tracker/" target="_blank" rel="noopener noreferrer">
+      <span class="lc-icon">▸</span>
+      <div class="lc-body">
+        <span class="lc-title">Citation Tracker</span>
+        <span class="lc-desc" data-i18n="link-cit">Monitor citation counts for your papers in real time.</span>
+      </div>
+      <span class="lc-arrow">↗</span>
+    </a>
+  </div>
+</div>
+
 <!-- FOOTER -->
 <footer>
   <span>MIT License</span>
@@ -609,6 +670,9 @@
       'src-qq-1':    '⚠ 30s preview',
       'src-qq-2':    '✓ search',
       'src-qq-3':    '✓ like',
+      'links-head':  'related projects',
+      'link-ccf':    'Academic deadline tracker for CCF conferences.',
+      'link-cit':    'Monitor citation counts for your papers in real time.',
       docs:          'Docs',
       made:          'Made for Claude Code',
     },
@@ -641,6 +705,9 @@
       'src-qq-1':    '⚠ 仅 30s 试听',
       'src-qq-2':    '✓ 搜索',
       'src-qq-3':    '✓ 收藏',
+      'links-head':  '友情链接',
+      'link-ccf':    'CCF 会议截稿日期追踪器。',
+      'link-cit':    '实时监控论文引用数量。',
       docs:          '文档',
       made:          '为 Claude Code 而生',
     }
