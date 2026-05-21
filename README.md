@@ -59,7 +59,7 @@ cd cc-jukebox
 2. **建 venv** — 放在 `~/.cc-jukebox/venv`，不在项目目录里，删了源码也不影响。
 3. **`cc-jukebox` 命令** — symlink 进 `~/.local/bin/`，顺便往 `~/.zshrc` / `~/.bashrc` 写一条 `export PATH`。
 4. **`/juke` slash command** — symlink 进 `~/.claude/commands/`，指向仓库里的文件，`git pull` 自动更新。
-5. **Claude Code 配置** — 合并写入 `~/.claude/settings.json`：MCP server、状态栏、四个 hooks。
+5. **Claude Code 配置** — 合并写入 `~/.claude/settings.json`：MCP server、状态栏、vibe hooks，以及 `/juke` 的 UserPromptExpansion hook。
 6. **状态目录** — `~/.cc-jukebox/` 存运行时 JSON。
 
 每项配置都打上 `_owner: "cc-jukebox"` 标签，卸载时精准清除，不动你自己的配置。
@@ -126,7 +126,7 @@ Apple Music 搜索三段走，从快到慢：
 /juke np
 ```
 
-中英文自由输入，`下一首`、`暂停`、`在放什么` 都行。
+中英文自由输入，`下一首`、`暂停`、`在放什么` 都行。默认情况下 `/juke` 会先被 UserPromptExpansion hook 接住，启动一个一次性的 headless Claude 子会话来理解你的意图，再执行经过校验的 `cc-jukebox` 命令；主会话只看到短结果，不会把点歌过程塞进当前上下文。
 
 ---
 

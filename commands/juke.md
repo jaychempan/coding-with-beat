@@ -1,8 +1,14 @@
 ---
 description: Control cc-jukebox (play / pause / skip / now-playing / music source / like / mode). Use $ARGUMENTS as a free-form intent.
+disable-model-invocation: true
 allowed-tools: Bash
 argument-hint: "[source <apple_music|qq_music|local> | play <query> | like | mode <shuffle|sequential|repeat> | karaoke | pause | next | prev | status]"
 ---
+
+If the cc-jukebox UserPromptExpansion hook is installed, this command is handled
+by a private one-shot headless Claude session. The child session interprets the
+intent, runs a validated cc-jukebox action, returns a short result, and blocks
+this fallback prompt so the main conversation context stays clean.
 
 You are driving the local **cc-jukebox** music player via its globally-installed CLI. Do NOT call any MCP tools — they may not be loaded. Always shell out via Bash to the `cc-jukebox` command (installed by `install.sh` at `~/.local/bin/cc-jukebox`, backed by a venv at `~/.cc-jukebox/venv`).
 

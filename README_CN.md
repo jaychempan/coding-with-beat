@@ -51,6 +51,7 @@ cd cc-jukebox
    - `mcpServers["cc-jukebox"]`
    - `statusLine`（仅当你没有配置时才添加）
    - `PreToolUse`、`PostToolUse`、`SessionStart`、`Stop` 钩子
+   - `/juke` 的 `UserPromptExpansion` 钩子，用一次性 headless Claude 子会话理解音乐指令，避免污染主上下文
 6. **状态目录** `~/.cc-jukebox/` 用于运行时 JSON。
 
 每个条目都标记 `_owner: "cc-jukebox"`，以便 `./uninstall.sh` 只删除我们添加的内容。
@@ -115,6 +116,8 @@ Apple Music 搜索是三层级的（优先最便宜的）：
 ```
 
 接受自由格式的中文或英文意图（`下一首`、`暂停`、`在放什么`）。
+
+默认情况下，`/juke` 会先由 `UserPromptExpansion` hook 拦截：它启动一个不持久化历史的 headless Claude 子会话来理解你的自然语言意图，然后只执行经过校验的 `cc-jukebox` 命令。主会话只收到短结果，不会吃掉当前上下文。
 
 ## 音乐来源能力矩阵
 

@@ -4,6 +4,7 @@ Adds (or removes) entries for:
   - mcpServers["cc-jukebox"]
   - statusLine (only if unset, or already ours; we don't clobber other tools)
   - hooks: PreToolUse, PostToolUse, SessionStart, Stop  (with matcher: ".*")
+  - UserPromptExpansion hook for /juke, so music controls do not enter chat context
 
 Re-running is safe. Keys we don't own are never touched.
 """
@@ -13,6 +14,8 @@ import argparse
 import json
 import sys
 from pathlib import Path
+
+from cc_jukebox.juke_agent import HOOK_TIMEOUT
 
 
 TAG = "cc-jukebox"
@@ -40,6 +43,20 @@ def session_hook_entry(python: str, repo: str) -> dict:
                 "type": "command",
                 "command": f'{python} -m cc_jukebox hook',
                 "timeout": 5,
+            }
+        ],
+        "_owner": TAG,
+    }
+
+
+def juke_expansion_hook_entry(python: str, repo: str) -> dict:
+    return {
+        "matcher": "juke",
+        "hooks": [
+            {
+                "type": "command",
+                "command": f'{python} -m cc_jukebox hook',
+                "timeout": HOOK_TIMEOUT,
             }
         ],
         "_owner": TAG,
@@ -93,6 +110,10 @@ def merge(settings: dict, python: str, repo: str) -> dict:
         lst = hooks.setdefault(event, [])
         lst[:] = [e for e in lst if not (isinstance(e, dict) and e.get("_owner") == TAG)]
         lst.append(session_hook_entry(python, repo))
+
+    lst = hooks.setdefault("UserPromptExpansion", [])
+    lst[:] = [e for e in lst if not (isinstance(e, dict) and e.get("_owner") == TAG)]
+    lst.append(juke_expansion_hook_entry(python, repo))
 
     return settings
 

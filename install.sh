@@ -9,8 +9,8 @@
 #   3. Symlinks `cc-jukebox` into ~/.local/bin/ and makes sure that dir
 #      is on your PATH (writes a marked block into ~/.zshrc / ~/.bashrc).
 #   4. Symlinks the /juke slash command into ~/.claude/commands/.
-#   5. Registers MCP server, statusline, and hooks with Claude Code via
-#      ~/.claude/settings.json.
+#   5. Registers MCP server, statusline, vibe hooks, and the /juke
+#      UserPromptExpansion hook with Claude Code via ~/.claude/settings.json.
 set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
