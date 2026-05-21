@@ -49,9 +49,10 @@ async def _call_tool_async(url: str, name: str, kwargs: dict[str, Any]) -> str:
             await session.initialize()
             result = await session.call_tool(name, kwargs)
             text = _content_text(result.content)
-            if getattr(result, "isError", False) or getattr(result, "is_error", False):
-                raise MCPClientError(text or f"MCP tool failed: {name}")
-            return text
+            is_error = getattr(result, "isError", False) or getattr(result, "is_error", False)
+    if is_error:
+        raise MCPClientError(text or f"MCP tool failed: {name}")
+    return text
 
 
 def _content_text(content: list[Any]) -> str:
