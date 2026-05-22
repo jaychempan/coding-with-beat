@@ -362,6 +362,25 @@
     .sp-lyric   { color: #9090a0; }
 
     /* ─── SOURCES ─── */
+    .screenshots-wrap {
+      max-width: 860px;
+      margin: 0 auto 72px;
+      padding: 0 28px;
+    }
+    .screens-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    .screens-full { width: 100%; }
+    .screen-img {
+      width: 100%;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      display: block;
+    }
+
     .sources-wrap {
       max-width: 860px;
       margin: 0 auto 72px;
@@ -477,8 +496,9 @@
     /* ─── MOBILE ─── */
     @media (max-width: 520px) {
       .hero-title { font-size: 22px; }
-      .source-grid { grid-template-columns: 1fr; }
-      .links-grid  { grid-template-columns: 1fr; }
+      .source-grid  { grid-template-columns: 1fr; }
+      .screens-grid { grid-template-columns: 1fr; }
+      .links-grid   { grid-template-columns: 1fr; }
       .gh-link { display: none; }
       .buddy-pre { font-size: 11px; }
     }
@@ -603,6 +623,20 @@
 
 <hr class="divider">
 
+<!-- SCREENSHOTS -->
+<div class="screenshots-wrap">
+  <p class="section-head" data-i18n="screens-head">screenshots</p>
+  <div class="screens-grid">
+    <img src="assets/screen_1.png" alt="Watch mode" class="screen-img"/>
+    <img src="assets/screen_2.png" alt="Karaoke mode" class="screen-img"/>
+  </div>
+  <div class="screens-full">
+    <img src="assets/screen_3.png" alt="Statusline" class="screen-img"/>
+  </div>
+</div>
+
+<hr class="divider">
+
 <!-- MUSIC SOURCES -->
 <div class="sources-wrap">
   <p class="section-head" data-i18n="src-head">music sources</p>
@@ -693,8 +727,9 @@
       f4d: 'Full-screen LRC lyrics, album art in ANSI half-block, GameBoy retro border.',
       f5t: 'Statusline',
       f5d: 'One line: mood face + track + progress bar + beat wave + current lyric.',
-      'status-head': 'statusline preview',
-      'src-head':    'music sources',
+      'status-head':  'statusline preview',
+      'screens-head': 'screenshots',
+      'src-head':     'music sources',
       'src-am-1':    '✓ full playback',
       'src-am-2':    '✓ lyrics / art',
       'src-am-3':    '✓ like / seek',
@@ -730,8 +765,9 @@
       f4d: '全屏 LRC 歌词，ANSI 半格专辑封面，GameBoy 复古边框。',
       f5t: '状态栏',
       f5d: '一行：心情 + 曲目 + 进度条 + 律动波纹 + 当前歌词。',
-      'status-head': '状态栏预览',
-      'src-head':    '音乐来源',
+      'status-head':  '状态栏预览',
+      'screens-head': '截图预览',
+      'src-head':     '音乐来源',
       'src-am-1':    '✓ 完整播放',
       'src-am-2':    '✓ 歌词 / 封面',
       'src-am-3':    '✓ 收藏 / 跳转',

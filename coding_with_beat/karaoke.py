@@ -1,39 +1,48 @@
-"""Full-screen karaoke lyrics mode rendered through HTTP MCP."""
+"""Full-screen karaoke mode — local render from JSON snapshot."""
 
 from __future__ import annotations
 
+import json
+import shutil
 import signal
 import sys
 import time
 
+from ._tui import (
+    CLEAR,
+    enter_alt_screen,
+    exit_alt_screen,
+    read_key,
+    restore_tty,
+    setup_raw_tty,
+)
 from .mcp_client import MCPClientError, call_tool
 from .ui.frame import _strip_ansi
-from .ui.lyrics import _display_width
+from .ui.lyrics import _display_width, render_lyrics_wave
+from .ui.progress import render_progress
 
-POLL_EVERY = 1.0
+FETCH_EVERY = 2.0
+RENDER_EVERY = 0.05
+LYRIC_WINDOW = 5
 
-_HIDE = "\x1b[?25l"
-_SHOW = "\x1b[?25h"
-_ALT = "\x1b[?1049h"
-_NORM = "\x1b[?1049l"
-_HOME = "\x1b[H"
-_CLEAR = "\x1b[2J"
-
-
-def _center_block(text: str, width: int) -> str:
-    rows = []
-    for line in text.splitlines() or [""]:
-        visible = _display_width(_strip_ansi(line))
-        rows.append(" " * max(0, (width - visible) // 2) + line)
-    return "\n".join(rows)
+_ACCENT = (155, 188, 15)
+_DIM = "\x1b[38;2;100;110;100m"
+_BOLD = "\x1b[1;38;2;220;230;220m"
+_GREEN = "\x1b[38;2;155;188;15m"
+_RESET = "\x1b[0m"
 
 
-def _lyrics_frame(width: int) -> str:
-    try:
-        text = call_tool("show_lyrics", {"window": 7, "width": width})
-    except MCPClientError as e:
-        text = f"\x1b[38;2;200;80;80m{str(e).splitlines()[0]}\x1b[0m"
-    return _center_block(text, width)
+def _fetch(known_key: str = "") -> dict:
+    raw = call_tool("now_playing_snapshot", {"known_lyrics_key": known_key})
+    return json.loads(raw)
+
+
+def _interp_pos(snap: dict) -> float:
+    pos = float(snap.get("position", 0.0))
+    if snap.get("playing"):
+        pos += time.time() - float(snap.get("sampled_at", time.time()))
+    dur = float(snap.get("duration", 0.0))
+    return max(0.0, min(pos, dur) if dur > 0 else pos)
 
 
 def _control(tool: str) -> None:
@@ -43,86 +52,136 @@ def _control(tool: str) -> None:
         pass
 
 
-def _setup_raw_tty():
-    try:
-        import termios
-        import tty
-
-        fd = sys.stdin.fileno()
-        old = termios.tcgetattr(fd)
-        tty.setraw(fd)
-        return fd, old
-    except Exception:
-        return None
+def _center(text: str, width: int) -> str:
+    """Center one ANSI-escaped line within `width` columns."""
+    vis_w = _display_width(_strip_ansi(text))
+    pad = max(0, (width - vis_w) // 2)
+    return " " * pad + text
 
 
-def _restore_tty(raw_state) -> None:
-    if raw_state is None:
-        return
-    try:
-        import termios
+def _render(snap: dict, lyrics_text: str, width: int, height: int, t: float) -> str:
+    title = snap.get("title") or "—"
+    artist = snap.get("artist") or ""
+    playing = snap.get("playing", False)
+    dur = float(snap.get("duration", 0.0))
+    pos = _interp_pos(snap)
 
-        fd, old = raw_state
-        termios.tcsetattr(fd, termios.TCSADRAIN, old)
-    except Exception:
-        pass
+    icon = f"{_GREEN}▶{_RESET}" if playing else f"{_DIM}❚❚{_RESET}"
+    header = f"{icon}  {_BOLD}{title}{_RESET}"
+    if artist:
+        header += f"  {_DIM}{artist}{_RESET}"
 
+    bar_w = max(1, min(width - 4, 48))
+    progress_line = render_progress(pos, dur, bar_w, _ACCENT)
 
-def _read_key(raw_state) -> str:
-    if raw_state is None:
-        return ""
-    try:
-        import select
+    header_rows = [
+        _center(header, width),
+        _center(progress_line, width),
+    ]
 
-        if select.select([sys.stdin], [], [], 0)[0]:
-            return sys.stdin.read(1)
-    except Exception:
-        pass
-    return ""
+    if lyrics_text:
+        lrc = render_lyrics_wave(lyrics_text, pos, dur, window=LYRIC_WINDOW, t=t, width=width)
+        lrc_rows = [_center(line, width) for line in lrc.split("\n")]
+    else:
+        lrc_rows = [_center(f"{_DIM}(no lyrics){_RESET}", width)]
+
+    hint = f"{_DIM}space pause  n next  p prev  l like  q quit{_RESET}"
+
+    top_blank = 1
+    mid_blank = 1
+    bottom_fixed = 1
+    available = height - top_blank - len(header_rows) - mid_blank - len(lrc_rows) - bottom_fixed
+    top_pad = max(0, available // 2)
+    bot_pad = max(0, available - top_pad)
+
+    rows: list[str] = []
+    rows.extend([""] * top_blank)
+    rows.extend(header_rows)
+    rows.extend([""] * mid_blank)
+    rows.extend([""] * top_pad)
+    rows.extend(lrc_rows)
+    rows.extend([""] * bot_pad)
+    rows.append(_center(hint, width))
+
+    return "\n".join(rows)
 
 
 def run(width: int = 0) -> int:
-    import shutil
+    sz = [shutil.get_terminal_size((80, 24))]
+    _width = [width if width > 0 else sz[0].columns]
+    raw = setup_raw_tty()
 
-    _width = [width if width > 0 else shutil.get_terminal_size((80, 24)).columns]
-    raw_state = _setup_raw_tty()
+    enter_alt_screen()
 
-    sys.stdout.write(_ALT + _HIDE + _CLEAR)
-    sys.stdout.flush()
-
-    def _restore(*_):
-        _restore_tty(raw_state)
-        sys.stdout.write(_SHOW + _NORM)
-        sys.stdout.flush()
+    def _quit(*_):
+        restore_tty(raw)
+        exit_alt_screen()
         sys.exit(0)
 
     def _resize(*_):
-        _width[0] = shutil.get_terminal_size((80, 24)).columns
-        sys.stdout.write(_CLEAR)
+        sz[0] = shutil.get_terminal_size((80, 24))
+        _width[0] = sz[0].columns
+        sys.stdout.write(CLEAR)
+        sys.stdout.flush()
 
-    signal.signal(signal.SIGINT, _restore)
-    signal.signal(signal.SIGTERM, _restore)
+    signal.signal(signal.SIGINT, _quit)
+    signal.signal(signal.SIGTERM, _quit)
     signal.signal(signal.SIGWINCH, _resize)
+
+    snap: dict = {}
+    lyrics_text = ""
+    lyrics_key = ""
+    last_fetch = 0.0
+    last_render = 0.0
 
     try:
         while True:
-            key = _read_key(raw_state)
+            key = read_key(raw)
             if key in ("q", "Q", "\x03"):
                 break
             if key == " ":
                 _control("toggle")
+                last_fetch = 0.0
             elif key in ("n", "N"):
                 _control("next_track")
+                last_fetch = 0.0
             elif key in ("p", "P"):
                 _control("prev_track")
+                last_fetch = 0.0
             elif key in ("l", "L"):
                 _control("like_current")
 
-            sys.stdout.write(_HOME + _CLEAR + _lyrics_frame(_width[0]))
-            sys.stdout.flush()
-            time.sleep(POLL_EVERY)
+            now = time.time()
+
+            if now - last_fetch >= FETCH_EVERY:
+                try:
+                    new = _fetch(lyrics_key)
+                    if new.get("lyrics_text"):
+                        lyrics_text = new["lyrics_text"]
+                        lyrics_key = new.get("lyrics_key", "")
+                    elif new.get("lyrics_key") and new["lyrics_key"] != lyrics_key:
+                        lyrics_text = ""
+                        lyrics_key = new["lyrics_key"]
+                    snap = new
+                    last_fetch = now
+                except MCPClientError:
+                    pass
+
+            if snap and now - last_render >= RENDER_EVERY:
+                height = sz[0].lines
+                frame = _render(snap, lyrics_text, _width[0], height, now)
+                lines = frame.split("\n")
+                out = []
+                for i, line in enumerate(lines[: height - 1]):
+                    out.append(f"\x1b[{i + 1};1H{line}\x1b[K")
+                last = min(len(lines), height - 1) + 1
+                out.append(f"\x1b[{last};1H\x1b[J")
+                sys.stdout.write("".join(out))
+                sys.stdout.flush()
+                last_render = now
+
+            time.sleep(0.02)
     finally:
-        _restore_tty(raw_state)
-        sys.stdout.write(_SHOW + _NORM)
-        sys.stdout.flush()
+        restore_tty(raw)
+        exit_alt_screen()
     return 0

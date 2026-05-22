@@ -19,6 +19,16 @@ A pixel-art DJ companion that lives inside Claude Code. It plays music, shows ly
 
 [中文文档](README_CN.md) ／ [日本語](README_JP.md)
 
+<table>
+  <tr>
+    <td><img src="assets/screen_1.png"/></td>
+    <td><img src="assets/screen_2.png"/></td>
+  </tr>
+  <tr>
+    <td colspan="2"><img src="assets/screen_3.png" width="100%"/></td>
+  </tr>
+</table>
+
 ---
 
 ## Features
