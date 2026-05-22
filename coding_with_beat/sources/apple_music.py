@@ -738,12 +738,20 @@ end tell
             return None
         return None
 
-    def play(self) -> None: _osa_silent('tell application "Music" to play')
-    def pause(self) -> None: _osa_silent('tell application "Music" to pause')
-    def toggle(self) -> None: _osa_silent('tell application "Music" to playpause')
+    def play(self) -> None:
+        _osa_silent('tell application "Music" to play')
 
-    def next(self) -> None: _osa_silent('tell application "Music" to next track')
-    def prev(self) -> None: _osa_silent('tell application "Music" to previous track')
+    def pause(self) -> None:
+        _osa_silent('tell application "Music" to pause')
+
+    def toggle(self) -> None:
+        _osa_silent('tell application "Music" to playpause')
+
+    def next(self) -> None:
+        _osa_silent('tell application "Music" to next track')
+
+    def prev(self) -> None:
+        _osa_silent('tell application "Music" to previous track')
 
     def seek(self, seconds: float) -> None:
         _osa_silent(f'tell application "Music" to set player position to {float(seconds)}')
