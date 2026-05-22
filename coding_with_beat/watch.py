@@ -5,9 +5,10 @@ Layout (adaptive to terminal size):
   │  player        │                 │
   │  progress      │  queue list     │
   │  spectrum      │  (full height)  │
-  │  DJ buddy      │                 │
   ├────────────────┤                 │
   │  lyrics        │                 │
+  │  (more lines)  │                 │
+  │  DJ buddy      │                 │
   │  hint bar      │                 │
   └────────────────┴─────────────────┘
 """
@@ -108,7 +109,7 @@ def _load_queue() -> tuple[list[dict], int]:
 
 
 def _render_player_top(snap: dict, width: int, height: int, t: float) -> list[str]:
-    """Top-left panel: title, progress, spectrum, dancing sprite."""
+    """Top-left panel: title, progress, spectrum (compact, no sprite)."""
     title = snap.get("title") or "—"
     artist = snap.get("artist") or ""
     playing = snap.get("playing", False)
@@ -129,39 +130,35 @@ def _render_player_top(snap: dict, width: int, height: int, t: float) -> list[st
         _sep(width),
     ]
 
-    # Dancing sprite if there's room
-    sprite_lines = dj.dancing_sprite("groove" if playing else "neutral").split("\n")
-    if height - len(rows) >= len(sprite_lines) + 1:
-        rows.extend(sprite_lines)
-        rows.append(_sep(width))
-
-    # Fill remaining rows
     while len(rows) < height:
         rows.append("")
     return [_pad(r, width) for r in rows[:height]]
 
 
 def _render_lyrics_bottom(
-    lyrics_text: str, pos: float, dur: float, width: int, height: int
+    lyrics_text: str, pos: float, dur: float, width: int, height: int, playing: bool
 ) -> list[str]:
-    """Bottom-left panel: lyrics + hint bar."""
+    """Bottom-left panel: lyrics + dancing sprite (bottom-left corner) + hint bar."""
+    sprite_lines = dj.dancing_sprite("groove" if playing else "neutral").split("\n")
+    sprite_h = len(sprite_lines)
     hint = f" {_DIM}space pause  n next  p prev  l like  q quit{_RESET}"
-    content_h = max(1, height - 2)  # reserve 1 for sep + 1 for hint
+
+    # Layout from top to bottom: lyrics | sprite | hint
+    lyrics_h = max(1, height - sprite_h - 1)
 
     if lyrics_text:
-        window = max(1, content_h // 2)
+        window = max(1, lyrics_h // 2)
         raw = render_lyrics_window(lyrics_text, pos, dur, window=window, width=width - 1)
         content = [" " + ln for ln in raw.split("\n")]
     else:
         content = [f" {_DIM}(no lyrics){_RESET}"]
 
-    # Vertically center the content
-    while len(content) < content_h:
+    while len(content) < lyrics_h:
         mid = len(content) // 2
         content.insert(mid, "")
-    content = content[:content_h]
+    content = content[:lyrics_h]
 
-    rows = content + [_sep(width), hint]
+    rows = content + sprite_lines + [hint]
     while len(rows) < height:
         rows.append("")
     return [_pad(r, width) for r in rows[:height]]
@@ -181,13 +178,20 @@ def _render_queue_lines(tracks: list[dict], cur_idx: int, width: int, height: in
         end = min(len(tracks), start + visible)
         start = max(0, end - visible)
 
+        # Right-align numbers so "1." and "22." end at the same column.
+        # Prefix is always 3 visible chars (" > " or "   ") + num_w + 1 space.
+        # Using ">" (ASCII) instead of "▶" avoids East-Asian ambiguous-width rendering.
+        num_w = len(str(len(tracks))) + 1  # chars for "N." at max track count
+        title_w = max(1, width - num_w - 4)  # 3 (indicator) + 1 (space after num)
+
         for i in range(start, end):
             num = f"{i + 1}."
-            title = _trunc(tracks[i].get("title", "?"), width - 7)
+            num_str = f"{num:>{num_w}}"
+            title = _trunc(tracks[i].get("title", "?"), title_w)
             if i == cur_idx:
-                line = _pad(f" {_CUR}▶ {num:<3} {title}{_RESET}", width)
+                line = _pad(f" {_CUR}> {num_str} {title}{_RESET}", width)
             else:
-                line = _pad(f"   {_DIM}{num:<3}{_RESET} {title}", width)
+                line = _pad(f"   {_DIM}{num_str}{_RESET} {title}", width)
             rows.append(line)
 
     while len(rows) < height:
@@ -298,23 +302,25 @@ def run(width: int = 0) -> int:
                 usable_h = h - 1
                 left_w = max(20, int(total_w * 0.6))
                 right_w = max(10, total_w - left_w - 1)  # 1 col for │
-                # Left split: top=player, bottom=lyrics, divider=1 row
-                top_h = max(8, usable_h // 2)
-                bot_h = max(3, usable_h - top_h - 1)
 
-                # Ensure top_h is tall enough for the sprite when possible
+                # Compact player (no sprite): ~8 rows.
+                # Bottom gets the sprite + hint + remaining space for lyrics.
                 _sprite_h = len(dj.dancing_sprite("groove").split("\n"))
-                _min_top = 7 + _sprite_h + 2  # basic rows + sep + sprite + sep
-                _min_bot = 5
-                if usable_h >= _min_top + _min_bot + 1:
-                    top_h = max(_min_top, usable_h // 2)
+                _min_top = 8   # blank + title + artist + sep + progress + spectrum + sep + pad
+                _min_bot = _sprite_h + 1 + 2  # sprite + hint + 2 lyrics lines
+                if usable_h >= _min_top + 1 + _min_bot:
+                    top_h = _min_top
                     bot_h = usable_h - top_h - 1
+                else:
+                    top_h = max(5, usable_h // 2)
+                    bot_h = max(3, usable_h - top_h - 1)
 
                 pos = _interp_pos(snap)
                 dur = float(snap.get("duration", 0.0))
+                playing = snap.get("playing", False)
 
                 player_lines = _render_player_top(snap, left_w, top_h, now)
-                lyrics_lines = _render_lyrics_bottom(lyrics_text, pos, dur, left_w, bot_h)
+                lyrics_lines = _render_lyrics_bottom(lyrics_text, pos, dur, left_w, bot_h, playing)
                 queue_lines = _render_queue_lines(queue, cur_idx, right_w, usable_h)
                 frame = _compose3(player_lines, lyrics_lines, queue_lines, left_w, usable_h)
 
