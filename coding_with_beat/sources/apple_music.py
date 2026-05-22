@@ -321,6 +321,12 @@ def _play_catalog(query: str) -> "Optional[NowPlaying]":
     # music:// scheme routes directly to Music.app and triggers library add for subscribers
     url = f"music://music.apple.com/{storefront}/song/{tid}"
 
+    # Remember what was playing before we open the URL so we can tell if it changed.
+    try:
+        prev_name = _osa('tell application "Music" to get name of current track')
+    except Exception:
+        prev_name = ""
+
     # open -g opens the URL in Music.app WITHOUT bringing it to the foreground.
     # This adds the catalog track to the library and starts playback, all in background.
     subprocess.run(["open", "-g", url], capture_output=True, timeout=10)
@@ -329,7 +335,9 @@ def _play_catalog(query: str) -> "Optional[NowPlaying]":
     # Ensure playback started (open -g may not auto-play on all macOS versions)
     _osa_silent('tell application "Music" to play')
 
-    # Poll up to ~6.4s for Music.app to confirm real playback
+    # Poll up to ~6.4s for Music.app to confirm real playback of the NEW track.
+    # Require that current_name changed from prev_name so we don't mistake the
+    # already-playing song for a successful catalog load.
     for _ in range(8):
         time.sleep(0.8)
         try:
@@ -340,8 +348,14 @@ def _play_catalog(query: str) -> "Optional[NowPlaying]":
             current_name = _osa('tell application "Music" to get name of current track')
         except Exception:
             current_name = ""
-        # Stub tracks use the numeric trackId as name; any non-numeric name is the real track
-        real_playback = (st == "playing" and current_name and not current_name.strip().isdigit())
+        # A stub track uses the numeric trackId as its name.
+        # A successful load: playing, non-stub, AND the track name actually changed.
+        real_playback = (
+            st == "playing"
+            and current_name
+            and not current_name.strip().isdigit()
+            and current_name != prev_name
+        )
         if real_playback:
             return NowPlaying(title=current_name or title, artist=artist, source="apple_music", playing=True)
         if st not in ("playing", "stopped", ""):

@@ -7,6 +7,7 @@ import time
 
 from .mcp_client import MCPClientError, call_tool
 from .ui.frame import _strip_ansi
+from .ui.lyrics import _display_width
 
 
 POLL_EVERY = 1.0
@@ -22,14 +23,14 @@ _CLEAR = "\x1b[2J"
 def _center_block(text: str, width: int) -> str:
     rows = []
     for line in text.splitlines() or [""]:
-        visible = len(_strip_ansi(line))
+        visible = _display_width(_strip_ansi(line))
         rows.append(" " * max(0, (width - visible) // 2) + line)
     return "\n".join(rows)
 
 
 def _lyrics_frame(width: int) -> str:
     try:
-        text = call_tool("show_lyrics", {"window": 7})
+        text = call_tool("show_lyrics", {"window": 7, "width": width})
     except MCPClientError as e:
         text = f"\x1b[38;2;200;80;80m{str(e).splitlines()[0]}\x1b[0m"
     return _center_block(text, width)
