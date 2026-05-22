@@ -4,6 +4,7 @@ Run with:
     python -m coding_with_beat.server
     python -m coding_with_beat server
 """
+
 from __future__ import annotations
 
 import json
@@ -15,14 +16,18 @@ from mcp.server.fastmcp import FastMCP
 
 from . import dj, focus, state
 from .config import DATA_DIR
-from .lyrics_snapshot import current_text as current_lyrics_text, track_key
+from .lyrics_snapshot import current_text as current_lyrics_text
+from .lyrics_snapshot import track_key
 from .sources import get_source
 from .ui import (
-    boxed, render_cover, render_cover_gameboy,
-    render_progress, render_spectrum_color,
-    retro_banner, render_lyrics_window,
+    boxed,
+    render_cover,
+    render_cover_gameboy,
+    render_lyrics_window,
+    render_progress,
+    render_spectrum_color,
+    retro_banner,
 )
-
 
 MCP_HTTP_HOST_ENV = "CWB_MCP_HOST"
 MCP_HTTP_PORT_ENV = "CWB_MCP_PORT"
@@ -80,7 +85,7 @@ def _needs_library_add(np) -> str:
     title = np.title or "?"
     artist = np.artist or "—"
     return (
-        f"Found \"{title} — {artist}\" in the Apple Music catalog, but full playback did not start.\n"
+        f'Found "{title} — {artist}" in the Apple Music catalog, but full playback did not start.\n'
         "Opened the Music.app search page. Add the track to your library, then try again.\n"
         "(Automatic catalog playback requires an active Apple Music subscription.)"
     )
@@ -278,8 +283,7 @@ def list_library(limit: int = 100) -> str:
     except Exception:
         pass
     return "\n".join(
-        f"{i+1}. {h['title']} — {h.get('artist','?')} · {h.get('album','?')}"
-        for i, h in enumerate(hits)
+        f"{i + 1}. {h['title']} — {h.get('artist', '?')} · {h.get('album', '?')}" for i, h in enumerate(hits)
     )
 
 
@@ -297,8 +301,14 @@ def search(query: str, limit: int = 8) -> str:
         pass
     lines = []
     for i, h in enumerate(hits):
-        tag = " [Library]" if h.get("source") == "library" else " [Apple Music]" if h.get("source") == "apple_music" else ""
-        lines.append(f"{i+1}. {h['title']} — {h.get('artist','?')} · {h.get('album','?')}{tag}")
+        tag = (
+            " [Library]"
+            if h.get("source") == "library"
+            else " [Apple Music]"
+            if h.get("source") == "apple_music"
+            else ""
+        )
+        lines.append(f"{i + 1}. {h['title']} — {h.get('artist', '?')} · {h.get('album', '?')}{tag}")
     return "\n".join(lines)
 
 
@@ -421,10 +431,15 @@ def show_player(width: int = 36, with_lyrics: bool = True) -> str:
         lrc = _current_lyrics()
         if lrc:
             lines.append("\x1b[38;2;90;90;105m─── lyrics ───\x1b[0m")
-            lines.append(render_lyrics_window(
-                lrc, position=np.position, duration=np.duration, window=5,
-                width=inner_w,
-            ))
+            lines.append(
+                render_lyrics_window(
+                    lrc,
+                    position=np.position,
+                    duration=np.duration,
+                    window=5,
+                    width=inner_w,
+                )
+            )
     lines.append(f"\x1b[38;2;155;188;15m{buddy}\x1b[0m")
     lines.append(f'\x1b[3;38;2;200;200;230m  "{quip}"\x1b[0m')
     body = "\n".join(lines)
@@ -447,7 +462,10 @@ def show_lyrics(window: int = 7, width: int = 0) -> str:
     if not lrc:
         return f"(no lyrics found for: {np.title} — {np.artist})"
     return render_lyrics_window(
-        lrc, position=np.position, duration=np.duration, window=window,
+        lrc,
+        position=np.position,
+        duration=np.duration,
+        window=window,
         width=width if width > 0 else None,
     )
 
@@ -458,7 +476,7 @@ def dj_say(mood: str = "") -> str:
     current vibe-derived mood. Useful for breaking up long debugging sessions."""
     st = state.load()
     m = mood or st.dj_mood or "neutral"
-    return f'{dj.face(m)}  “{dj.quip(m)}”'
+    return f"{dj.face(m)}  “{dj.quip(m)}”"
 
 
 @mcp.tool()
@@ -519,17 +537,13 @@ def status() -> str:
     lines = [
         f"source : {st.source}",
         f"vibe   : {st.vibe}  (mood={st.dj_mood})",
-        "focus  : "
-        + (f"{f.phase} — {f.remaining}s left" if f.active else "off"),
+        "focus  : " + (f"{f.phase} — {f.remaining}s left" if f.active else "off"),
     ]
     if _unsupported_reason(np):
         lines.append(f"track  : {_unsupported(np.source or st.source, 'now_playing', _unsupported_reason(np))}")
     elif np.title:
         lines.append(f"track  : {np.title} — {np.artist}")
-        lines.append(
-            f"         {int(np.position)}s / {int(np.duration)}s "
-            + ("▶" if np.playing else "❚❚")
-        )
+        lines.append(f"         {int(np.position)}s / {int(np.duration)}s " + ("▶" if np.playing else "❚❚"))
     else:
         lines.append("track  : (none)")
     return "\n".join(lines)

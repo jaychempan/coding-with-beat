@@ -4,6 +4,7 @@ Inputs come from CC hooks (SessionStart, PreToolUse, PostToolUse, Stop) as
 JSON on stdin. We translate the event to a (mood, vibe) tuple and update the
 shared state. A background "auto-switch" can optionally retrigger playback.
 """
+
 from __future__ import annotations
 
 import json
@@ -13,7 +14,7 @@ import time
 from pathlib import Path
 from typing import Optional, Tuple
 
-from . import dj, cwb_agent, state
+from . import cwb_agent, dj, state
 from .config import FILE_KIND_VIBES, LOG_FILE, ensure_dirs
 
 

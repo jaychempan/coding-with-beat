@@ -1,4 +1,5 @@
 """Full-screen karaoke lyrics mode rendered through HTTP MCP."""
+
 from __future__ import annotations
 
 import signal
@@ -8,7 +9,6 @@ import time
 from .mcp_client import MCPClientError, call_tool
 from .ui.frame import _strip_ansi
 from .ui.lyrics import _display_width
-
 
 POLL_EVERY = 1.0
 
@@ -45,7 +45,9 @@ def _control(tool: str) -> None:
 
 def _setup_raw_tty():
     try:
-        import termios, tty
+        import termios
+        import tty
+
         fd = sys.stdin.fileno()
         old = termios.tcgetattr(fd)
         tty.setraw(fd)
@@ -59,6 +61,7 @@ def _restore_tty(raw_state) -> None:
         return
     try:
         import termios
+
         fd, old = raw_state
         termios.tcsetattr(fd, termios.TCSADRAIN, old)
     except Exception:
@@ -70,6 +73,7 @@ def _read_key(raw_state) -> str:
         return ""
     try:
         import select
+
         if select.select([sys.stdin], [], [], 0)[0]:
             return sys.stdin.read(1)
     except Exception:
@@ -79,6 +83,7 @@ def _read_key(raw_state) -> str:
 
 def run(width: int = 0) -> int:
     import shutil
+
     _width = [width if width > 0 else shutil.get_terminal_size((80, 24)).columns]
     raw_state = _setup_raw_tty()
 

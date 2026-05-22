@@ -1,8 +1,6 @@
 """Retro GameBoy / NES-flavored UI frames and banners."""
+
 from __future__ import annotations
-
-from typing import List
-
 
 GB_GREEN = "\x1b[38;2;155;188;15m"
 GB_DARK = "\x1b[38;2;15;56;15m"
@@ -22,6 +20,7 @@ EDGE_V_R = "▐"
 
 def _strip_ansi(s: str) -> str:
     import re
+
     return re.sub(r"\x1b\[[0-9;]*m", "", s)
 
 
@@ -29,12 +28,19 @@ def _display_width(s: str) -> int:
     total = 0
     for ch in s:
         cp = ord(ch)
-        if (0x1100 <= cp <= 0x115F or 0x2E80 <= cp <= 0x303E or
-                0x3040 <= cp <= 0x33FF or 0x3400 <= cp <= 0x4DBF or
-                0x4E00 <= cp <= 0x9FFF or 0xA000 <= cp <= 0xA4CF or
-                0xAC00 <= cp <= 0xD7AF or 0xF900 <= cp <= 0xFAFF or
-                0xFE10 <= cp <= 0xFE6F or 0xFF01 <= cp <= 0xFF60 or
-                0xFFE0 <= cp <= 0xFFE6):
+        if (
+            0x1100 <= cp <= 0x115F
+            or 0x2E80 <= cp <= 0x303E
+            or 0x3040 <= cp <= 0x33FF
+            or 0x3400 <= cp <= 0x4DBF
+            or 0x4E00 <= cp <= 0x9FFF
+            or 0xA000 <= cp <= 0xA4CF
+            or 0xAC00 <= cp <= 0xD7AF
+            or 0xF900 <= cp <= 0xFAFF
+            or 0xFE10 <= cp <= 0xFE6F
+            or 0xFF01 <= cp <= 0xFF60
+            or 0xFFE0 <= cp <= 0xFFE6
+        ):
             total += 2
         else:
             total += 1
@@ -115,14 +121,14 @@ def welcome_screen() -> str:
         "\x1b[38;2;210;170;57m",
         "\x1b[38;2;214;190;50m",
     ]
-    RING  = "\x1b[38;2;80;48;32m"    # dark outer vinyl ring
-    GROVE = "\x1b[38;2;130;78;52m"   # mid groove ring
-    LABEL = "\x1b[38;2;200;95;65m"   # coral center label
-    HOLE  = "\x1b[38;2;214;190;50m"  # amber hole
-    DIM   = "\x1b[38;2;108;65;40m"
-    MID   = "\x1b[38;2;172;110;68m"
+    RING = "\x1b[38;2;80;48;32m"  # dark outer vinyl ring
+    GROVE = "\x1b[38;2;130;78;52m"  # mid groove ring
+    LABEL = "\x1b[38;2;200;95;65m"  # coral center label
+    HOLE = "\x1b[38;2;214;190;50m"  # amber hole
+    DIM = "\x1b[38;2;108;65;40m"
+    MID = "\x1b[38;2;172;110;68m"
     CREAM = "\x1b[38;2;248;238;222m"
-    R  = "\x1b[0m"
+    R = "\x1b[0m"
 
     def colorize_vinyl(line: str, depth: int) -> str:
         color = [RING, GROVE, LABEL][min(depth, 2)]
@@ -148,25 +154,27 @@ def welcome_screen() -> str:
     # Center the 19-wide vinyl over 76-wide block: indent = (76-19)//2 = 28
     vinyl_block = "\n".join(f"{' ' * 28}{ln}" for ln in vinyl_lines)
 
-    tag    = f" {CREAM}{'(♪‿♪)   a pixel companion for vibecoding   (♪‿♪)'.center(76)}{R}"
+    tag = f" {CREAM}{'(♪‿♪)   a pixel companion for vibecoding   (♪‿♪)'.center(76)}{R}"
     check1 = f" {MID}   ✓  MCP server registered                ✓  /cwb command installed{R}"
     check2 = f" {MID}   ✓  CC hooks active                      ✓  statusline ready{R}"
-    hint   = f" {DIM}   open Claude Code and say: \"play some lofi\"  ·  or /cwb play lofi beats{R}"
+    hint = f' {DIM}   open Claude Code and say: "play some lofi"  ·  or /cwb play lofi beats{R}'
 
-    return "\n".join([
-        rule,
-        "",
-        vinyl_block,
-        "",
-        tag,
-        "",
-        *banner,
-        "",
-        rule,
-        check1,
-        check2,
-        rule,
-        "",
-        hint,
-        "",
-    ])
+    return "\n".join(
+        [
+            rule,
+            "",
+            vinyl_block,
+            "",
+            tag,
+            "",
+            *banner,
+            "",
+            rule,
+            check1,
+            check2,
+            rule,
+            "",
+            hint,
+            "",
+        ]
+    )

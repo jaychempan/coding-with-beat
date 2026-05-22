@@ -8,6 +8,7 @@ Adds (or removes) entries for:
 
 Re-running is safe. Keys we don't own are never touched.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -16,7 +17,6 @@ import sys
 from pathlib import Path
 
 from coding_with_beat.cwb_agent import HOOK_TIMEOUT
-
 
 TAG = "coding-with-beat"
 LEGACY_TAGS = {"cc-jukebox"}
@@ -34,7 +34,7 @@ def hook_entry(python: str, repo: str) -> dict:
         "hooks": [
             {
                 "type": "command",
-                "command": f'{python} -m coding_with_beat hook',
+                "command": f"{python} -m coding_with_beat hook",
                 "timeout": 5,
             }
         ],
@@ -48,7 +48,7 @@ def session_hook_entry(python: str, repo: str) -> dict:
         "hooks": [
             {
                 "type": "command",
-                "command": f'{python} -m coding_with_beat hook',
+                "command": f"{python} -m coding_with_beat hook",
                 "timeout": 5,
             }
         ],
@@ -62,7 +62,7 @@ def cwb_expansion_hook_entry(python: str, repo: str) -> dict:
         "hooks": [
             {
                 "type": "command",
-                "command": f'{python} -m coding_with_beat hook',
+                "command": f"{python} -m coding_with_beat hook",
                 "timeout": HOOK_TIMEOUT,
             }
         ],

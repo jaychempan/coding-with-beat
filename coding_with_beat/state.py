@@ -35,13 +35,13 @@ class JukeboxState:
     vibe: str = "focus"
     dj_mood: str = "neutral"
     focus_active: bool = False
-    focus_phase: str = "work"            # work | break
+    focus_phase: str = "work"  # work | break
     focus_started_at: float = 0.0
     updated_at: float = 0.0
     dj_quip: str = ""
     dj_quip_at: float = 0.0
     last_tool_at: float = 0.0
-    statusline_mode: str = "show"   # show | hide | auto
+    statusline_mode: str = "show"  # show | hide | auto
 
 
 def load() -> JukeboxState:

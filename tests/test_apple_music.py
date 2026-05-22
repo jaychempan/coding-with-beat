@@ -1,10 +1,10 @@
 import unittest
 from unittest import mock
 
+from coding_with_beat.sources import apple_music as am
 from coding_with_beat.sources.apple_music import AppleMusic
 from coding_with_beat.sources.base import NowPlaying
 from coding_with_beat.sources.local import LocalFiles
-from coding_with_beat.sources import apple_music as am
 
 
 class AppleMusicControlsTest(unittest.TestCase):
@@ -85,20 +85,24 @@ class AppleMusicPlayQueryTest(unittest.TestCase):
         self.assertFalse(am._track_matches("我怀念的", "孙燕姿", query=query))
 
     def test_catalog_target_accepts_localized_artist_from_query(self):
-        self.assertTrue(am._track_matches_target(
-            "小小",
-            "容祖儿",
-            "小小",
-            "Joey Yung",
-            "小小 容祖儿",
-        ))
-        self.assertFalse(am._track_matches_target(
-            "我怀念的",
-            "孙燕姿",
-            "小小",
-            "Joey Yung",
-            "小小 容祖儿",
-        ))
+        self.assertTrue(
+            am._track_matches_target(
+                "小小",
+                "容祖儿",
+                "小小",
+                "Joey Yung",
+                "小小 容祖儿",
+            )
+        )
+        self.assertFalse(
+            am._track_matches_target(
+                "我怀念的",
+                "孙燕姿",
+                "小小",
+                "Joey Yung",
+                "小小 容祖儿",
+            )
+        )
 
     def test_play_query_uses_display_query_for_catalog_search(self):
         music = AppleMusic()
