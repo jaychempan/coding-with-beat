@@ -48,6 +48,7 @@ _ALLOWED_COMMANDS = {
     "search",
     "list",
     "play_number",
+    "update",
 }
 _SOURCES = {
     # English
@@ -141,6 +142,7 @@ _fp(r"^(?:play|播放|听|放|来一首)\s+(.+)$", cmd="play", args=_extract_pla
 _fp(r"^(help|usage|commands)$", cmd="help", args=lambda m: ("en",))
 _fp(r"^(帮助|命令|命令列表|怎么用)$", cmd="help", args=lambda m: ("zh",))
 _fp(r"^(welcome|欢迎|欢迎界面|启动界面)$", cmd="welcome")
+_fp(r"^(update|更新|升级)$", cmd="update")
 
 # ── volume ─────────────────────────────────────────────────────────────────
 _fp(r"^(?:volume|音量|调音量(?:到)?|把音量(?:调)?(?:到)?|设置音量(?:为)?)\s*(\d+)%?$", cmd="volume",
@@ -415,7 +417,7 @@ def run_child_claude(intent: str, *, timeout: Optional[int] = None) -> CwbPlan:
     return parse_claude_plan(proc.stdout)
 
 
-_PASSTHROUGH_COMMANDS = {"player", "status", "lyrics", "history", "help", "welcome", "search", "list"}
+_PASSTHROUGH_COMMANDS = {"player", "status", "lyrics", "history", "help", "welcome", "search", "list", "update"}
 
 _CJK_RE = re.compile(r"[　-鿿豈-﫿]")
 

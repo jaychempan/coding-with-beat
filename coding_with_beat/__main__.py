@@ -441,6 +441,34 @@ def cmd_prefetch() -> int:
     return 0
 
 
+def cmd_update() -> int:
+    """update — pull latest changes from the git repo and restart the MCP server."""
+    import subprocess as _sp
+    from pathlib import Path as _Path
+    from .config import DATA_DIR
+    repo_file = DATA_DIR / "repo-path"
+    if not repo_file.exists():
+        print("error: repo path not found — re-run install.sh to register it")
+        return 1
+    repo = repo_file.read_text().strip()
+    if not (_Path(repo) / ".git").exists():
+        print(f"error: {repo} is not a git repository")
+        return 1
+    print(f"Pulling latest changes from {repo} ...", flush=True)
+    r = _sp.run(["git", "-C", repo, "pull"], text=True)
+    if r.returncode != 0:
+        print("error: git pull failed")
+        return 1
+    plist = _Path.home() / "Library/LaunchAgents/com.coding-with-beat.server.plist"
+    if plist.exists():
+        print("Restarting MCP server ...")
+        _sp.run(["launchctl", "unload", str(plist)], capture_output=True)
+        _sp.run(["launchctl", "load", str(plist)], capture_output=True)
+        print("MCP server restarted.")
+    print("coding-with-beat is up to date.")
+    return 0
+
+
 def cmd_server() -> int:
     import argparse
     from .server import main
@@ -488,6 +516,7 @@ def cmd_hook() -> int:
 
 COMMANDS = {
     "_prefetch": cmd_prefetch,
+    "update": cmd_update,
     "server": cmd_server,
     "statusline": cmd_statusline,
     "hook": cmd_hook,
