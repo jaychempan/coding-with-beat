@@ -112,6 +112,65 @@ lofi をかけて
 | ビートウェーブ | `▁▂▃▄▅` | ビートに合わせて上下；一時停止中は暗く |
 | 歌詞 | `│ ♪ 歌詞テキスト` | 現在の LRC 歌詞 |
 
+<details>
+<summary>小さなイースターエッグ：ステータスラインを別の場所にも表示する</summary>
+
+`cwb statusline` は Claude Code のステータスラインで使っているものと同じレンダラーです。stdin から任意の JSON を読み取り、`columns` を幅のヒントとして使い、stdout に 1 行のコンパクトなステータスラインを出力します。
+
+```bash
+printf '{"columns":120}' | cwb statusline
+```
+
+そのため、他のステータスバーにも差し込めます。たとえば tmux の右側ステータスバーに CWB を表示できます：
+
+#### tmux status-right
+
+```tmux
+set -g status-right-length 180
+set -g status-interval 1
+set -g status-right '#(printf "{\"columns\":170}" | cwb statusline | perl -pe "s/\e\[[0-9;]*m//g")'
+```
+
+`cwb statusline` は現在、ANSI カラー付きのターミナル文字列を出力します。ここで使っている `perl` は ANSI escape code を取り除くためのものです。tmux のステータスバーは独自のスタイル構文を使うためです。歌詞の表示領域を広げたい場合は `columns` と `status-right-length` を大きくし、短くしたい場合は小さくしてください。
+
+#### Neovim statusline
+
+Neovim の statusline に CWB を表示することもできます。編集操作が音楽状態の取得を待たないよう、外部コマンドは非同期で実行し、statusline はキャッシュ済みテキストだけを読みます：
+
+```lua
+local cwb = { text = "", running = false }
+
+local function strip_ansi(text)
+  return text:gsub("\27%[[0-9;]*m", "")
+end
+
+local function refresh()
+  if cwb.running or vim.fn.executable("cwb") == 0 then
+    return
+  end
+  cwb.running = true
+  vim.system({ "cwb", "statusline" }, {
+    text = true,
+    stdin = vim.json.encode({ columns = 90 }),
+  }, function(result)
+    vim.schedule(function()
+      cwb.running = false
+      if result.code == 0 and result.stdout then
+        cwb.text = vim.trim(strip_ansi(result.stdout)):gsub("%%", "%%%%")
+        vim.cmd.redrawstatus()
+      end
+    end)
+  end)
+end
+
+_G.cwb = cwb
+vim.fn.timer_start(1000, refresh, { ["repeat"] = -1 })
+refresh()
+vim.o.statusline = "%f %m%r %= %{v:lua.cwb.text}"
+```
+
+</details>
+
 ---
 
 ## CLI
@@ -135,6 +194,7 @@ cwb karaoke             # フルスクリーンカラオケ（q で終了）
 cwb lyrics              # 歌詞ウィンドウ
 cwb history [n]         # 最近再生した n 曲
 cwb bar <show|hide|auto> # ステータスライン表示設定
+cwb statusline          # コンパクトなステータスラインを 1 行描画
 cwb status              # 現在の状態
 ```
 

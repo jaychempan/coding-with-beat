@@ -120,6 +120,65 @@ pause
 | Beat wave | `▁▂▃▄▅` | 随节拍起伏，暂停时变暗 |
 | 歌词 | `│ ♪ lyrics here` | 当前 LRC 歌词行 |
 
+<details>
+<summary>小彩蛋：把状态栏显示到别的地方</summary>
+
+`cwb statusline` 就是 Claude Code 状态栏使用的同一个渲染器。它会从 stdin 读取可选 JSON，把 `columns` 当作宽度提示，然后向 stdout 输出一行紧凑状态栏。
+
+```bash
+printf '{"columns":120}' | cwb statusline
+```
+
+所以它也可以接到其他状态栏里。比如在 tmux 右侧状态栏显示 CWB：
+
+#### tmux status-right
+
+```tmux
+set -g status-right-length 180
+set -g status-interval 1
+set -g status-right '#(printf "{\"columns\":170}" | cwb statusline | perl -pe "s/\e\[[0-9;]*m//g")'
+```
+
+`cwb statusline` 现在输出的是带 ANSI 颜色的终端文本。这里的 `perl` 用来去掉 ANSI escape code，因为 tmux 状态栏使用自己的样式语法。想让歌词显示更长，就调大 `columns` 和 `status-right-length`；想短一点就调小。
+
+#### Neovim statusline
+
+Neovim 也可以把 CWB 显示在 statusline 里。建议异步刷新，让编辑器绘制状态栏时只读取缓存文本，不等待外部命令：
+
+```lua
+local cwb = { text = "", running = false }
+
+local function strip_ansi(text)
+  return text:gsub("\27%[[0-9;]*m", "")
+end
+
+local function refresh()
+  if cwb.running or vim.fn.executable("cwb") == 0 then
+    return
+  end
+  cwb.running = true
+  vim.system({ "cwb", "statusline" }, {
+    text = true,
+    stdin = vim.json.encode({ columns = 90 }),
+  }, function(result)
+    vim.schedule(function()
+      cwb.running = false
+      if result.code == 0 and result.stdout then
+        cwb.text = vim.trim(strip_ansi(result.stdout)):gsub("%%", "%%%%")
+        vim.cmd.redrawstatus()
+      end
+    end)
+  end)
+end
+
+_G.cwb = cwb
+vim.fn.timer_start(1000, refresh, { ["repeat"] = -1 })
+refresh()
+vim.o.statusline = "%f %m%r %= %{v:lua.cwb.text}"
+```
+
+</details>
+
 ---
 
 ## SSH 远端 Claude Code
@@ -162,6 +221,7 @@ cwb karaoke             # 全屏卡拉 OK（q 退出）
 cwb lyrics              # 歌词窗口
 cwb history [n]         # 最近播放的 n 首歌
 cwb bar <show|hide|auto> # 状态栏显示模式
+cwb statusline          # 渲染一行紧凑状态栏
 cwb status              # 当前状态
 cwb server              # MCP streamable HTTP 服务器
 ```

@@ -130,6 +130,65 @@ Once installed, a statusline appears at the bottom of Claude Code:
 | Beat wave | `▁▂▃▄▅` | Rises and falls each beat; dims when paused |
 | Lyrics | `│ ♪ lyrics here` | Current LRC lyric |
 
+<details>
+<summary>Little easter egg: show it anywhere</summary>
+
+`cwb statusline` is the same renderer Claude Code uses. It reads optional JSON from stdin, uses `columns` as a width hint, and prints one compact status bar line to stdout.
+
+```bash
+printf '{"columns":120}' | cwb statusline
+```
+
+That makes it easy to plug into other status bars. For example, tmux can show CWB on the right side of its status bar:
+
+#### tmux status-right
+
+```tmux
+set -g status-right-length 180
+set -g status-interval 1
+set -g status-right '#(printf "{\"columns\":170}" | cwb statusline | perl -pe "s/\e\[[0-9;]*m//g")'
+```
+
+`cwb statusline` currently emits ANSI-coloured terminal text. The `perl` bit strips ANSI escape codes because tmux status formats use their own styling syntax. Increase or decrease `columns` and `status-right-length` to control how much room lyrics get.
+
+#### Neovim statusline
+
+Neovim can also show CWB in its statusline. Keep the shell call asynchronous so editing never waits on music state:
+
+```lua
+local cwb = { text = "", running = false }
+
+local function strip_ansi(text)
+  return text:gsub("\27%[[0-9;]*m", "")
+end
+
+local function refresh()
+  if cwb.running or vim.fn.executable("cwb") == 0 then
+    return
+  end
+  cwb.running = true
+  vim.system({ "cwb", "statusline" }, {
+    text = true,
+    stdin = vim.json.encode({ columns = 90 }),
+  }, function(result)
+    vim.schedule(function()
+      cwb.running = false
+      if result.code == 0 and result.stdout then
+        cwb.text = vim.trim(strip_ansi(result.stdout)):gsub("%%", "%%%%")
+        vim.cmd.redrawstatus()
+      end
+    end)
+  end)
+end
+
+_G.cwb = cwb
+vim.fn.timer_start(1000, refresh, { ["repeat"] = -1 })
+refresh()
+vim.o.statusline = "%f %m%r %= %{v:lua.cwb.text}"
+```
+
+</details>
+
 ---
 
 ## SSH Remote Claude Code
@@ -172,6 +231,7 @@ cwb karaoke             # full-screen karaoke (q to quit)
 cwb lyrics              # lyrics window
 cwb history [n]         # last n played tracks
 cwb bar <show|hide|auto> # statusline visibility
+cwb statusline          # render one compact statusline frame
 cwb status              # current state
 cwb server              # MCP streamable HTTP server
 ```
