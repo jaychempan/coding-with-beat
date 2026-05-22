@@ -57,7 +57,7 @@ def _marquee(text: str, width: int, t: float, speed: float = 4.0) -> str:
     """Return a fixed-`width`-cell slice of text, scrolling over time if too wide."""
     dw = _dw(text)
     if dw <= width:
-        return text + " " * (width - dw)
+        return text
     loop   = text + "  "          # two-space gap before the repeat
     total  = _dw(loop)
     offset = int(t * speed) % total
