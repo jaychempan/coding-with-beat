@@ -7,14 +7,20 @@ from coding_with_beat import cwb_agent
 
 class CwbAgentTest(unittest.TestCase):
     def test_parse_claude_plan_accepts_print_mode_wrapper(self):
-        raw = json.dumps({
-            "type": "result",
-            "result": json.dumps({
-                "command": "play",
-                "args": ["稻香 周杰伦"],
-                "note": "",
-            }, ensure_ascii=False),
-        }, ensure_ascii=False)
+        raw = json.dumps(
+            {
+                "type": "result",
+                "result": json.dumps(
+                    {
+                        "command": "play",
+                        "args": ["稻香 周杰伦"],
+                        "note": "",
+                    },
+                    ensure_ascii=False,
+                ),
+            },
+            ensure_ascii=False,
+        )
 
         plan = cwb_agent.parse_claude_plan(raw)
 

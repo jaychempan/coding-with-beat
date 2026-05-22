@@ -34,6 +34,7 @@ Commands:
     bar [mode]   — statusline visibility: show | hide | auto (print current if no arg)
     help         — show command reference
 """
+
 from __future__ import annotations
 
 import os
@@ -61,6 +62,7 @@ _MCP_ERROR_MARKERS = ("full playback did not start",)
 
 def _mcp_print(tool: str, kwargs: dict | None = None) -> int:
     from .mcp_client import MCPClientError, call_tool
+
     try:
         output = call_tool(tool, kwargs or {})
     except MCPClientError as e:
@@ -69,8 +71,7 @@ def _mcp_print(tool: str, kwargs: dict | None = None) -> int:
     if output:
         print(output)
     if output and (
-        any(output.startswith(p) for p in _MCP_ERROR_PREFIXES)
-        or any(marker in output for marker in _MCP_ERROR_MARKERS)
+        any(output.startswith(p) for p in _MCP_ERROR_PREFIXES) or any(marker in output for marker in _MCP_ERROR_MARKERS)
     ):
         return 1
     return 0
@@ -114,7 +115,7 @@ def cmd_status() -> int:
 
 
 def cmd_demo() -> int:
-    from . import state, dj
+    from . import dj, state
     from .ui import boxed, render_cover, render_progress, retro_banner
     from .ui.progress import render_spectrum_color
 
@@ -146,6 +147,7 @@ def cmd_banner() -> int:
 
 def cmd_welcome() -> int:
     from .ui.frame import welcome_screen
+
     print(welcome_screen())
     return 0
 
@@ -166,6 +168,7 @@ def cmd_player() -> int:
 
 def cmd_watch() -> int:
     from .watch import run
+
     width = int(sys.argv[2]) if len(sys.argv) > 2 else 44
     return run(width=width)
 
@@ -179,6 +182,7 @@ def cmd_source() -> int:
 
 def cmd_karaoke() -> int:
     from .karaoke import run
+
     width = int(sys.argv[2]) if len(sys.argv) > 2 else 0
     return run(width=width)
 
@@ -278,6 +282,7 @@ def cmd_seek() -> int:
 
 def cmd_bar() -> int:
     from . import state
+
     st = state.load()
     if len(sys.argv) < 3:
         print(f"statusline mode: {st.statusline_mode or 'show'}")
@@ -299,6 +304,7 @@ def cmd_bar() -> int:
 
 def cmd_history() -> int:
     from .config import DATA_DIR
+
     hist_file = DATA_DIR / "history.log"
     if not hist_file.exists():
         print("(no history yet — run 'watch' or 'karaoke' to start recording)")
@@ -316,10 +322,15 @@ def cmd_mode() -> int:
         print("error: mode is required  (shuffle | sequential | repeat | repeat_one)")
         return 2
     _zh_modes = {
-        "随机": "shuffle", "随机播放": "shuffle",
-        "顺序": "sequential", "顺序播放": "sequential",
-        "单曲循环": "repeat_one", "单曲": "repeat_one",
-        "列表循环": "repeat", "循环": "repeat", "循环播放": "repeat",
+        "随机": "shuffle",
+        "随机播放": "shuffle",
+        "顺序": "sequential",
+        "顺序播放": "sequential",
+        "单曲循环": "repeat_one",
+        "单曲": "repeat_one",
+        "列表循环": "repeat",
+        "循环": "repeat",
+        "循环播放": "repeat",
     }
     mode = _zh_modes.get(mode, mode)
     return _mcp_print("set_play_mode", {"mode": mode})
@@ -345,37 +356,37 @@ def cmd_help() -> int:
             f"{G}/cwb — coding-with-beat 命令速查{R}",
             "",
             sec("播放控制"),
-            row("play [歌名 / song]",    "播放 / 搜索播放"),
-            row("play <序号>",            "按编号播放（来自搜索或列表结果）"),
-            row("search <关键词>",        "搜索资料库 + Apple Music 目录"),
-            row("list [n]",              "列出资料库所有歌曲（默认100首）"),
-            row("pause / 暂停",           "暂停"),
-            row("next  / 下一首",         "下一首"),
-            row("prev  / 上一首",         "上一首"),
-            row("like  / 收藏",           "收藏当前曲目"),
-            row("np    / 当前",           "显示正在播放"),
+            row("play [歌名 / song]", "播放 / 搜索播放"),
+            row("play <序号>", "按编号播放（来自搜索或列表结果）"),
+            row("search <关键词>", "搜索资料库 + Apple Music 目录"),
+            row("list [n]", "列出资料库所有歌曲（默认100首）"),
+            row("pause / 暂停", "暂停"),
+            row("next  / 下一首", "下一首"),
+            row("prev  / 上一首", "上一首"),
+            row("like  / 收藏", "收藏当前曲目"),
+            row("np    / 当前", "显示正在播放"),
             "",
             sec("音量 & 进度"),
-            row("volume <0-100>",         "音量 70  /  音量70"),
-            row("seek <T>",               "跳转 1:30  /  跳至90"),
+            row("volume <0-100>", "音量 70  /  音量70"),
+            row("seek <T>", "跳转 1:30  /  跳至90"),
             "",
             sec("来源 & 模式"),
-            row("source <来源>",          "apple_music  qq_music  local"),
-            row("",                       "苹果音乐  本地  qq音乐"),
-            row("mode <模式>",            "shuffle / sequential / repeat / repeat_one"),
-            row("",                       "随机 / 顺序 / 循环 / 单曲循环"),
+            row("source <来源>", "apple_music  qq_music  local"),
+            row("", "苹果音乐  本地  qq音乐"),
+            row("mode <模式>", "shuffle / sequential / repeat / repeat_one"),
+            row("", "随机 / 顺序 / 循环 / 单曲循环"),
             "",
             sec("界面"),
-            row("player / 播放器",        "像素播放器"),
-            row("watch",                  "实时 TUI  Space/n/p/l 控制  q 退出"),
-            row("karaoke",                "全屏卡拉 OK  同上快捷键"),
-            row("lyrics / 歌词",          "歌词窗口"),
-            row("cover [rgb|gameboy]",    "专辑封面"),
+            row("player / 播放器", "像素播放器"),
+            row("watch", "实时 TUI  Space/n/p/l 控制  q 退出"),
+            row("karaoke", "全屏卡拉 OK  同上快捷键"),
+            row("lyrics / 歌词", "歌词窗口"),
+            row("cover [rgb|gameboy]", "专辑封面"),
             "",
             sec("记录 & 设置"),
-            row("history [n]",            "最近 n 首播放记录（默认 10）"),
-            row("bar show|hide|auto",     "状态栏：始终显示 / 隐藏 / 仅播放时"),
-            row("status / 状态",          "当前完整状态"),
+            row("history [n]", "最近 n 首播放记录（默认 10）"),
+            row("bar show|hide|auto", "状态栏：始终显示 / 隐藏 / 仅播放时"),
+            row("status / 状态", "当前完整状态"),
             "",
             f"  {D}中英文均可：/cwb 暂停  /cwb 下一首  /cwb 切换苹果音乐  /cwb help{R}",
         ]
@@ -384,35 +395,35 @@ def cmd_help() -> int:
             f"{G}/cwb — coding-with-beat command reference{R}",
             "",
             sec("Playback"),
-            row("play [query]",           "Resume or search & play"),
-            row("play <n>",               "Play track #n from last search or list"),
-            row("search <query>",         "Search library + Apple Music catalog"),
-            row("list [n]",               "List all library tracks (default 100)"),
-            row("pause",                  "Pause playback"),
-            row("next",                   "Skip to next track"),
-            row("prev",                   "Go to previous track"),
-            row("like",                   "Like the current track"),
-            row("np",                     "Show now playing"),
+            row("play [query]", "Resume or search & play"),
+            row("play <n>", "Play track #n from last search or list"),
+            row("search <query>", "Search library + Apple Music catalog"),
+            row("list [n]", "List all library tracks (default 100)"),
+            row("pause", "Pause playback"),
+            row("next", "Skip to next track"),
+            row("prev", "Go to previous track"),
+            row("like", "Like the current track"),
+            row("np", "Show now playing"),
             "",
             sec("Volume & Position"),
-            row("volume <0-100>",         "Set playback volume  (e.g. volume 70)"),
-            row("seek <T>",               "Seek to position  (90  or  1:30)"),
+            row("volume <0-100>", "Set playback volume  (e.g. volume 70)"),
+            row("seek <T>", "Seek to position  (90  or  1:30)"),
             "",
             sec("Source & Mode"),
-            row("source <name>",          "apple_music | qq_music | local"),
-            row("mode <mode>",            "shuffle | sequential | repeat | repeat_one"),
+            row("source <name>", "apple_music | qq_music | local"),
+            row("mode <mode>", "shuffle | sequential | repeat | repeat_one"),
             "",
             sec("UI"),
-            row("player",                 "Pixel player"),
-            row("watch",                  "Live TUI  Space/n/p/l to control  q to quit"),
-            row("karaoke",                "Full-screen lyrics  (same shortcuts)"),
-            row("lyrics",                 "Lyrics window"),
-            row("cover [rgb|gameboy]",    "Album cover art"),
+            row("player", "Pixel player"),
+            row("watch", "Live TUI  Space/n/p/l to control  q to quit"),
+            row("karaoke", "Full-screen lyrics  (same shortcuts)"),
+            row("lyrics", "Lyrics window"),
+            row("cover [rgb|gameboy]", "Album cover art"),
             "",
             sec("History & Settings"),
-            row("history [n]",            "Last n played tracks (default 10)"),
-            row("bar show|hide|auto",     "Statusline: always | hidden | when playing"),
-            row("status",                 "Full current state"),
+            row("history [n]", "Last n played tracks (default 10)"),
+            row("bar show|hide|auto", "Statusline: always | hidden | when playing"),
+            row("status", "Full current state"),
             "",
             f"  {D}Tip: use search first for precise matches, then play the result number.{R}",
         ]
@@ -422,10 +433,12 @@ def cmd_help() -> int:
 
 def cmd_prefetch() -> int:
     """Internal: silently fetch and cache lyrics for the current track."""
-    from . import state
-    from .sources import get_source
-    from .config import DATA_DIR
     import re
+
+    from . import state
+    from .config import DATA_DIR
+    from .sources import get_source
+
     st = state.load()
     src = get_source(st.source)
     fn = getattr(src, "lyrics", None)
@@ -437,8 +450,7 @@ def cmd_prefetch() -> int:
     # Remove the lock file so statusline can trigger again on track change
     t = st.track
     if t.title:
-        key = re.sub(r"[^a-zA-Z0-9一-鿿]+", "_",
-                     f"{t.artist}_{t.album}_{t.title}").strip("_")[:160]
+        key = re.sub(r"[^a-zA-Z0-9一-鿿]+", "_", f"{t.artist}_{t.album}_{t.title}").strip("_")[:160]
         prefix = {"apple_music": "am", "local": "local", "qq_music": "qq"}.get(st.source, "am")
         lock = DATA_DIR / f".lyfetch_{prefix}_{key}"
         lock.unlink(missing_ok=True)
@@ -449,6 +461,7 @@ def _find_repo():
     """Locate the coding-with-beat git repo via multiple fallbacks."""
     import subprocess as _sp
     from pathlib import Path as _Path
+
     from .config import DATA_DIR
 
     candidates = []
@@ -465,7 +478,8 @@ def _find_repo():
     try:
         r = _sp.run(
             [sys.executable, "-m", "pip", "show", "coding-with-beat"],
-            capture_output=True, text=True,
+            capture_output=True,
+            text=True,
         )
         for line in r.stdout.splitlines():
             if line.lower().startswith("editable project location:"):
@@ -493,7 +507,9 @@ def cmd_update() -> int:
     repo = _find_repo()
     if repo is None:
         print("error: could not find the coding-with-beat git repository.")
-        print("  Re-run the installer:  curl -LsSf https://raw.githubusercontent.com/jaychempan/coding-with-beat/main/bootstrap.sh | sh")
+        print(
+            "  Re-run the installer:  curl -LsSf https://raw.githubusercontent.com/jaychempan/coding-with-beat/main/bootstrap.sh | sh"
+        )
         return 1
     print(f"Pulling latest changes from {repo} ...", flush=True)
     r = _sp.run(["git", "-C", str(repo), "pull"], text=True)
@@ -512,6 +528,7 @@ def cmd_update() -> int:
 
 def cmd_server() -> int:
     import argparse
+
     from .server import main
 
     ap = argparse.ArgumentParser(prog="cwb server")
@@ -547,11 +564,13 @@ def cmd_server() -> int:
 
 def cmd_statusline() -> int:
     from .statusline import main
+
     return main()
 
 
 def cmd_hook() -> int:
     from .vibe import main
+
     return main()
 
 

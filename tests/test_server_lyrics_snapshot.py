@@ -5,8 +5,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
 
-from coding_with_beat import lyrics_snapshot
-from coding_with_beat import server
+from coding_with_beat import lyrics_snapshot, server
 
 
 class ServerLyricsSnapshotTest(unittest.TestCase):
@@ -118,9 +117,7 @@ class ServerPlaybackMessageTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             data_dir = Path(td)
             (data_dir / "last_results.json").write_text(
-                json.dumps([
-                    {"title": "孤勇者", "artist": "陈奕迅", "source": "apple_music"}
-                ], ensure_ascii=False),
+                json.dumps([{"title": "孤勇者", "artist": "陈奕迅", "source": "apple_music"}], ensure_ascii=False),
                 encoding="utf-8",
             )
             with (

@@ -4,10 +4,11 @@ A half-block char (▀ U+2580) shows two vertical pixels at once: foreground
 color paints the top half, background color paints the bottom half. This
 doubles vertical resolution while staying terminal-character aligned.
 """
+
 from __future__ import annotations
 
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Optional, Tuple
 
 from PIL import Image
 
@@ -76,9 +77,7 @@ def render_cover_gameboy(path: Optional[str], width: int = 32, height: int = 16)
 
 def _placeholder(width: int, height: int, gameboy: bool = False) -> str:
     """No-cover fallback: a striped 'cassette tape' pattern."""
-    palette = GAMEBOY_PALETTE if gameboy else [
-        (40, 40, 60), (90, 90, 130), (140, 140, 180), (200, 200, 230)
-    ]
+    palette = GAMEBOY_PALETTE if gameboy else [(40, 40, 60), (90, 90, 130), (140, 140, 180), (200, 200, 230)]
     rows = []
     for y in range(height):
         row = []

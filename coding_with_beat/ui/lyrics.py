@@ -6,30 +6,37 @@ Two input formats are supported:
   - Plain text — splits on newlines; the current line is interpolated from
     position/duration so it scrolls karaoke-style without real timing.
 """
+
 from __future__ import annotations
 
 import math
 import re
 from typing import List, Optional, Tuple
 
-
 HIGHLIGHT = "\x1b[1;38;2;255;230;100m"
-NEXT      = "\x1b[38;2;200;200;230m"
-DIM       = "\x1b[38;2;120;130;130m"
-EDGE      = "\x1b[38;2;90;90;105m"
-RESET     = "\x1b[0m"
+NEXT = "\x1b[38;2;200;200;230m"
+DIM = "\x1b[38;2;120;130;130m"
+EDGE = "\x1b[38;2;90;90;105m"
+RESET = "\x1b[0m"
 
 _PREFIX_W = 2  # "▶ " / "  " prefix display width
 
 
 def _char_width(ch: str) -> int:
     cp = ord(ch)
-    if (0x1100 <= cp <= 0x115F or 0x2E80 <= cp <= 0x303E or
-            0x3040 <= cp <= 0x33FF or 0x3400 <= cp <= 0x4DBF or
-            0x4E00 <= cp <= 0x9FFF or 0xA000 <= cp <= 0xA4CF or
-            0xAC00 <= cp <= 0xD7AF or 0xF900 <= cp <= 0xFAFF or
-            0xFE10 <= cp <= 0xFE6F or 0xFF01 <= cp <= 0xFF60 or
-            0xFFE0 <= cp <= 0xFFE6):
+    if (
+        0x1100 <= cp <= 0x115F
+        or 0x2E80 <= cp <= 0x303E
+        or 0x3040 <= cp <= 0x33FF
+        or 0x3400 <= cp <= 0x4DBF
+        or 0x4E00 <= cp <= 0x9FFF
+        or 0xA000 <= cp <= 0xA4CF
+        or 0xAC00 <= cp <= 0xD7AF
+        or 0xF900 <= cp <= 0xFAFF
+        or 0xFE10 <= cp <= 0xFE6F
+        or 0xFF01 <= cp <= 0xFF60
+        or 0xFFE0 <= cp <= 0xFFE6
+    ):
         return 2
     return 1
 
@@ -105,7 +112,7 @@ def render_lyrics_window(
         or to interpolate a current line for plain-text lyrics.
     """
     if isinstance(text_or_lines, list):
-        lines = [l for l in text_or_lines if l is not None]
+        lines = [line for line in text_or_lines if line is not None]
         cues: List[Tuple[float, str]] = []
         is_lrc = False
     else:
@@ -116,7 +123,7 @@ def render_lyrics_window(
             cues = [(t, b) for t, b in cues if b.strip()]
             lines = [c[1] for c in cues]
         else:
-            lines = [l.strip() for l in text.splitlines() if l.strip()]
+            lines = [line.strip() for line in text.splitlines() if line.strip()]
 
     if not lines:
         return f"{DIM}(no lyrics){RESET}"
@@ -138,6 +145,7 @@ def render_lyrics_window(
 
     if width is None:
         import shutil
+
         width = shutil.get_terminal_size((80, 24)).columns
     text_w = max(1, width - _PREFIX_W)
 
@@ -192,7 +200,7 @@ def render_lyrics_wave(
     """Like render_lyrics_window but the active line has a per-character wave
     animation driven by wall-clock time t, plus a brief white flash on entry."""
     if isinstance(text_or_lines, list):
-        lines = [l for l in text_or_lines if l is not None]
+        lines = [line for line in text_or_lines if line is not None]
         cues: List[Tuple[float, str]] = []
         is_lrc = False
     else:
@@ -202,7 +210,7 @@ def render_lyrics_wave(
             cues = [(ts, b) for ts, b in cues if b.strip()]
             lines = [c[1] for c in cues]
         else:
-            lines = [l.strip() for l in text.splitlines() if l.strip()]
+            lines = [line.strip() for line in text.splitlines() if line.strip()]
 
     if not lines:
         return f"{DIM}(no lyrics){RESET}"
@@ -231,6 +239,7 @@ def render_lyrics_wave(
 
     if width is None:
         import shutil
+
         width = shutil.get_terminal_size((80, 24)).columns
     text_w = max(1, width - _PREFIX_W)
 

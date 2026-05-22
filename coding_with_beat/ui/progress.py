@@ -4,11 +4,10 @@ The "spectrum" isn't real FFT — we don't have access to the audio stream from
 Apple Music. Instead we use a smooth hash of (position, bar_index) so the bars
 animate as the song progresses, looking reactive without being fake-random.
 """
+
 from __future__ import annotations
 
 import math
-from typing import Tuple
-
 
 SPECTRUM_GLYPHS = " ▁▂▃▄▅▆▇█"
 BAR_FILLED = "█"
@@ -20,8 +19,7 @@ def _mmss(seconds: float) -> str:
     return f"{s // 60:02d}:{s % 60:02d}"
 
 
-def render_progress(position: float, duration: float, width: int = 28,
-                    accent: tuple = (155, 188, 15)) -> str:
+def render_progress(position: float, duration: float, width: int = 28, accent: tuple = (155, 188, 15)) -> str:
     duration = max(0.0, duration)
     position = max(0.0, min(position, duration if duration else position))
     ratio = (position / duration) if duration > 0 else 0.0
@@ -37,7 +35,8 @@ def render_spectrum(position: float, width: int = 28, energy: float = 0.85) -> s
     for i in range(width):
         phase = position * 2.3 + i * 0.51
         v = (
-            0.55 + 0.45 * math.sin(phase)
+            0.55
+            + 0.45 * math.sin(phase)
             + 0.30 * math.sin(phase * 1.7 + i * 0.13)
             + 0.20 * math.sin(phase * 0.4 + i * 0.31)
         ) / 1.6
@@ -47,8 +46,7 @@ def render_spectrum(position: float, width: int = 28, energy: float = 0.85) -> s
     return "\x1b[38;2;48;98;48m" + "".join(bars) + "\x1b[0m"
 
 
-def render_spectrum_color(position: float, width: int = 28, energy: float = 0.85,
-                          t: float = 0.0) -> str:
+def render_spectrum_color(position: float, width: int = 28, energy: float = 0.85, t: float = 0.0) -> str:
     """Spectrum with a green-to-yellow-to-red gradient.
     `t` is wall-clock seconds; when nonzero, the spectrum keeps animating even
     if `position` is stationary (e.g., between AppleScript polls)."""
@@ -57,7 +55,8 @@ def render_spectrum_color(position: float, width: int = 28, energy: float = 0.85
     for i in range(width):
         phase = drive + i * 0.51
         v = (
-            0.55 + 0.45 * math.sin(phase)
+            0.55
+            + 0.45 * math.sin(phase)
             + 0.30 * math.sin(phase * 1.7 + i * 0.13)
             + 0.20 * math.sin(phase * 0.4 + i * 0.31)
         ) / 1.6
@@ -89,8 +88,7 @@ _LED_DIGITS = {
 }
 
 
-def render_led_time(seconds: float, color: str = "155;188;15",
-                    dim: str = "30;50;30") -> str:
+def render_led_time(seconds: float, color: str = "155;188;15", dim: str = "30;50;30") -> str:
     """Render mm:ss as a 3-row chunky 7-segment-style display."""
     s = max(0, int(seconds))
     text = f"{s // 60:02d}:{s % 60:02d}"
@@ -105,8 +103,7 @@ def render_led_time(seconds: float, color: str = "155;188;15",
     return "\n".join(out)
 
 
-def render_beat_wave(bpm: int, t: float, accent: tuple = (155, 188, 15),
-                     playing: bool = True, width: int = 5) -> str:
+def render_beat_wave(bpm: int, t: float, accent: tuple = (155, 188, 15), playing: bool = True, width: int = 5) -> str:
     """Mini beat-pulse waveform: rises once per beat, bell-shaped across `width` cols."""
     GLYPHS = " ▁▂▃▄▅▆▇█"
     r, g, b = accent
@@ -114,13 +111,13 @@ def render_beat_wave(bpm: int, t: float, accent: tuple = (155, 188, 15),
         dr, dg, db = max(40, r // 4), max(40, g // 4), max(30, b // 4)
         return f"\x1b[38;2;{dr};{dg};{db}m{'▁' * width}\x1b[0m"
     beat_period = 60.0 / bpm
-    phase = (t % beat_period) / beat_period          # 0..1 within one beat
-    amp = max(0.0, math.sin(phase * math.pi))        # smooth 0 → 1 → 0 pulse
+    phase = (t % beat_period) / beat_period  # 0..1 within one beat
+    amp = max(0.0, math.sin(phase * math.pi))  # smooth 0 → 1 → 0 pulse
     center = (width - 1) / 2.0
     bars = []
     for i in range(width):
         dist = abs(i - center) / center if center else 0.0
-        weight = 1.0 - dist * 0.65                  # 1.0 at centre, 0.35 at edges
+        weight = 1.0 - dist * 0.65  # 1.0 at centre, 0.35 at edges
         h = 1 + amp * weight * 7.0
         bars.append(GLYPHS[min(8, max(0, int(round(h))))])
     intensity = 0.4 + 0.6 * amp
@@ -134,12 +131,13 @@ def render_hud_chip(track_key: str, vibe: str = "build", playing: bool = True) -
     """Fake-audiophile readout: deterministic per-track BPM / sample-rate /
     bit-depth + a live REC/TX indicator. Stable across renders, looks legit."""
     import hashlib
+
     h = int(hashlib.md5(track_key.encode()).hexdigest()[:8], 16)
-    bpm = 72 + (h % 80)               # 72-152 BPM, song-feel range
+    bpm = 72 + (h % 80)  # 72-152 BPM, song-feel range
     sr = (44100, 48000, 96000)[h % 3]
     bit = (16, 24, 24)[h % 3]
     codec = ("AAC", "ALAC", "FLAC")[h % 3]
-    sr_label = f"{sr//1000}.{(sr%1000)//100}k" if sr % 1000 else f"{sr//1000}k"
+    sr_label = f"{sr // 1000}.{(sr % 1000) // 100}k" if sr % 1000 else f"{sr // 1000}k"
     dot_color = "0;255;100" if playing else "120;120;120"
     return (
         f"\x1b[38;2;{dot_color}m●\x1b[0m "

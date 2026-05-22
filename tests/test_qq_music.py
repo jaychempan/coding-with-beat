@@ -65,45 +65,58 @@ class QQMusicTest(unittest.TestCase):
 
     def test_api_search_once_normalizes_legacy_payload(self):
         source = qm.QQMusic()
-        source._client = FakeClient([
-            FakeResponse({
-                "data": {
-                    "song": {
-                        "list": [{
-                            "songname": "稻香",
-                            "singer": [{"name": "周杰伦"}],
-                            "albumname": "魔杰座",
-                            "songmid": "003aAYrm3GE0Ac",
-                            "strMediaMid": "0020wJDo3cx0j3",
-                            "albummid": "002Neh8l0uciQZ",
-                            "interval": 223,
-                        }]
+        source._client = FakeClient(
+            [
+                FakeResponse(
+                    {
+                        "data": {
+                            "song": {
+                                "list": [
+                                    {
+                                        "songname": "稻香",
+                                        "singer": [{"name": "周杰伦"}],
+                                        "albumname": "魔杰座",
+                                        "songmid": "003aAYrm3GE0Ac",
+                                        "strMediaMid": "0020wJDo3cx0j3",
+                                        "albummid": "002Neh8l0uciQZ",
+                                        "interval": 223,
+                                    }
+                                ]
+                            }
+                        }
                     }
-                }
-            })
-        ])
+                )
+            ]
+        )
 
         hits = source._api_search_once("稻香", limit=3, new_json=False)
 
-        self.assertEqual(hits, [{
-            "title": "稻香",
-            "artist": "周杰伦",
-            "album": "魔杰座",
-            "mid": "003aAYrm3GE0Ac",
-            "media_mid": "0020wJDo3cx0j3",
-            "albummid": "002Neh8l0uciQZ",
-            "duration": 223.0,
-            "url": "https://y.qq.com/n/ryqq/songDetail/003aAYrm3GE0Ac",
-        }])
+        self.assertEqual(
+            hits,
+            [
+                {
+                    "title": "稻香",
+                    "artist": "周杰伦",
+                    "album": "魔杰座",
+                    "mid": "003aAYrm3GE0Ac",
+                    "media_mid": "0020wJDo3cx0j3",
+                    "albummid": "002Neh8l0uciQZ",
+                    "duration": 223.0,
+                    "url": "https://y.qq.com/n/ryqq/songDetail/003aAYrm3GE0Ac",
+                }
+            ],
+        )
 
     def test_api_search_normalization_tolerates_bad_duration_values(self):
         source = qm.QQMusic()
-        hit = source._normalize_hit({
-            "songname": "坏时长",
-            "singer": [],
-            "songmid": "mid",
-            "interval": "not-a-number",
-        })
+        hit = source._normalize_hit(
+            {
+                "songname": "坏时长",
+                "singer": [],
+                "songmid": "mid",
+                "interval": "not-a-number",
+            }
+        )
 
         self.assertEqual(hit["duration"], 0.0)
 
@@ -128,15 +141,17 @@ class QQMusicTest(unittest.TestCase):
 
         class MetadataOnlyQQ(qm.QQMusic):
             def _api_search(self, query, limit):
-                return [{
-                    "title": "稻香",
-                    "artist": "周杰伦",
-                    "album": "魔杰座",
-                    "mid": "songmid",
-                    "media_mid": "mediamid",
-                    "albummid": "albummid",
-                    "duration": 223.0,
-                }]
+                return [
+                    {
+                        "title": "稻香",
+                        "artist": "周杰伦",
+                        "album": "魔杰座",
+                        "mid": "songmid",
+                        "media_mid": "mediamid",
+                        "albummid": "albummid",
+                        "duration": 223.0,
+                    }
+                ]
 
             def _download_cover(self, url, key):
                 return "/tmp/cover.jpg"
@@ -162,15 +177,17 @@ class QQMusicTest(unittest.TestCase):
 
         class PreviewQQ(qm.QQMusic):
             def _api_search(self, query, limit):
-                return [{
-                    "title": "稻香",
-                    "artist": "周杰伦",
-                    "album": "魔杰座",
-                    "mid": "songmid",
-                    "media_mid": "mediamid",
-                    "albummid": "albummid",
-                    "duration": 223.0,
-                }]
+                return [
+                    {
+                        "title": "稻香",
+                        "artist": "周杰伦",
+                        "album": "魔杰座",
+                        "mid": "songmid",
+                        "media_mid": "mediamid",
+                        "albummid": "albummid",
+                        "duration": 223.0,
+                    }
+                ]
 
             def _download_cover(self, url, key):
                 return "/tmp/cover.jpg"
@@ -182,8 +199,10 @@ class QQMusicTest(unittest.TestCase):
         source = PreviewQQ()
         source._client = FakeClient([FakeResponse(content=b"\x00\x00\x00\x18ftypM4A " + b"x" * 3000)])
 
-        with mock.patch.object(qm, "_read", return_value={"pid": 123, "path": str(qm.PREVIEW_FILE)}), \
-                mock.patch.object(qm, "_write", side_effect=writes.append):
+        with (
+            mock.patch.object(qm, "_read", return_value={"pid": 123, "path": str(qm.PREVIEW_FILE)}),
+            mock.patch.object(qm, "_write", side_effect=writes.append),
+        ):
             np = source.play_query("稻香 周杰伦")
 
         self.assertEqual(source.started_path, qm.PREVIEW_FILE)
@@ -193,24 +212,33 @@ class QQMusicTest(unittest.TestCase):
 
     def test_now_playing_ignores_unrelated_local_afplay_state(self):
         self.isolated_paths()
-        qm._write_qq_state({
-            "track": {
-                "title": "稻香",
-                "artist": "周杰伦",
-                "album": "魔杰座",
-                "duration": 223.0,
-                "artwork": "/tmp/cover.jpg",
-            },
-            "mode": "metadata_only",
-        })
+        qm._write_qq_state(
+            {
+                "track": {
+                    "title": "稻香",
+                    "artist": "周杰伦",
+                    "album": "魔杰座",
+                    "duration": 223.0,
+                    "artwork": "/tmp/cover.jpg",
+                },
+                "mode": "metadata_only",
+            }
+        )
 
         source = qm.QQMusic()
-        with mock.patch.object(qm, "_read", return_value={
-            "source": "local",
-            "pid": 99,
-            "path": "/tmp/unrelated.mp3",
-            "started_at": 10.0,
-        }), mock.patch.object(qm, "_pid_alive", return_value=True):
+        with (
+            mock.patch.object(
+                qm,
+                "_read",
+                return_value={
+                    "source": "local",
+                    "pid": 99,
+                    "path": "/tmp/unrelated.mp3",
+                    "started_at": 10.0,
+                },
+            ),
+            mock.patch.object(qm, "_pid_alive", return_value=True),
+        ):
             np = source.now_playing()
 
         self.assertEqual(np.title, "")
@@ -221,16 +249,18 @@ class QQMusicTest(unittest.TestCase):
 
     def test_now_playing_overlays_metadata_on_active_qq_preview(self):
         self.isolated_paths()
-        qm._write_qq_state({
-            "track": {
-                "title": "稻香",
-                "artist": "周杰伦",
-                "album": "魔杰座",
-                "duration": 223.0,
-                "artwork": "/tmp/cover.jpg",
-            },
-            "mode": "preview",
-        })
+        qm._write_qq_state(
+            {
+                "track": {
+                    "title": "稻香",
+                    "artist": "周杰伦",
+                    "album": "魔杰座",
+                    "duration": 223.0,
+                    "artwork": "/tmp/cover.jpg",
+                },
+                "mode": "preview",
+            }
+        )
 
         source = qm.QQMusic()
         local_state = {
@@ -241,9 +271,11 @@ class QQMusicTest(unittest.TestCase):
             "paused_total": 0.0,
             "duration": 30.0,
         }
-        with mock.patch.object(qm, "_read", return_value=local_state), \
-                mock.patch.object(local_source, "_read", return_value=local_state), \
-                mock.patch.object(local_source, "_pid_alive", return_value=True):
+        with (
+            mock.patch.object(qm, "_read", return_value=local_state),
+            mock.patch.object(local_source, "_read", return_value=local_state),
+            mock.patch.object(local_source, "_pid_alive", return_value=True),
+        ):
             np = source.now_playing()
 
         self.assertEqual(np.title, "稻香")
@@ -253,19 +285,19 @@ class QQMusicTest(unittest.TestCase):
 
     def test_lyrics_fetches_qq_lrc_and_uses_cache(self):
         self.isolated_paths()
-        qm._write_qq_state({
-            "track": {
-                "title": "稻香",
-                "artist": "周杰伦",
-                "album": "魔杰座",
-                "mid": "003aAYrm3GE0Ac",
+        qm._write_qq_state(
+            {
+                "track": {
+                    "title": "稻香",
+                    "artist": "周杰伦",
+                    "album": "魔杰座",
+                    "mid": "003aAYrm3GE0Ac",
+                }
             }
-        })
+        )
         lyric = "[ti:稻香]\n[00:00.00]稻香 - 周杰伦"
         source = qm.QQMusic()
-        source._client = FakeClient([
-            FakeResponse({"lyric": base64.b64encode(lyric.encode()).decode()})
-        ])
+        source._client = FakeClient([FakeResponse({"lyric": base64.b64encode(lyric.encode()).decode()})])
 
         self.assertEqual(source.lyrics(), lyric)
 
@@ -310,8 +342,10 @@ class QQMusicTest(unittest.TestCase):
         source = qm.QQMusic()
         calls = []
 
-        with mock.patch.object(source, "_desktop_play_mode", side_effect=lambda idx: calls.append(idx) or True), \
-                mock.patch.object(source, "_desktop_menu_item", return_value=True):
+        with (
+            mock.patch.object(source, "_desktop_play_mode", side_effect=lambda idx: calls.append(idx) or True),
+            mock.patch.object(source, "_desktop_menu_item", return_value=True),
+        ):
             self.assertTrue(source.set_play_mode("shuffle"))
             self.assertTrue(source.set_play_mode("sequential"))
             self.assertTrue(source.set_play_mode("repeat"))

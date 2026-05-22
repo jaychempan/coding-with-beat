@@ -4,6 +4,7 @@ The snapshot path must not block on network lyric lookups. It reads the whole
 song lyric cache when available and starts one background fetch per track when
 the cache is missing.
 """
+
 from __future__ import annotations
 
 import re
@@ -13,8 +14,7 @@ from pathlib import Path
 from typing import Optional
 
 from .config import LYRICS_CACHE
-from .ui.lyrics import parse_lrc, _index_for_position
-
+from .ui.lyrics import _index_for_position, parse_lrc
 
 _KEY_RE = re.compile(r"[^a-zA-Z0-9一-鿿]+")
 _SOURCE_PREFIX = {"apple_music": "am", "local": "local", "qq_music": "qq"}

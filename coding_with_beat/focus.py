@@ -4,14 +4,13 @@ Doesn't run a daemon; instead, every read of `focus_status()` computes the
 current phase from `focus_started_at`. The MCP `focus_start` tool flips it on,
 `focus_stop` flips it off. Statusline shows the remaining time.
 """
+
 from __future__ import annotations
 
 import time
 from dataclasses import dataclass
-from typing import Optional
 
 from . import state
-
 
 WORK_SECONDS = 25 * 60
 BREAK_SECONDS = 5 * 60
@@ -41,8 +40,11 @@ def status() -> FocusStatus:
         phase = "break"
         remaining = cycle_len - in_cycle
     return FocusStatus(
-        active=True, phase=phase,
-        remaining=remaining, elapsed=elapsed, cycle=cycle + 1,
+        active=True,
+        phase=phase,
+        remaining=remaining,
+        elapsed=elapsed,
+        cycle=cycle + 1,
     )
 
 

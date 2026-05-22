@@ -1,4 +1,5 @@
 """Small synchronous client for coding-with-beat's HTTP MCP server."""
+
 from __future__ import annotations
 
 import os
@@ -10,7 +11,6 @@ from mcp.client.streamable_http import streamablehttp_client
 
 from .config import MCP_URL_FILE
 
-
 MCP_URL_ENV = "CWB_MCP_URL"
 LEGACY_MCP_URL_ENV = "CC_JUKEBOX_MCP_URL"
 DEFAULT_MCP_URL = "http://127.0.0.1:8765/mcp"
@@ -21,10 +21,7 @@ class MCPClientError(RuntimeError):
 
 
 def configured_url() -> str:
-    env_url = (
-        os.environ.get(MCP_URL_ENV, "").strip()
-        or os.environ.get(LEGACY_MCP_URL_ENV, "").strip()
-    )
+    env_url = os.environ.get(MCP_URL_ENV, "").strip() or os.environ.get(LEGACY_MCP_URL_ENV, "").strip()
     if env_url:
         return env_url
     try:
@@ -48,8 +45,7 @@ def call_tool(
         raise
     except Exception as e:
         raise MCPClientError(
-            f"coding-with-beat MCP server is not reachable at {target}: {e}\n"
-            "Start it with: cwb server"
+            f"coding-with-beat MCP server is not reachable at {target}: {e}\nStart it with: cwb server"
         ) from e
 
 

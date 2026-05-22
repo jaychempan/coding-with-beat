@@ -5,23 +5,23 @@ Moods map to:
 - a chunkier ASCII sprite for the player frame
 - a pool of short quips DJ Buddy may drop into the chat via the `dj_say` tool
 """
+
 from __future__ import annotations
 
 import random
 import time
-from typing import List, Tuple
-
+from typing import Tuple
 
 COMPACT_FACES = {
-    "neutral":  "(•_•)",
-    "focus":    "(◉_◉)",
-    "happy":    "(•‿•)",
-    "victory":  "\\(^o^)/",
-    "sad":      "(╥_╥)",
-    "panic":    "(°O°)",
+    "neutral": "(•_•)",
+    "focus": "(◉_◉)",
+    "happy": "(•‿•)",
+    "victory": "\\(^o^)/",
+    "sad": "(╥_╥)",
+    "panic": "(°O°)",
     "thinking": "(•ᴗ•)",
-    "groove":   "(♪‿♪)",
-    "sleep":    "(-_-)zZ",
+    "groove": "(♪‿♪)",
+    "sleep": "(-_-)zZ",
 }
 
 SPRITES = {
@@ -77,15 +77,15 @@ SPRITES = {
 
 
 QUIPS = {
-    "neutral":  ["beat dropping in 3...", "ready when you are", "let's cook"],
-    "focus":    ["headphones on. let's go.", "zone engaged.", "shhh, deep focus"],
-    "happy":    ["look at that clean diff!", "we love a green check", "nice."],
-    "victory":  ["LET'S GOOO 🎉".replace("🎉", "*"), "ship it!", "tests green, vibes greener"],
-    "sad":      ["welp.", "we'll get it next try", "deep breath — pair with me"],
-    "panic":    ["stack trace incoming!!", "abort? retry? cry?", "oh no oh no oh no"],
+    "neutral": ["beat dropping in 3...", "ready when you are", "let's cook"],
+    "focus": ["headphones on. let's go.", "zone engaged.", "shhh, deep focus"],
+    "happy": ["look at that clean diff!", "we love a green check", "nice."],
+    "victory": ["LET'S GOOO 🎉".replace("🎉", "*"), "ship it!", "tests green, vibes greener"],
+    "sad": ["welp.", "we'll get it next try", "deep breath — pair with me"],
+    "panic": ["stack trace incoming!!", "abort? retry? cry?", "oh no oh no oh no"],
     "thinking": ["hmmm", "consulting the rubber duck", "let me think..."],
-    "groove":   ["♪ this slaps ♪", "tempo check: locked in", "we are vibing"],
-    "sleep":    ["...idle...", "wake me when you commit", "battery: low"],
+    "groove": ["♪ this slaps ♪", "tempo check: locked in", "we are vibing"],
+    "sleep": ["...idle...", "wake me when you commit", "battery: low"],
 }
 
 
@@ -94,7 +94,7 @@ QUIPS = {
 # The headphone bracket style (═[…]═ / ♪[…]♫ / ╱[…]╲) carries the motion.
 PIXEL_FRAMES: dict[str, list[list[str]]] = {
     "groove": [
-        [   # 0 — arms wide, grooving
+        [  # 0 — arms wide, grooving
             "  ╔════╗  ",
             "═[│ ♪♪ │]═",
             "  │ ‿‿ │  ",
@@ -103,7 +103,7 @@ PIXEL_FRAMES: dict[str, list[list[str]]] = {
             " ╱▐█  █▌╲ ",
             "  ▐█  █▌  ",
         ],
-        [   # 1 — arms up, beat drop, notes flying
+        [  # 1 — arms up, beat drop, notes flying
             " ♪╔════╗♫ ",
             "╱[│ ♪♪ │]╲",
             "  │ ‿‿ │  ",
@@ -112,7 +112,7 @@ PIXEL_FRAMES: dict[str, list[list[str]]] = {
             "  ▐█  █▌  ",
             " ╱▐█  █▌╲ ",
         ],
-        [   # 2 — shimmy, leaning
+        [  # 2 — shimmy, leaning
             "  ╔════╗  ",
             "═[│ ♪~♪│]═",
             "  │  ‿  │ ",
@@ -209,19 +209,19 @@ PIXEL_FRAMES: dict[str, list[list[str]]] = {
 # Multi-frame dance animations (legacy small sprites, 10 cols × 4 lines).
 DANCE_FRAMES: dict[str, list[list[str]]] = {
     "groove": [
-        [   # frame 0 — arms wide, notes flying right
+        [  # frame 0 — arms wide, notes flying right
             "  ╭───╮ ♪",
             " ◖|♪‿♪|◗ ",
             "  ╰─v─╯ ♫",
             " ╱╱│ │╲╲ ",
         ],
-        [   # frame 1 — arms up, beat drop
+        [  # frame 1 — arms up, beat drop
             "♪ ╭───╮ ♫",
             "◖\\|♪‿♪|/◗",
             "  ╰─v─╯  ",
             "  ╱╱│╲╲  ",
         ],
-        [   # frame 2 — shimmy, note left
+        [  # frame 2 — shimmy, note left
             "♫ ╭───╮  ",
             " ◖|♪~♪|◗ ",
             "  ╰─v─╯ ♪",
@@ -229,13 +229,13 @@ DANCE_FRAMES: dict[str, list[list[str]]] = {
         ],
     ],
     "happy": [
-        [   # frame 0 — normal
+        [  # frame 0 — normal
             "  ╭───╮  ",
             " ◖|•‿•|◗ ",
             "  ╰─v─╯  ",
             "  ╱│ │╲  ",
         ],
-        [   # frame 1 — bounce up
+        [  # frame 1 — bounce up
             " /╭───╮\\ ",
             " ◖|•‿•|◗ ",
             "  ╰─v─╯  ",
@@ -243,13 +243,13 @@ DANCE_FRAMES: dict[str, list[list[str]]] = {
         ],
     ],
     "victory": [
-        [   # frame 0 — classic
+        [  # frame 0 — classic
             " \\ ╭─╮ / ",
             "  |^o^|  ",
             "  ╰─v─╯  ",
             "   ╱ ╲   ",
         ],
-        [   # frame 1 — arms higher
+        [  # frame 1 — arms higher
             "/ ╭───╮ \\",
             " ◖|^o^|◗ ",
             "  ╰─v─╯  ",
@@ -260,14 +260,14 @@ DANCE_FRAMES: dict[str, list[list[str]]] = {
 
 
 _C = {
-    "amber":  "\x1b[38;2;214;190;50m",
-    "coral":  "\x1b[38;2;200;95;65m",
-    "green":  "\x1b[38;2;155;188;15m",
-    "ltgrn":  "\x1b[38;2;120;200;80m",
+    "amber": "\x1b[38;2;214;190;50m",
+    "coral": "\x1b[38;2;200;95;65m",
+    "green": "\x1b[38;2;155;188;15m",
+    "ltgrn": "\x1b[38;2;120;200;80m",
     "yellow": "\x1b[38;2;255;230;80m",
-    "cream":  "\x1b[38;2;230;220;200m",
-    "dim":    "\x1b[38;2;90;90;110m",
-    "R":      "\x1b[0m",
+    "cream": "\x1b[38;2;230;220;200m",
+    "dim": "\x1b[38;2;90;90;110m",
+    "R": "\x1b[0m",
 }
 
 
@@ -323,7 +323,7 @@ def pixel_person_frame(mood: str, frame_idx: int = 0, colored: bool = True) -> s
     frames = PIXEL_FRAMES.get(mood, PIXEL_FRAMES["neutral"])
     lines = frames[frame_idx % len(frames)]
     if colored:
-        lines = [_colorize_pixel(l) for l in lines]
+        lines = [_colorize_pixel(line) for line in lines]
     return "\n".join(lines)
 
 

@@ -3,18 +3,16 @@
 Does NOT require Music.app to be foregrounded; osascript launches it headless
 if needed. Subscribed library + local library both work.
 """
+
 from __future__ import annotations
 
-import base64
 import re
 import subprocess
 import urllib.parse
-from pathlib import Path
 from typing import List, Optional
 
 from ..config import COVER_CACHE, LYRICS_CACHE
 from .base import NowPlaying
-
 
 _NETEASE_HEADERS = {
     "Referer": "https://music.163.com/",
@@ -64,9 +62,7 @@ def _netease_lyrics(title: str, artist: str) -> Optional[str]:
     q = urllib.parse.quote(f"{title} {artist}".strip())
     with httpx.Client(headers=_NETEASE_HEADERS, timeout=6.0) as c:
         try:
-            r = c.get(
-                f"https://music.163.com/api/search/get/?s={q}&type=1&limit=5"
-            )
+            r = c.get(f"https://music.163.com/api/search/get/?s={q}&type=1&limit=5")
             data = r.json()
             songs = (data.get("result") or {}).get("songs") or []
             if not songs:
@@ -74,9 +70,7 @@ def _netease_lyrics(title: str, artist: str) -> Optional[str]:
             song_id = songs[0].get("id")
             if not song_id:
                 return None
-            r2 = c.get(
-                f"https://music.163.com/api/song/lyric?id={song_id}&lv=-1&kv=-1&tv=-1"
-            )
+            r2 = c.get(f"https://music.163.com/api/song/lyric?id={song_id}&lv=-1&kv=-1&tv=-1")
             d2 = r2.json()
             lrc = (d2.get("lrc") or {}).get("lyric") or ""
             return lrc or None
@@ -84,7 +78,7 @@ def _netease_lyrics(title: str, artist: str) -> Optional[str]:
             return None
 
 
-_SCRIPT_NOW = '''
+_SCRIPT_NOW = """
 tell application "Music"
     if it is running then
         set SEP to (ASCII character 31)
@@ -104,22 +98,24 @@ tell application "Music"
         return "__not_running__"
     end if
 end tell
-'''
+"""
 
-_SCRIPT_ARTWORK = '''
+_SCRIPT_ARTWORK = """
 tell application "Music"
     if exists current track then
         set artData to (raw data of artwork 1 of current track) as «class PNG »
         return artData
     end if
 end tell
-'''
+"""
 
 
 def _osa(script: str) -> str:
     p = subprocess.run(
         ["osascript", "-e", script],
-        capture_output=True, text=True, timeout=8,
+        capture_output=True,
+        text=True,
+        timeout=8,
     )
     if p.returncode != 0:
         raise RuntimeError(f"AppleScript failed: {p.stderr.strip()}")
@@ -147,10 +143,7 @@ def _strip_result_format(query: str) -> str:
 def _display_parts(query: str) -> tuple[str, str, str]:
     """Parse copied search rows like 'title — artist · album'."""
     q = _strip_result_format(query)
-    m = (
-        re.match(r"^\s*(.+?)\s*[—–]\s*(.+?)\s*$", q)
-        or re.match(r"^\s*(.+?)\s+-\s+(.+?)\s*$", q)
-    )
+    m = re.match(r"^\s*(.+?)\s*[—–]\s*(.+?)\s*$", q) or re.match(r"^\s*(.+?)\s+-\s+(.+?)\s*$", q)
     if not m:
         return "", "", ""
     title = m.group(1).strip()
@@ -277,7 +270,7 @@ def _play_local_tokens(tokens: List[str]) -> bool:
         te = _osa_quote(t)
         conds.append(f'(name contains "{te}" or artist contains "{te}")')
     where = " and ".join(conds)
-    script = f'''
+    script = f"""
 tell application "Music"
     set candidates to (every track of library playlist 1 whose {where})
     if (count of candidates) > 0 then
@@ -286,7 +279,7 @@ tell application "Music"
     end if
     return "none"
 end tell
-'''
+"""
     try:
         return _osa(script) == "ok"
     except Exception:
@@ -297,19 +290,51 @@ end tell
 # CJK-region music is found even for users whose Apple ID is in a Western
 # storefront, and vice-versa.
 _ALL_CATALOG_STOREFRONTS = (
-    "cn", "hk", "tw", "jp", "kr",           # CJK — first for most users of this tool
-    "us", "gb", "au", "ca", "nz",            # English-speaking
-    "sg", "my", "th", "ph", "id", "vn",      # SE Asia
-    "de", "fr", "es", "it", "nl", "se",      # Europe
-    "in", "br", "mx", "sa", "ae",            # Global
+    "cn",
+    "hk",
+    "tw",
+    "jp",
+    "kr",  # CJK — first for most users of this tool
+    "us",
+    "gb",
+    "au",
+    "ca",
+    "nz",  # English-speaking
+    "sg",
+    "my",
+    "th",
+    "ph",
+    "id",
+    "vn",  # SE Asia
+    "de",
+    "fr",
+    "es",
+    "it",
+    "nl",
+    "se",  # Europe
+    "in",
+    "br",
+    "mx",
+    "sa",
+    "ae",  # Global
 )
 
 # Descriptive suffixes that confuse iTunes Search (it does literal substring
 # matching on title/artist, not semantic search). When a query ends with one
 # of these we retry once with it stripped.
 _CATALOG_NOISE_SUFFIXES = (
-    "主题曲", "主题歌", "片头曲", "片尾曲", "插曲", "主题",
-    "OST", "BGM", "OP", "ED", "原声", "原声带",
+    "主题曲",
+    "主题歌",
+    "片头曲",
+    "片尾曲",
+    "插曲",
+    "主题",
+    "OST",
+    "BGM",
+    "OP",
+    "ED",
+    "原声",
+    "原声带",
 )
 
 
@@ -330,7 +355,7 @@ def _detect_storefront() -> Optional[str]:
     track's store URL (e.g. music.apple.com/cn/album/…  →  'cn').
     Returns None when Music.app isn't running or has no catalog track."""
     try:
-        url = _osa("tell application \"Music\" to get store URL of current track")
+        url = _osa('tell application "Music" to get store URL of current track')
         m = re.search(r"music\.apple\.com/([a-z]{2,3})/", url or "")
         if m:
             return m.group(1)
@@ -363,6 +388,7 @@ def _play_preview(preview_url: str, title: str, artist: str) -> bool:
     """Play a 30-second iTunes preview via afplay (works without subscription).
     Pauses Music.app first so the audio doesn't clash."""
     import time
+
     if not preview_url:
         return False
     try:
@@ -402,9 +428,7 @@ def _music_now_if_matches(
     if target_track_id:
         try:
             store_url = _osa('tell application "Music" to get store URL of current track')
-            matched_by_store_url = bool(
-                re.search(rf"(?<!\d){re.escape(str(target_track_id))}(?!\d)", store_url or "")
-            )
+            matched_by_store_url = bool(re.search(rf"(?<!\d){re.escape(str(target_track_id))}(?!\d)", store_url or ""))
         except Exception:
             matched_by_store_url = False
     if not matched_by_store_url and not _track_matches_target(
@@ -448,6 +472,7 @@ def _play_catalog(query: str) -> "Optional[NowPlaying]":
     Callers should prefer a live now_playing() query but can use this as fallback.
     """
     import time
+
     try:
         import httpx
     except ImportError:
@@ -471,8 +496,7 @@ def _play_catalog(query: str) -> "Optional[NowPlaying]":
                     try:
                         r = c.get(
                             "https://itunes.apple.com/search",
-                            params={"term": term, "entity": "song",
-                                    "limit": 5, "country": sf},
+                            params={"term": term, "entity": "song", "limit": 5, "country": sf},
                         )
                         data = r.json()
                     except Exception:
@@ -592,8 +616,7 @@ def _search_catalog_api(query: str, limit: int = 8) -> List[dict]:
                 try:
                     r = c.get(
                         "https://itunes.apple.com/search",
-                        params={"term": query, "entity": "song",
-                                "limit": limit, "country": sf},
+                        params={"term": query, "entity": "song", "limit": limit, "country": sf},
                     )
                     results = r.json().get("results") or []
                     if results:
@@ -626,17 +649,22 @@ class AppleMusic:
         delay: float = 0.5,
     ) -> Optional[NowPlaying]:
         import time
+
         for _ in range(attempts):
             np = self.now_playing()
-            if np.title and np.playing and (
-                _track_matches(np.title, np.artist, query=query)
-                if not (target_title or target_artist)
-                else _track_matches_target(
-                    np.title,
-                    np.artist,
-                    target_title,
-                    target_artist,
-                    query,
+            if (
+                np.title
+                and np.playing
+                and (
+                    _track_matches(np.title, np.artist, query=query)
+                    if not (target_title or target_artist)
+                    else _track_matches_target(
+                        np.title,
+                        np.artist,
+                        target_title,
+                        target_artist,
+                        query,
+                    )
                 )
             ):
                 return np
@@ -661,9 +689,13 @@ class AppleMusic:
         except ValueError:
             duration, position = 0.0, 0.0
         np = NowPlaying(
-            title=title, artist=artist, album=album,
-            duration=duration, position=position,
-            playing=playing, source=self.name,
+            title=title,
+            artist=artist,
+            album=album,
+            duration=duration,
+            position=position,
+            playing=playing,
+            source=self.name,
         )
         np.artwork_path = self._fetch_artwork(title, artist, album)
         return np
@@ -706,11 +738,20 @@ end tell
             return None
         return None
 
-    def play(self) -> None: _osa_silent('tell application "Music" to play')
-    def pause(self) -> None: _osa_silent('tell application "Music" to pause')
-    def toggle(self) -> None: _osa_silent('tell application "Music" to playpause')
-    def next(self) -> None: _osa_silent('tell application "Music" to next track')
-    def prev(self) -> None: _osa_silent('tell application "Music" to previous track')
+    def play(self) -> None:
+        _osa_silent('tell application "Music" to play')
+
+    def pause(self) -> None:
+        _osa_silent('tell application "Music" to pause')
+
+    def toggle(self) -> None:
+        _osa_silent('tell application "Music" to playpause')
+
+    def next(self) -> None:
+        _osa_silent('tell application "Music" to next track')
+
+    def prev(self) -> None:
+        _osa_silent('tell application "Music" to previous track')
 
     def seek(self, seconds: float) -> None:
         _osa_silent(f'tell application "Music" to set player position to {float(seconds)}')
@@ -720,13 +761,13 @@ end tell
         _osa_silent(f'tell application "Music" to set sound volume to {p}')
 
     def like_current(self) -> bool:
-        script = '''
+        script = """
 tell application "Music"
     if not (exists current track) then return "no_track"
     set favorited of current track to true
     return "ok"
 end tell
-'''
+"""
         try:
             return _osa(script) == "ok"
         except Exception:
@@ -735,37 +776,37 @@ end tell
     def set_play_mode(self, mode: str) -> bool:
         normalized = (mode or "").lower().replace("-", "_")
         if normalized in ("shuffle", "random"):
-            script = '''
+            script = """
 tell application "Music"
     set shuffle enabled to true
     set song repeat to off
     return "ok"
 end tell
-'''
+"""
         elif normalized in ("sequential", "sequence", "normal", "off"):
-            script = '''
+            script = """
 tell application "Music"
     set shuffle enabled to false
     set song repeat to off
     return "ok"
 end tell
-'''
+"""
         elif normalized in ("repeat", "loop", "repeat_all", "all"):
-            script = '''
+            script = """
 tell application "Music"
     set shuffle enabled to false
     set song repeat to all
     return "ok"
 end tell
-'''
+"""
         elif normalized in ("repeat_one", "one", "single"):
-            script = '''
+            script = """
 tell application "Music"
     set shuffle enabled to false
     set song repeat to one
     return "ok"
 end tell
-'''
+"""
         else:
             raise NotImplementedError(f"unsupported Apple Music play mode: {mode}")
         try:
@@ -808,7 +849,7 @@ end tell
 
     def list_library(self, limit: int = 100) -> List[dict]:
         """Return all tracks in the library, sorted by name, up to limit."""
-        script = f'''
+        script = f"""
 tell application "Music"
     set SEP to (ASCII character 31)
     set out to ""
@@ -821,7 +862,7 @@ tell application "Music"
     end repeat
     return out
 end tell
-'''
+"""
         try:
             raw = _osa(script)
         except Exception:
@@ -839,7 +880,7 @@ end tell
         """Static lyrics for the current track via AppleScript. Synced timing
         isn't reliably exposed, so callers should estimate the current line
         from position/duration."""
-        script = '''
+        script = """
 tell application "Music"
     if not (exists current track) then return "__no_track__"
     try
@@ -850,12 +891,11 @@ tell application "Music"
         return ""
     end try
 end tell
-'''
+"""
         np = self.now_playing()
         if not np.title:
             return None
-        key = re.sub(r"[^a-zA-Z0-9一-鿿]+", "_",
-                     f"{np.artist}_{np.album}_{np.title}").strip("_")[:160]
+        key = re.sub(r"[^a-zA-Z0-9一-鿿]+", "_", f"{np.artist}_{np.album}_{np.title}").strip("_")[:160]
         cache = LYRICS_CACHE / f"am_{key}.txt"
         if cache.exists():
             txt = cache.read_text(encoding="utf-8")
@@ -878,14 +918,14 @@ end tell
 
     def play_query(self, query: str) -> Optional[NowPlaying]:
         """Three-tier search:
-          1. Full-string substring match in local library (fast).
-          2. If query has multiple whitespace-separated tokens, AND-match each
-             token against name OR artist (so '青花瓷 周杰伦' matches a track
-             named 青花瓷 by 周杰伦 even though no single field contains the
-             whole string).
-          3. Fall back to the public iTunes Search API and ask Music to open
-             the top hit's catalog URL. Requires an active Apple Music
-             subscription for actual playback.
+        1. Full-string substring match in local library (fast).
+        2. If query has multiple whitespace-separated tokens, AND-match each
+           token against name OR artist (so '青花瓷 周杰伦' matches a track
+           named 青花瓷 by 周杰伦 even though no single field contains the
+           whole string).
+        3. Fall back to the public iTunes Search API and ask Music to open
+           the top hit's catalog URL. Requires an active Apple Music
+           subscription for actual playback.
         """
         if _play_local_match(query):
             np = self._wait_for_match(query=query, attempts=12, delay=0.5)
