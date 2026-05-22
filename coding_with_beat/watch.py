@@ -142,11 +142,11 @@ def _render_lyrics_bottom(
     sprite_lines = dj.dancing_sprite("groove" if playing else "neutral").split("\n")
     sprite_h = len(sprite_lines)
 
-    # If the panel is too short to fit the sprite, hide it.
-    if height <= sprite_h:
+    # If the panel is too short to fit sprite + sep + 1 lyric, hide sprite.
+    if height <= sprite_h + 1:
         sprite_lines = []
         sprite_h = 0
-    lyrics_h = max(1, height - sprite_h)
+    lyrics_h = max(1, height - sprite_h - (1 if sprite_h else 0))  # 1 = separator
 
     if lyrics_text:
         raw = render_lyrics_window(lyrics_text, pos, dur, window=lyrics_h, width=width - 1)
@@ -158,7 +158,7 @@ def _render_lyrics_bottom(
         content.append("")
     content = content[:lyrics_h]
 
-    rows = content + sprite_lines
+    rows = content + ([_sep(width)] + sprite_lines if sprite_h else [])
     while len(rows) < height:
         rows.append("")
     return [_pad(r, width) for r in rows[:height]]
@@ -304,7 +304,7 @@ def run(width: int = 0) -> int:
                 #            into the queue column regardless of terminal size.
                 usable_h = h - 1
                 panels_h = usable_h - 1
-                left_w = max(20, int(total_w * 0.6))
+                left_w = max(20, int(total_w * 0.65))
                 right_w = max(10, total_w - left_w - 1)  # 1 col for │
 
                 # Player section: compact 8 rows (no sprite).
