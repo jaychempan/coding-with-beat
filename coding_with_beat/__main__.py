@@ -176,6 +176,15 @@ def cmd_karaoke() -> int:
     return run(width=width)
 
 
+def cmd_search() -> int:
+    """search <query> — list matching tracks from library and Apple Music catalog."""
+    query = " ".join(sys.argv[2:]).strip()
+    if not query:
+        print("error: usage: search <query>")
+        return 2
+    return _mcp_print("search", {"query": query})
+
+
 def cmd_play() -> int:
     """play [query] — resume if no query, otherwise search and play."""
     query = " ".join(sys.argv[2:]).strip()
@@ -458,6 +467,7 @@ COMMANDS = {
     "watch": cmd_watch,
     "source": cmd_source,
     "karaoke": cmd_karaoke,
+    "search": cmd_search,
     "play": cmd_play,
     "pause": cmd_pause,
     "next": cmd_next,
@@ -476,6 +486,8 @@ COMMANDS = {
     "下一首": cmd_next,
     "上一首": cmd_prev,
     "播放": cmd_play,
+    "搜索": cmd_search,
+    "找歌": cmd_search,
     "收藏": cmd_like,
     "歌词": cmd_lyrics,
     "播放器": cmd_player,

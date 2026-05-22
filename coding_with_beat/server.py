@@ -252,10 +252,11 @@ def search(query: str, limit: int = 8) -> str:
     hits = get_source(st.source).search(query, limit=limit)
     if not hits:
         return f"(no matches for '{query}' in source={st.source})"
-    return "\n".join(
-        f"{i+1}. {h['title']} — {h.get('artist','?')} · {h.get('album','?')}"
-        for i, h in enumerate(hits)
-    )
+    lines = []
+    for i, h in enumerate(hits):
+        tag = " [资料库]" if h.get("source") == "library" else " [Apple Music]" if h.get("source") == "apple_music" else ""
+        lines.append(f"{i+1}. {h['title']} — {h.get('artist','?')} · {h.get('album','?')}{tag}")
+    return "\n".join(lines)
 
 
 @mcp.tool()

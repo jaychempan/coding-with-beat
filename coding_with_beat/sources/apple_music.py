@@ -399,6 +399,44 @@ end tell
     )
 
 
+def _search_catalog_api(query: str, limit: int = 8) -> List[dict]:
+    """Search the Apple Music catalog via iTunes Search API.
+    Returns dicts with title/artist/album/source='apple_music'."""
+    try:
+        import httpx
+    except ImportError:
+        return []
+    detected = _detect_storefront()
+    storefronts = list(_ALL_CATALOG_STOREFRONTS)
+    if detected:
+        storefronts = [detected] + [s for s in storefronts if s != detected]
+    try:
+        with httpx.Client(timeout=6.0) as c:
+            for sf in storefronts[:5]:
+                try:
+                    r = c.get(
+                        "https://itunes.apple.com/search",
+                        params={"term": query, "entity": "song",
+                                "limit": limit, "country": sf},
+                    )
+                    results = r.json().get("results") or []
+                    if results:
+                        return [
+                            {
+                                "title": h.get("trackName") or "?",
+                                "artist": h.get("artistName") or "?",
+                                "album": h.get("collectionName") or "?",
+                                "source": "apple_music",
+                            }
+                            for h in results[:limit]
+                        ]
+                except Exception:
+                    continue
+    except Exception:
+        pass
+    return []
+
+
 class AppleMusic:
     name = "apple_music"
 
@@ -551,14 +589,18 @@ end tell
         try:
             raw = _osa(script)
         except Exception:
-            return []
+            raw = ""
         items = []
         for line in raw.splitlines():
             if not line.strip():
                 continue
             parts = line.split("\x1f")
             if len(parts) >= 3:
-                items.append({"title": parts[0], "artist": parts[1], "album": parts[2]})
+                items.append({"title": parts[0], "artist": parts[1], "album": parts[2], "source": "library"})
+        # Fill remaining slots with Apple Music catalog results
+        remaining = limit - len(items)
+        if remaining > 0:
+            items.extend(_search_catalog_api(query, remaining))
         return items
 
     def lyrics(self) -> Optional[str]:
@@ -629,17 +671,4 @@ end tell
                     return np
                 time.sleep(0.5)
             return self.now_playing()
-        catalog_np = _play_catalog(query)
-        if catalog_np is not None:
-            if catalog_np.unsupported_reason:
-                # Found on catalog but couldn't play — return immediately, no need to poll.
-                return catalog_np
-            # Playback confirmed; get a fuller NowPlaying from Music.app.
-            # Music.app may still be buffering, so retry before falling back to catalog metadata.
-            for _ in range(5):
-                time.sleep(0.8)
-                np = self.now_playing()
-                if np.title:
-                    return np
-            return catalog_np
         return None

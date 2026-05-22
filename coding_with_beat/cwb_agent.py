@@ -45,6 +45,7 @@ _ALLOWED_COMMANDS = {
     "history",
     "help",
     "welcome",
+    "search",
 }
 _SOURCES = {
     # English
@@ -111,6 +112,8 @@ _fp(r"^(player|播放器|显示播放器|打开播放器)$", cmd="player")
 _fp(r"^(play|播放|继续|继续播放|resume)$", cmd="play")
 _fp(r"^(history|播放历史|最近播放|听歌记录|历史)(?:\s+(\d+))?$", cmd="history",
     args=lambda m: (m.group(2),) if m.group(2) else ())
+_fp(r"^(?:search|搜索|找歌|查找)\s+(.+)$", cmd="search",
+    args=lambda m: (m.group(1).strip(),))
 _fp(r"^(help|usage|commands)$", cmd="help", args=lambda m: ("en",))
 _fp(r"^(帮助|命令|命令列表|怎么用)$", cmd="help", args=lambda m: ("zh",))
 _fp(r"^(welcome|欢迎|欢迎界面|启动界面)$", cmd="welcome")
@@ -180,6 +183,7 @@ Valid commands and args:
 - seek: ["seconds" or "mm:ss"] — seek to position
 - bar: ["show" | "hide" | "auto"] — statusline visibility (auto = only when playing)
 - history: [] or ["n"] — show last n played tracks
+- search: ["query"] — list matching tracks from library and Apple Music catalog
 
 Choose status for an empty or ambiguous intent. Preserve Chinese song names and
 artist names verbatim. Put a play search query in args as one string when
@@ -376,7 +380,7 @@ def run_child_claude(intent: str, *, timeout: Optional[int] = None) -> CwbPlan:
     return parse_claude_plan(proc.stdout)
 
 
-_PASSTHROUGH_COMMANDS = {"player", "status", "lyrics", "history", "help", "welcome"}
+_PASSTHROUGH_COMMANDS = {"player", "status", "lyrics", "history", "help", "welcome", "search"}
 
 _CJK_RE = re.compile(r"[　-鿿豈-﫿]")
 
