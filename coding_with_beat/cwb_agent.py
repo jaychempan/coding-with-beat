@@ -382,10 +382,9 @@ _CJK_RE = re.compile(r"[　-鿿豈-﫿]")
 
 
 def _detect_lang(text: str) -> str:
-    """'zh' if the command keyword (first token) is CJK, else 'en'.
-    Arguments like song names are ignored — 'play 周杰伦' is an English command."""
-    first = (text or "").strip().split()[0] if (text or "").strip() else ""
-    return "zh" if _CJK_RE.search(first) else "en"
+    """'zh' if any CJK character appears anywhere in the intent, else 'en'.
+    Both 'play 周杰伦' and '播放 周杰伦' produce Chinese output."""
+    return "zh" if _CJK_RE.search(text or "") else "en"
 
 
 _T: dict[str, dict[str, str]] = {
@@ -400,6 +399,8 @@ _T: dict[str, dict[str, str]] = {
         "not_found":   "找不到「{q}」",
         "hint1":       "试试加上艺术家名",
         "hint2":       "或换个搜索词",
+        "needs_library":  "「{q}」在 Apple Music 找到了",
+        "needs_library_hint": "已打开搜索页面，点击歌曲旁「...」→「添加到资料库」后再试",
         "source":      "音源 → {v}",
         "mode":        "播放模式 → {v}",
         "volume":      "音量 → {v}%",
@@ -423,6 +424,8 @@ _T: dict[str, dict[str, str]] = {
         "not_found":   'Not found: "{q}"',
         "hint1":       "Try adding the artist name",
         "hint2":       "or use different search terms",
+        "needs_library":  '"{q}" found on Apple Music',
+        "needs_library_hint": "Search opened — click \"...\" → \"Add to Library\", then retry",
         "source":      "Source → {v}",
         "mode":        "Mode → {v}",
         "volume":      "Volume → {v}%",
@@ -489,6 +492,13 @@ def _format_result(plan: CwbPlan, code: int, output: str, lang: str = "zh") -> s
         if plan.command == "play":
             query = " ".join(plan.args) if plan.args else ""
             if query:
+                # Distinguish "found on Apple Music catalog but not in library" from "not found at all"
+                if "(unsupported" in clean and "source=apple_music" in clean:
+                    return _buddy_card("neutral", [
+                        t["needs_library"].format(q=query),
+                        t["needs_library_hint"],
+                        f'"{dj.quip("neutral")}"',
+                    ])
                 return _buddy_card("sad", [
                     t["not_found"].format(q=query),
                     t["hint1"],

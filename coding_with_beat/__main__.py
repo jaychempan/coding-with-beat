@@ -52,6 +52,9 @@ def _env_first(name: str, legacy_name: str, default: str) -> str:
     return os.environ.get(name) or os.environ.get(legacy_name) or default
 
 
+_MCP_ERROR_PREFIXES = ("(unsupported", "(no match")
+
+
 def _mcp_print(tool: str, kwargs: dict | None = None) -> int:
     from .mcp_client import MCPClientError, call_tool
     try:
@@ -61,6 +64,8 @@ def _mcp_print(tool: str, kwargs: dict | None = None) -> int:
         return 1
     if output:
         print(output)
+    if output and any(output.startswith(p) for p in _MCP_ERROR_PREFIXES):
+        return 1
     return 0
 
 

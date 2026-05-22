@@ -255,7 +255,7 @@ def _play_preview(preview_url: str, title: str, artist: str) -> bool:
         return False
 
 
-def _play_catalog(query: str) -> bool:
+def _play_catalog(query: str) -> "Optional[NowPlaying]":
     """Search the Apple Music catalog via the public iTunes Search API and ask
     Music.app to open the best hit.
 
@@ -267,12 +267,15 @@ def _play_catalog(query: str) -> bool:
     3. Attempt full playback via `music.apple.com` URL (requires subscription).
     4. If Music.app can't play the full track (no subscription / wrong Apple ID),
        fall back to a 30-second afplay preview using the iTunes previewUrl.
+
+    Returns a NowPlaying with iTunes metadata on success, None on failure.
+    Callers should prefer a live now_playing() query but can use this as fallback.
     """
     import sys, time
     try:
         import httpx
     except ImportError:
-        return False
+        return None
 
     # Build ordered storefront list: detected region first
     detected = _detect_storefront()
@@ -306,24 +309,28 @@ def _play_catalog(query: str) -> bool:
                 if hit:
                     break
     except Exception:
-        return False
+        return None
 
     if not hit:
-        return False
+        return None
 
     tid = hit["trackId"]
     title = hit.get("trackName") or "?"
     artist = hit.get("artistName") or "?"
     preview_url = hit.get("previewUrl") or ""
-    url = f"https://music.apple.com/{storefront}/song/{tid}"
+    # music:// scheme routes directly to Music.app and triggers library add for subscribers
+    url = f"music://music.apple.com/{storefront}/song/{tid}"
 
-    _osa_silent(f'tell application "Music" to open location "{url}"')
-    time.sleep(1.5)
+    # open -g opens the URL in Music.app WITHOUT bringing it to the foreground.
+    # This adds the catalog track to the library and starts playback, all in background.
+    subprocess.run(["open", "-g", url], capture_output=True, timeout=10)
+    # Wait for Music.app to fetch metadata and register track in library
+    time.sleep(3.0)
+    # Ensure playback started (open -g may not auto-play on all macOS versions)
     _osa_silent('tell application "Music" to play')
 
-    # Poll up to ~5s for Music.app to confirm real playback
-    real_playback = False
-    for _ in range(6):
+    # Poll up to ~6.4s for Music.app to confirm real playback
+    for _ in range(8):
         time.sleep(0.8)
         try:
             st = _osa('tell application "Music" to get player state as text')
@@ -333,18 +340,42 @@ def _play_catalog(query: str) -> bool:
             current_name = _osa('tell application "Music" to get name of current track')
         except Exception:
             current_name = ""
-        # A stub (no subscription) has the numeric trackId as the track name
-        real_playback = (st == "playing" and current_name and current_name != str(tid))
+        # Stub tracks use the numeric trackId as name; any non-numeric name is the real track
+        real_playback = (st == "playing" and current_name and not current_name.strip().isdigit())
         if real_playback:
-            return True
+            return NowPlaying(title=current_name or title, artist=artist, source="apple_music", playing=True)
         if st not in ("playing", "stopped", ""):
             continue  # still buffering
 
+    # open location may have added the track to the library even if current track is inaccessible.
+    # Search the library by exact title + artist from the iTunes API response.
+    title_esc = title.replace('"', '\\"')
+    artist_esc = artist.replace('"', '\\"')
+    lib_script = f'''
+tell application "Music"
+    set cands to (every track of library playlist 1 whose (name contains "{title_esc}" and artist contains "{artist_esc}"))
+    if (count of cands) = 0 then
+        set cands to (every track of library playlist 1 whose name contains "{title_esc}")
+    end if
+    if (count of cands) > 0 then
+        play item 1 of cands
+        return "ok"
+    end if
+    return "none"
+end tell
+'''
+    try:
+        if _osa(lib_script) == "ok":
+            return NowPlaying(title=title, artist=artist, source="apple_music", playing=True)
+    except Exception:
+        pass
+
     # Full playback failed — clean up stub track
+    tid_esc = str(tid).replace('"', '\\"')
     _osa_silent(f'''tell application "Music"
         stop
         try
-            set badTracks to (every track of library playlist 1 whose name is "{tid}")
+            set badTracks to (every track of library playlist 1 whose name is "{tid_esc}")
             repeat with t in badTracks
                 delete t
             end repeat
@@ -353,14 +384,19 @@ def _play_catalog(query: str) -> bool:
 
     # Fallback: play 30-second preview if available
     if preview_url and _play_preview(preview_url, title, artist):
-        return True
+        return NowPlaying(title=title, artist=artist, source="apple_music", playing=True)
 
-    print(
-        f"! catalog hit: {title} — {artist} ({url})\n"
-        f"  无法播放 — 请确认 Apple Music 订阅已激活且使用正确的 Apple ID 登录。",
-        file=sys.stderr,
+    # Track was found on Apple Music catalog but couldn't be played directly.
+    # Open the Music.app search results page so the user can find the song and add to library.
+    encoded = urllib.parse.quote(query)
+    search_url = f"music://music.apple.com/{storefront}/search?term={encoded}"
+    subprocess.run(["open", search_url], capture_output=True, timeout=10)
+    return NowPlaying(
+        source="apple_music",
+        title=title,
+        artist=artist,
+        unsupported_reason="needs_library_add",
     )
-    return False
 
 
 class AppleMusic:
@@ -577,18 +613,33 @@ end tell
              the top hit's catalog URL. Requires an active Apple Music
              subscription for actual playback.
         """
+        import time
         if _play_local_match(query):
+            for _ in range(4):
+                np = self.now_playing()
+                if np.title:
+                    return np
+                time.sleep(0.5)
             return self.now_playing()
         tokens = [t for t in query.split() if t.strip()]
         if len(tokens) > 1 and _play_local_tokens(tokens):
+            for _ in range(4):
+                np = self.now_playing()
+                if np.title:
+                    return np
+                time.sleep(0.5)
             return self.now_playing()
-        if _play_catalog(query):
-            import time
-            # Wait longer for Music.app to load the catalog track
+        catalog_np = _play_catalog(query)
+        if catalog_np is not None:
+            if catalog_np.unsupported_reason:
+                # Found on catalog but couldn't play — return immediately, no need to poll.
+                return catalog_np
+            # Playback confirmed; get a fuller NowPlaying from Music.app.
+            # Music.app may still be buffering, so retry before falling back to catalog metadata.
             for _ in range(5):
                 time.sleep(0.8)
                 np = self.now_playing()
                 if np.title:
                     return np
-            return self.now_playing()
+            return catalog_np
         return None

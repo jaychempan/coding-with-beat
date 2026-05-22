@@ -96,16 +96,9 @@ def _maybe_refresh(st):
             pass
         return st, unsupported_reason
     if not data.get("title"):
-        st.track.title = ""
-        st.track.artist = ""
-        st.track.album = ""
-        st.track.duration = 0.0
-        st.track.position = 0.0
+        # Preserve the last known track instead of blanking it — a failed
+        # search or brief gap shouldn't clear what the user was listening to.
         st.track.position_sampled_at = time.time()
-        st.track.lyrics_key = ""
-        st.track.lyrics_text = ""
-        st.track.lyrics_pending = False
-        st.track.artwork_path = None
         st.track.source = source
         st.source = source
         st.playing = bool(data.get("playing"))
