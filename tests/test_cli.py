@@ -109,6 +109,23 @@ class CliCommandTest(unittest.TestCase):
         self.assertEqual(out.getvalue(), "")
         self.assertIn("server unavailable", stderr.getvalue())
 
+    def test_music_cli_treats_needs_library_message_as_error(self):
+        output = (
+            'Found "孤勇者 — 陈奕迅" in the Apple Music catalog, but full playback did not start.\n'
+            "Opened the Music.app search page. Add the track to your library, then try again."
+        )
+        out = io.StringIO()
+        with (
+            mock.patch.object(sys, "argv", ["cwb", "play", "1"]),
+            mock.patch.object(mcp_client, "call_tool", return_value=output) as call_tool,
+            contextlib.redirect_stdout(out),
+        ):
+            code = cli.main()
+
+        self.assertEqual(code, 1)
+        call_tool.assert_called_once_with("play_number", {"number": 1})
+        self.assertEqual(out.getvalue(), output + "\n")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -528,6 +528,21 @@ def _format_result(plan: CwbPlan, code: int, output: str, lang: str = "zh") -> s
     t = _T[lang]
     clean = _clean_text(output).strip()
 
+    def _needs_library_card(fallback: str) -> Optional[str]:
+        if "needs_library_add" not in clean and "full playback did not start" not in clean:
+            return None
+        # Found on Apple Music catalog but can't auto-add/play fully.
+        import re as _re
+        _m = _re.search(r"needs_library_add:(.+?):(.+)", clean)
+        if not _m:
+            _m = _re.search(r'Found "(.+?) — (.+?)" in the Apple Music catalog', clean)
+        song_info = f"{_m.group(1)} — {_m.group(2)}" if _m else fallback
+        return _buddy_card("neutral", [
+            t["needs_library"].format(q=song_info),
+            t["needs_library_hint"],
+            f'"{dj.quip("neutral")}"',
+        ])
+
     if plan.command in _PASSTHROUGH_COMMANDS:
         if code != 0:
             return _buddy_card("sad", [clean or t["cmd_fail"].format(cmd=plan.command)])
@@ -538,17 +553,9 @@ def _format_result(plan: CwbPlan, code: int, output: str, lang: str = "zh") -> s
             query = " ".join(plan.args) if plan.args else ""
             if query:
                 # Distinguish "found on Apple Music catalog but not in library" from "not found at all"
-                if "needs_library_add" in clean:
-                    # Found on Apple Music catalog but can't auto-add (no subscription).
-                    # Extract title/artist encoded as "needs_library_add:title:artist".
-                    import re as _re
-                    _m = _re.search(r"needs_library_add:(.+?):(.+)", clean)
-                    song_info = f"{_m.group(1)} — {_m.group(2)}" if _m else query
-                    return _buddy_card("neutral", [
-                        t["needs_library"].format(q=song_info),
-                        t["needs_library_hint"],
-                        f'"{dj.quip("neutral")}"',
-                    ])
+                needs_library = _needs_library_card(query)
+                if needs_library:
+                    return needs_library
                 return _buddy_card("sad", [
                     t["not_found"].format(q=query),
                     t["hint1"],
@@ -557,6 +564,9 @@ def _format_result(plan: CwbPlan, code: int, output: str, lang: str = "zh") -> s
                 ])
             return _buddy_card("sad", [t["no_track"], f'"{dj.quip("sad")}"'])
         if plan.command == "play_number":
+            needs_library = _needs_library_card(f"#{plan.args[0]}" if plan.args else "selected track")
+            if needs_library:
+                return needs_library
             return _buddy_card("sad", [clean or t["cmd_fail"].format(cmd="play_number"), f'"{dj.quip("sad")}"'])
         if plan.command in ("np", "pause", "next", "prev", "like"):
             return _buddy_card("neutral", [t["no_track"], f'"{dj.quip("neutral")}"'])

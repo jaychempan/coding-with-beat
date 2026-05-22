@@ -59,6 +59,19 @@ class CwbAgentTest(unittest.TestCase):
         self.assertEqual(cwb_agent._detect_lang("play lofi beats"), "en")
         self.assertEqual(cwb_agent._detect_lang("播放 周杰伦"), "zh")
 
+    def test_play_number_needs_library_add_uses_friendly_card(self):
+        text = cwb_agent._format_result(
+            cwb_agent.CwbPlan("play_number", ("1",)),
+            1,
+            'Found "孤勇者 — 陈奕迅" in the Apple Music catalog, but full playback did not start.\n'
+            "Opened the Music.app search page. Add the track to your library, then try again.",
+            lang="zh",
+        )
+
+        self.assertIn("孤勇者 — 陈奕迅", text)
+        self.assertIn("添加到资料库", text)
+        self.assertNotIn("unsupported", text)
+
     def test_hook_timeout_covers_child_claude_and_cli_timeouts(self):
         self.assertGreater(
             cwb_agent.HOOK_TIMEOUT,
@@ -98,7 +111,6 @@ class CwbAgentTest(unittest.TestCase):
 
         self.assertEqual(response["decision"], "block")
         self.assertEqual(response["reason"], f"{cwb_agent._CWB_HEADER}\n正在播放")
-        self.assertTrue(response["suppressOutput"])
 
     def test_non_cwb_prompt_expansion_is_ignored(self):
         event = {

@@ -76,6 +76,16 @@ def _preview_message(np) -> str:
     )
 
 
+def _needs_library_add(np) -> str:
+    title = np.title or "?"
+    artist = np.artist or "—"
+    return (
+        f"Found \"{title} — {artist}\" in the Apple Music catalog, but full playback did not start.\n"
+        "Opened the Music.app search page. Add the track to your library, then try again.\n"
+        "(Automatic catalog playback requires an active Apple Music subscription.)"
+    )
+
+
 def _refresh_now_playing():
     st = state.load()
     old_key = track_key(st.track.source or st.source, st.track.artist, st.track.album, st.track.title)
@@ -314,6 +324,8 @@ def play_number(number: int) -> str:
         return f"(no match for '{query}' in source={st.source})"
     if _unsupported_reason(np) == "preview_playing":
         return _preview_message(np)
+    if _unsupported_reason(np) == "needs_library_add":
+        return _needs_library_add(np)
     if _unsupported_reason(np):
         return _unsupported(np.source or st.source, "play_number", _unsupported_reason(np))
     if not np.title:
@@ -333,14 +345,7 @@ def play_song(query: str) -> str:
     if _unsupported_reason(np) == "preview_playing":
         return _preview_message(np)
     if _unsupported_reason(np) == "needs_library_add":
-        title = np.title or "?"
-        artist = np.artist or "—"
-        # Encode title/artist so cwb_agent.py can parse them for i18n display.
-        return _unsupported(
-            "apple_music",
-            "play_song",
-            f"needs_library_add:{title}:{artist}",
-        )
+        return _needs_library_add(np)
     if _unsupported_reason(np):
         return _unsupported(np.source or st.source, "play_song", _unsupported_reason(np))
     if not np.title:

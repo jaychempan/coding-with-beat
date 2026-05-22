@@ -1,4 +1,7 @@
+import json
+import tempfile
 import unittest
+from pathlib import Path
 from types import SimpleNamespace
 from unittest import mock
 
@@ -101,6 +104,35 @@ class ServerPlaybackMessageTest(unittest.TestCase):
         self.assertIn("30s preview", text)
         self.assertIn("牧马城市", text)
         self.assertNotIn("now playing", text)
+
+    def test_play_number_reports_needs_library_add_with_track_details(self):
+        source = SimpleNamespace(
+            play_query=lambda _query: SimpleNamespace(
+                title="孤勇者",
+                artist="陈奕迅",
+                source="apple_music",
+                unsupported_reason="needs_library_add",
+            )
+        )
+
+        with tempfile.TemporaryDirectory() as td:
+            data_dir = Path(td)
+            (data_dir / "last_results.json").write_text(
+                json.dumps([
+                    {"title": "孤勇者", "artist": "陈奕迅", "source": "apple_music"}
+                ], ensure_ascii=False),
+                encoding="utf-8",
+            )
+            with (
+                mock.patch.object(server, "DATA_DIR", data_dir),
+                mock.patch.object(server.state, "load", return_value=SimpleNamespace(source="apple_music")),
+                mock.patch.object(server, "get_source", return_value=source),
+            ):
+                text = server.play_number(1)
+
+        self.assertIn('Found "孤勇者 — 陈奕迅" in the Apple Music catalog', text)
+        self.assertIn("Add the track to your library", text)
+        self.assertNotIn("unsupported", text)
 
 
 if __name__ == "__main__":
