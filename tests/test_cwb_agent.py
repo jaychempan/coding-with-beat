@@ -55,6 +55,10 @@ class CwbAgentTest(unittest.TestCase):
         self.assertIn('"command":"next"', cwb_agent._SYSTEM_PROMPT)
         self.assertIn("matches the rules below", cwb_agent._SYSTEM_PROMPT)
 
+    def test_detect_lang_preserves_cjk_output_path(self):
+        self.assertEqual(cwb_agent._detect_lang("play lofi beats"), "en")
+        self.assertEqual(cwb_agent._detect_lang("播放 周杰伦"), "zh")
+
     def test_hook_timeout_covers_child_claude_and_cli_timeouts(self):
         self.assertGreater(
             cwb_agent.HOOK_TIMEOUT,

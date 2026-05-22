@@ -18,20 +18,20 @@ User intent: `$ARGUMENTS`
 
 Parse the intent and pick exactly ONE action. If empty or ambiguous, default to `status`.
 
-| Intent keywords (zh / en) | Command |
+| Intent keywords | Command |
 |---|---|
-| 播放/放/听/来一首/play/start + `<query>` | `cwb play <query>` |
-| 播放/play (no query) / 继续/恢复/resume | `cwb play` |
-| 暂停/pause/stop | `cwb pause` |
-| 下一首/跳过/next/skip | `cwb next` |
-| 上一首/prev/back | `coding-with-beat prev` |
-| 切换音乐源/source/music source + `<apple_music|qq_music|local>` | `cwb source <apple_music|qq_music|local>` |
-| 喜欢/收藏当前歌/like/favorite current | `cwb like` |
-| 随机/顺序/循环/shuffle/sequential/repeat | `cwb mode <shuffle|sequential|repeat>` |
-| 在放什么/正在播放/什么歌/now playing/what | `cwb np` |
-| 显示/show player/player | `cwb player` |
-| 状态/status | `cwb status` |
-| 歌词/卡拉OK/lyrics/karaoke | `cwb karaoke` |
+| play/start + `<query>` | `cwb play <query>` |
+| play/resume with no query | `cwb play` |
+| pause/stop | `cwb pause` |
+| next/skip | `cwb next` |
+| previous/back | `cwb prev` |
+| source/music source + `<apple_music|qq_music|local>` | `cwb source <apple_music|qq_music|local>` |
+| like/favorite current | `cwb like` |
+| shuffle/sequential/repeat | `cwb mode <shuffle|sequential|repeat>` |
+| now playing/what's playing | `cwb np` |
+| show player/player | `cwb player` |
+| status | `cwb status` |
+| lyrics/karaoke | `cwb karaoke` |
 
 For a play-by-query, the `<query>` is the rest of the text after the verb (artist name, song name, mood — pass it through verbatim, including Chinese). Quote it.
 
@@ -44,7 +44,7 @@ cwb <action> [args...]
 Examples:
 
 ```bash
-cwb play "稻香 周杰伦"
+cwb play "lofi beats"
 cwb source apple_music
 cwb source qq_music
 cwb like
@@ -56,4 +56,4 @@ cwb status
 
 If `cwb` is not on PATH (rare — only if `~/.local/bin` isn't exported), fall back to the absolute path: `~/.coding-with-beat/venv/bin/coding-with-beat`.
 
-After running, give the user a **one-line** confirmation in their language (Chinese if they used Chinese): e.g. `▶ 正在播放：稻香 — 周杰伦`. No extra commentary.
+After running, give the user a **one-line** English confirmation, e.g. `▶ Now playing: lofi beats`. No extra commentary.

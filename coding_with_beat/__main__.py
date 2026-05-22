@@ -32,7 +32,7 @@ Commands:
     seek <t>     — seek to position: seconds (90) or mm:ss (1:30)
     history [n]  — show last n tracks played (default 10)
     bar [mode]   — statusline visibility: show | hide | auto (print current if no arg)
-    help         — show command reference (also: /cwb help, /cwb 帮助)
+    help         — show command reference
 """
 from __future__ import annotations
 
@@ -410,7 +410,7 @@ def cmd_help() -> int:
             row("bar show|hide|auto",     "Statusline: always | hidden | when playing"),
             row("status",                 "Full current state"),
             "",
-            f"  {D}Chinese commands also work: /cwb 暂停  /cwb 下一首  /cwb 帮助{R}",
+            f"  {D}Tip: use search first for precise matches, then play the result number.{R}",
         ]
     print("\n".join(lines))
     return 0

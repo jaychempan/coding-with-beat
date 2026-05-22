@@ -207,7 +207,7 @@ def render(term_width: int = 0) -> str:
     elif st.source == "qq_music":
         track = "\x1b[38;2;120;130;130mqq_music now-playing unsupported\x1b[0m"
     else:
-        track = "\x1b[38;2;120;130;130mno track loaded — try /cwb play 周杰伦\x1b[0m"
+        track = "\x1b[38;2;120;130;130mno track loaded — try /cwb play lofi beats\x1b[0m"
 
     focus_chip = ""
     if f.active:

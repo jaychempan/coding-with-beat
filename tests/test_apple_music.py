@@ -2,6 +2,7 @@ import unittest
 from unittest import mock
 
 from coding_with_beat.sources.apple_music import AppleMusic
+from coding_with_beat.sources.base import NowPlaying
 from coding_with_beat.sources.local import LocalFiles
 from coding_with_beat.sources import apple_music as am
 
@@ -73,6 +74,84 @@ class AppleMusicControlsTest(unittest.TestCase):
             local.like_current()
         with self.assertRaises(NotImplementedError):
             local.set_play_mode("shuffle")
+
+
+class AppleMusicPlayQueryTest(unittest.TestCase):
+    def test_copied_search_row_is_parsed_for_catalog_and_matching(self):
+        query = "1. 小小 — 容祖儿 · 小小 [Apple Music]"
+
+        self.assertEqual(am._catalog_search_query(query), "小小 容祖儿")
+        self.assertTrue(am._track_matches("小小", "容祖儿", query=query))
+        self.assertFalse(am._track_matches("我怀念的", "孙燕姿", query=query))
+
+    def test_catalog_target_accepts_localized_artist_from_query(self):
+        self.assertTrue(am._track_matches_target(
+            "小小",
+            "容祖儿",
+            "小小",
+            "Joey Yung",
+            "小小 容祖儿",
+        ))
+        self.assertFalse(am._track_matches_target(
+            "我怀念的",
+            "孙燕姿",
+            "小小",
+            "Joey Yung",
+            "小小 容祖儿",
+        ))
+
+    def test_play_query_uses_display_query_for_catalog_search(self):
+        music = AppleMusic()
+        catalog_hit = NowPlaying(
+            title="小小",
+            artist="容祖儿",
+            source="apple_music",
+            playing=True,
+        )
+
+        with (
+            mock.patch.object(am, "_play_local_match", return_value=False),
+            mock.patch.object(am, "_play_local_tokens", return_value=False),
+            mock.patch.object(am, "_play_catalog", return_value=catalog_hit) as play_catalog,
+            mock.patch.object(
+                music,
+                "now_playing",
+                return_value=NowPlaying(
+                    title="我怀念的",
+                    artist="孙燕姿",
+                    source="apple_music",
+                    playing=True,
+                ),
+            ),
+            mock.patch("time.sleep", return_value=None),
+        ):
+            result = music.play_query("小小 — 容祖儿 · 小小")
+
+        self.assertEqual(result, catalog_hit)
+        play_catalog.assert_called_once_with("小小 容祖儿")
+
+    def test_play_query_does_not_accept_unmatched_current_track(self):
+        music = AppleMusic()
+
+        with (
+            mock.patch.object(am, "_play_local_match", return_value=True),
+            mock.patch.object(am, "_play_catalog", return_value=None) as play_catalog,
+            mock.patch.object(
+                music,
+                "now_playing",
+                return_value=NowPlaying(
+                    title="我怀念的",
+                    artist="孙燕姿",
+                    source="apple_music",
+                    playing=True,
+                ),
+            ),
+            mock.patch("time.sleep", return_value=None),
+        ):
+            result = music.play_query("小小")
+
+        self.assertIsNone(result)
+        play_catalog.assert_called_once_with("小小")
 
 
 if __name__ == "__main__":

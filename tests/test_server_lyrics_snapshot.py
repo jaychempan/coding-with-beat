@@ -81,5 +81,27 @@ class ServerLyricsSnapshotTest(unittest.TestCase):
                 self.assertTrue(lyrics_snapshot._prefetch_once("apple_music", "Artist", "Album", "Song"))
 
 
+class ServerPlaybackMessageTest(unittest.TestCase):
+    def test_play_song_reports_preview_without_claiming_now_playing(self):
+        source = SimpleNamespace(
+            play_query=lambda _query: SimpleNamespace(
+                title="牧马城市",
+                artist="毛不易",
+                source="apple_music",
+                unsupported_reason="preview_playing",
+            )
+        )
+
+        with (
+            mock.patch.object(server.state, "load", return_value=SimpleNamespace(source="apple_music")),
+            mock.patch.object(server, "get_source", return_value=source),
+        ):
+            text = server.play_song("牧马城市 毛不易")
+
+        self.assertIn("30s preview", text)
+        self.assertIn("牧马城市", text)
+        self.assertNotIn("now playing", text)
+
+
 if __name__ == "__main__":
     unittest.main()

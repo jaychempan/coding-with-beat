@@ -347,6 +347,6 @@ if [ -n "$MCP_URL" ]; then
 fi
 echo "  cwb player       — open the pixel player"
 echo "  cwb watch        — live TUI"
-echo "  /cwb play 周杰伦        — drive it from Claude Code"
+echo "  /cwb play lofi beats   — drive it from Claude Code"
 echo
 warn "To remove: ./uninstall.sh   (add --purge to also delete ~/.coding-with-beat)"

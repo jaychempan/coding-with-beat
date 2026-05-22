@@ -135,7 +135,7 @@ def welcome_screen() -> str:
     tag    = f" {CREAM}{'(♪‿♪)   a pixel companion for vibecoding   (♪‿♪)'.center(76)}{R}"
     check1 = f" {MID}   ✓  MCP server registered                ✓  /cwb command installed{R}"
     check2 = f" {MID}   ✓  CC hooks active                      ✓  statusline ready{R}"
-    hint   = f" {DIM}   open Claude Code and say: \"play some lofi\"  ·  or /cwb play 周杰伦{R}"
+    hint   = f" {DIM}   open Claude Code and say: \"play some lofi\"  ·  or /cwb play lofi beats{R}"
 
     return "\n".join([
         rule,

@@ -71,9 +71,9 @@ pause
 ### `/cwb` command
 
 ```
-/cwb play 周杰伦          # search and play
+/cwb play "lofi beats"    # search and play
 /cwb play lofi beats
-/cwb search 周杰伦        # search library + Apple Music, show numbered list
+/cwb search "lofi beats"  # search library + Apple Music, show numbered list
 /cwb play 2               # play track #2 from last search / list results
 /cwb list                 # list all library tracks
 /cwb next
@@ -87,7 +87,7 @@ pause
 /cwb bar auto             # statusline: auto / show / hide
 ```
 
-Chinese works too — `下一首`, `暂停`, `在放什么`, `收藏` are all valid.
+Natural-language commands work too: `skip this track`, `pause`, `what's playing`, and `like this` are all valid.
 
 ### `watch` / `karaoke` shortcuts
 
@@ -106,7 +106,7 @@ Chinese works too — `下一首`, `暂停`, `在放什么`, `收藏` are all va
 Once installed, a statusline appears at the bottom of Claude Code:
 
 ```
-(•_•) ⚡  ▶ 雨爱 — 杨丞琳  ██████░░░░░░░░  [build]  ▃▆█▆▃  │ ♪ 不忍揭曉的劇情
+(•_•) ⚡  ▶ Midnight City — M83  ██████░░░░░░░░  [build]  ▃▆█▆▃  │ ♪ lyric preview
 ```
 
 | Element | Example | Description |
@@ -114,7 +114,7 @@ Once installed, a statusline appears at the bottom of Claude Code:
 | DJ face | `(•_•)` `(^_^)` `(T_T)` | Buddy's mood, shifts with coding events |
 | Activity | `⚡` / `·` / _(none)_ | `⚡` = tool call in last 15 s; `·` = last 90 s |
 | Play icon | `▶` / `▷` / `❚❚` | Blinks while playing; ❚❚ when paused |
-| Track | `雨爱 — 杨丞琳  ██████░░░░░░░░` | Title + artist + progress bar |
+| Track | `Midnight City — M83  ██████░░░░░░░░` | Title + artist + progress bar |
 | Vibe | `[build]` `[focus]` etc. | Current coding vibe |
 | Pomodoro | `🍅 work 24:15` | Only shown when focus mode is active |
 | Beat wave | `▁▂▃▄▅` | Rises and falls each beat; dims when paused |

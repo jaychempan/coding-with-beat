@@ -69,6 +69,13 @@ def _unsupported_reason(obj) -> str:
     return getattr(obj, "unsupported_reason", None) or ""
 
 
+def _preview_message(np) -> str:
+    return (
+        f"♪ 30s preview: {np.title or '?'} — {np.artist or '—'}\n"
+        "  Apple Music full playback did not start; opened/attempted the catalog track."
+    )
+
+
 def _refresh_now_playing():
     st = state.load()
     old_key = track_key(st.track.source or st.source, st.track.artist, st.track.album, st.track.title)
@@ -280,7 +287,7 @@ def search(query: str, limit: int = 8) -> str:
         pass
     lines = []
     for i, h in enumerate(hits):
-        tag = " [资料库]" if h.get("source") == "library" else " [Apple Music]" if h.get("source") == "apple_music" else ""
+        tag = " [Library]" if h.get("source") == "library" else " [Apple Music]" if h.get("source") == "apple_music" else ""
         lines.append(f"{i+1}. {h['title']} — {h.get('artist','?')} · {h.get('album','?')}{tag}")
     return "\n".join(lines)
 
@@ -305,6 +312,8 @@ def play_number(number: int) -> str:
     np = src.play_query(query)
     if not np:
         return f"(no match for '{query}' in source={st.source})"
+    if _unsupported_reason(np) == "preview_playing":
+        return _preview_message(np)
     if _unsupported_reason(np):
         return _unsupported(np.source or st.source, "play_number", _unsupported_reason(np))
     if not np.title:
@@ -321,13 +330,15 @@ def play_song(query: str) -> str:
     np = src.play_query(query)
     if not np:
         return f"(no match for '{query}' in source={st.source})"
+    if _unsupported_reason(np) == "preview_playing":
+        return _preview_message(np)
     if _unsupported_reason(np) == "needs_library_add":
         title = np.title or "?"
         artist = np.artist or "—"
         return (
-            f"在 Apple Music 目录中找到「{title} — {artist}」，但无法自动播放。\n"
-            f"已在 Music.app 中打开搜索页面，请手动添加到资料库后重新播放。\n"
-            f"（需要激活的 Apple Music 订阅才能自动添加并播放）"
+            f"Found \"{title} — {artist}\" in the Apple Music catalog, but full playback did not start.\n"
+            "Opened the Music.app search page. Add the track to your library, then try again.\n"
+            "(Automatic catalog playback requires an active Apple Music subscription.)"
         )
     if _unsupported_reason(np):
         return _unsupported(np.source or st.source, "play_song", _unsupported_reason(np))
