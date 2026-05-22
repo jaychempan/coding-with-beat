@@ -9,11 +9,37 @@
 #   3. Symlinks `cwb` into ~/.local/bin/ and makes sure that dir
 #      is on your PATH (writes a marked block into ~/.zshrc / ~/.bashrc).
 #   4. Symlinks the /cwb slash command into ~/.claude/commands/.
-#   5. Registers MCP server, statusline, vibe hooks, and the /cwb
+#   5. Registers HTTP MCP server, statusline, vibe hooks, and the /cwb
 #      UserPromptExpansion hook with Claude Code via ~/.claude/settings.json.
 set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DEFAULT_MCP_URL="http://127.0.0.1:8765/mcp"
+MCP_URL="${CWB_MCP_URL:-${CC_JUKEBOX_MCP_URL:-$DEFAULT_MCP_URL}}"
+
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --mcp-url)
+      [ "$#" -ge 2 ] || { echo "--mcp-url requires a value" >&2; exit 2; }
+      MCP_URL="$2"
+      shift 2
+      ;;
+    -h|--help)
+      cat <<'EOF'
+Usage: ./install.sh [--mcp-url URL]
+
+Options:
+  --mcp-url URL        Configure Claude Code to connect to coding-with-beat as an
+                       HTTP MCP server, usually http://127.0.0.1:8765/mcp.
+EOF
+      exit 0
+      ;;
+    *)
+      echo "unknown option: $1" >&2
+      exit 2
+      ;;
+  esac
+done
 
 bold() { printf "\033[1m%s\033[0m\n" "$1"; }
 ok()   { printf "\033[32m✓\033[0m %s\n" "$1"; }
@@ -25,6 +51,9 @@ echo "  repo:    $REPO"
 echo "  venv:    $HOME/.coding-with-beat/venv"
 echo "  bin:     $HOME/.local/bin/cwb"
 echo "  command: $HOME/.claude/commands/cwb.md"
+if [ -n "$MCP_URL" ]; then
+  echo "  mcp:     url $MCP_URL"
+fi
 
 # 1. find a Python ≥3.10
 #    Honours $CWB_PYTHON if set; otherwise scans PATH, Homebrew prefixes
@@ -104,15 +133,28 @@ ok "python: $PY ($($PY --version))"
 # 2. venv at ~/.coding-with-beat/venv
 VENV="$HOME/.coding-with-beat/venv"
 mkdir -p "$HOME/.coding-with-beat"
+if [ -n "$MCP_URL" ]; then
+  printf "%s\n" "$MCP_URL" > "$HOME/.coding-with-beat/mcp-url"
+  ok "saved MCP URL for CLI commands: $HOME/.coding-with-beat/mcp-url"
+fi
+if [ -d "$VENV" ] && { [ ! -x "$VENV/bin/python" ] || [ ! -x "$VENV/bin/pip" ]; }; then
+  warn "incomplete venv at $VENV — recreating it."
+  rm -rf "$VENV"
+fi
 if [ ! -d "$VENV" ]; then
-  "$PY" -m venv "$VENV"
+  if ! "$PY" -m venv "$VENV"; then
+    warn "could not create venv with $PY; trying uv-managed Python."
+    rm -rf "$VENV"
+    bootstrap_via_uv
+    "$PY" -m venv "$VENV" || die "could not create venv at $VENV"
+  fi
   ok "created venv at $VENV"
 else
   ok "venv exists at $VENV"
 fi
 VENV_PY="$VENV/bin/python"
-"$VENV/bin/pip" install --quiet --upgrade pip
-"$VENV/bin/pip" install --quiet -e "$REPO"
+"$VENV_PY" -m pip install --quiet --upgrade pip
+"$VENV_PY" -m pip install --quiet -e "$REPO"
 ok "installed coding-with-beat (editable) + deps"
 
 # 3. symlink ~/.local/bin/cwb
@@ -172,12 +214,124 @@ SETTINGS_DIR="$HOME/.claude"
 SETTINGS_FILE="$SETTINGS_DIR/settings.json"
 mkdir -p "$SETTINGS_DIR"
 
-"$VENV_PY" "$REPO/scripts/install_settings.py" \
-  --settings "$SETTINGS_FILE" \
-  --python   "$VENV_PY" \
-  --repo     "$REPO"
+SETTINGS_ARGS=(
+  --settings "$SETTINGS_FILE"
+  --python "$VENV_PY"
+  --repo "$REPO"
+)
+[ -z "$MCP_URL" ] || SETTINGS_ARGS+=(--mcp-url "$MCP_URL")
+"$VENV_PY" "$REPO/scripts/install_settings.py" "${SETTINGS_ARGS[@]}"
 
 ok "Claude Code settings patched: $SETTINGS_FILE"
+
+start_mcp_service() {
+  [ -n "$MCP_URL" ] || return 0
+  if [ "$(uname -s)" != "Darwin" ]; then
+    warn "HTTP MCP configured at $MCP_URL. Auto-start is macOS-only; make sure the Mac-side server is reachable."
+    return 0
+  fi
+
+  local parts host port path
+  parts="$("$VENV_PY" - "$MCP_URL" <<'PY'
+import sys
+from urllib.parse import urlparse
+
+url = sys.argv[1]
+parsed = urlparse(url)
+if parsed.scheme not in ("http", "https"):
+    raise SystemExit(f"unsupported MCP URL scheme: {parsed.scheme or '(missing)'}")
+host = parsed.hostname or "127.0.0.1"
+port = parsed.port or (443 if parsed.scheme == "https" else 80)
+path = parsed.path or "/mcp"
+print(f"{host}\t{port}\t{path}")
+PY
+)"
+  host="$(printf "%s" "$parts" | cut -f1)"
+  port="$(printf "%s" "$parts" | cut -f2)"
+  path="$(printf "%s" "$parts" | cut -f3)"
+
+  case "$host" in
+    127.0.0.1|localhost|::1) ;;
+    *)
+      warn "HTTP MCP URL is not localhost ($MCP_URL); not starting a local LaunchAgent."
+      return 0
+      ;;
+  esac
+
+  local label="com.coding-with-beat.server"
+  local plist="$HOME/Library/LaunchAgents/$label.plist"
+  local old_label="com.cc-jukebox.mcp-http"
+  local old_plist="$HOME/Library/LaunchAgents/$old_label.plist"
+  local old_server_label="com.cc-jukebox.server"
+  local old_server_plist="$HOME/Library/LaunchAgents/$old_server_label.plist"
+  local log_dir="$HOME/.coding-with-beat/logs"
+  mkdir -p "$(dirname "$plist")" "$log_dir"
+
+  "$VENV_PY" - "$plist" "$TARGET" "$host" "$port" "$path" "$log_dir" <<'PY'
+import plistlib
+import sys
+from pathlib import Path
+
+plist, program, host, port, path, log_dir = sys.argv[1:]
+data = {
+    "Label": "com.coding-with-beat.server",
+    "ProgramArguments": [
+        program,
+        "server",
+        "--host",
+        host,
+        "--port",
+        str(port),
+        "--path",
+        path,
+    ],
+    "RunAtLoad": True,
+    "KeepAlive": True,
+    "StandardOutPath": str(Path(log_dir) / "server.log"),
+    "StandardErrorPath": str(Path(log_dir) / "server.err.log"),
+    "EnvironmentVariables": {
+        "PATH": "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin",
+    },
+}
+with open(plist, "wb") as f:
+    plistlib.dump(data, f)
+PY
+
+  local domain="gui/$(id -u)"
+  launchctl bootout "$domain" "$old_plist" >/dev/null 2>&1 || true
+  rm -f "$old_plist"
+  launchctl bootout "$domain" "$old_server_plist" >/dev/null 2>&1 || true
+  rm -f "$old_server_plist"
+  launchctl bootout "$domain" "$plist" >/dev/null 2>&1 || true
+  if launchctl bootstrap "$domain" "$plist" >/dev/null 2>&1; then
+    launchctl kickstart -k "$domain/$label" >/dev/null 2>&1 || true
+    if "$VENV_PY" - "$host" "$port" <<'PY'
+import socket
+import sys
+import time
+
+host, port = sys.argv[1], int(sys.argv[2])
+for _ in range(40):
+    try:
+        with socket.create_connection((host, port), timeout=0.2):
+            raise SystemExit(0)
+    except OSError:
+        time.sleep(0.1)
+raise SystemExit(1)
+PY
+    then
+      ok "HTTP MCP LaunchAgent started: $MCP_URL"
+      ok "MCP logs: $log_dir/server.log"
+    else
+      warn "LaunchAgent loaded, but HTTP MCP is not listening at $MCP_URL."
+      warn "Check logs: $log_dir/server.err.log"
+    fi
+  else
+    warn "Could not start LaunchAgent. Run manually: cwb server --host $host --port $port --path $path"
+  fi
+}
+
+start_mcp_service
 
 # 7. Make sure data dir exists
 "$VENV_PY" -c "from coding_with_beat.config import ensure_dirs; ensure_dirs()"
@@ -187,6 +341,10 @@ echo
 "$VENV/bin/cwb" welcome 2>/dev/null || true
 echo
 bold "From a new shell (or after 'source ~/.zshrc'):"
+if [ -n "$MCP_URL" ]; then
+  echo "  # MCP endpoint configured at $MCP_URL"
+  echo "  cwb server      — manually run the HTTP MCP server for debugging"
+fi
 echo "  cwb player       — open the pixel player"
 echo "  cwb watch        — live TUI"
 echo "  /cwb play 周杰伦        — drive it from Claude Code"

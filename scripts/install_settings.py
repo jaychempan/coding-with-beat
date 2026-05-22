@@ -4,7 +4,7 @@ Adds (or removes) entries for:
   - mcpServers["coding-with-beat"]
   - statusLine (only if unset, or already ours; we don't clobber other tools)
   - hooks: PreToolUse, PostToolUse, SessionStart, Stop  (with matcher: ".*")
-  - UserPromptExpansion hook for /juke, so music controls do not enter chat context
+  - UserPromptExpansion hook for /cwb, so music controls do not enter chat context
 
 Re-running is safe. Keys we don't own are never touched.
 """
@@ -19,6 +19,13 @@ from coding_with_beat.cwb_agent import HOOK_TIMEOUT
 
 
 TAG = "coding-with-beat"
+LEGACY_TAGS = {"cc-jukebox"}
+OWNERS = {TAG, *LEGACY_TAGS}
+DEFAULT_MCP_URL = "http://127.0.0.1:8765/mcp"
+
+
+def _owned(entry: object) -> bool:
+    return isinstance(entry, dict) and entry.get("_owner") in OWNERS
 
 
 def hook_entry(python: str, repo: str) -> dict:
@@ -49,7 +56,7 @@ def session_hook_entry(python: str, repo: str) -> dict:
     }
 
 
-def juke_expansion_hook_entry(python: str, repo: str) -> dict:
+def cwb_expansion_hook_entry(python: str, repo: str) -> dict:
     return {
         "matcher": "cwb",
         "hooks": [
@@ -79,18 +86,27 @@ def save_settings(path: Path, data: dict) -> None:
     path.write_text(json.dumps(data, indent=2, ensure_ascii=False))
 
 
-def merge(settings: dict, python: str, repo: str) -> dict:
+def merge(
+    settings: dict,
+    python: str,
+    repo: str,
+    mcp_url: str = DEFAULT_MCP_URL,
+) -> dict:
+    mcp_url = mcp_url or DEFAULT_MCP_URL
+
     # mcpServers
     servers = settings.setdefault("mcpServers", {})
-    servers[TAG] = {
-        "command": python,
-        "args": ["-m", "coding_with_beat.server"],
-        "cwd": repo,
+    for legacy in LEGACY_TAGS:
+        servers.pop(legacy, None)
+    server = {
+        "type": "http",
+        "url": mcp_url,
     }
+    servers[TAG] = server
 
     # statusLine — only set if not present OR already ours
     sl = settings.get("statusLine")
-    if not sl or (isinstance(sl, dict) and sl.get("_owner") == TAG):
+    if not sl or _owned(sl):
         settings["statusLine"] = {
             "type": "command",
             "command": f"{python} -m coding_with_beat statusline",
@@ -103,17 +119,17 @@ def merge(settings: dict, python: str, repo: str) -> dict:
     for event in ("PreToolUse", "PostToolUse"):
         lst = hooks.setdefault(event, [])
         # remove any prior entries we own
-        lst[:] = [e for e in lst if not (isinstance(e, dict) and e.get("_owner") == TAG)]
+        lst[:] = [e for e in lst if not _owned(e)]
         lst.append(hook_entry(python, repo))
 
     for event in ("SessionStart", "Stop"):
         lst = hooks.setdefault(event, [])
-        lst[:] = [e for e in lst if not (isinstance(e, dict) and e.get("_owner") == TAG)]
+        lst[:] = [e for e in lst if not _owned(e)]
         lst.append(session_hook_entry(python, repo))
 
     lst = hooks.setdefault("UserPromptExpansion", [])
-    lst[:] = [e for e in lst if not (isinstance(e, dict) and e.get("_owner") == TAG)]
-    lst.append(juke_expansion_hook_entry(python, repo))
+    lst[:] = [e for e in lst if not _owned(e)]
+    lst.append(cwb_expansion_hook_entry(python, repo))
 
     return settings
 
@@ -121,17 +137,19 @@ def merge(settings: dict, python: str, repo: str) -> dict:
 def remove(settings: dict) -> dict:
     servers = settings.get("mcpServers", {})
     servers.pop(TAG, None)
+    for legacy in LEGACY_TAGS:
+        servers.pop(legacy, None)
     if not servers:
         settings.pop("mcpServers", None)
 
     sl = settings.get("statusLine")
-    if isinstance(sl, dict) and sl.get("_owner") == TAG:
+    if _owned(sl):
         settings.pop("statusLine", None)
 
     hooks = settings.get("hooks", {})
     for event, lst in list(hooks.items()):
         if isinstance(lst, list):
-            lst[:] = [e for e in lst if not (isinstance(e, dict) and e.get("_owner") == TAG)]
+            lst[:] = [e for e in lst if not _owned(e)]
             if not lst:
                 hooks.pop(event)
     if not hooks:
@@ -144,6 +162,7 @@ def main() -> int:
     ap.add_argument("--settings", required=True)
     ap.add_argument("--python", required=True)
     ap.add_argument("--repo", required=True)
+    ap.add_argument("--mcp-url", default=DEFAULT_MCP_URL)
     ap.add_argument("--remove", action="store_true")
     args = ap.parse_args()
 
@@ -153,7 +172,7 @@ def main() -> int:
     if args.remove:
         settings = remove(settings)
     else:
-        settings = merge(settings, args.python, args.repo)
+        settings = merge(settings, args.python, args.repo, args.mcp_url)
 
     save_settings(path, settings)
     return 0

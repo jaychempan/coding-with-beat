@@ -2,7 +2,7 @@ import datetime
 import json
 import os
 import time
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, fields
 from typing import Optional
 
 from .config import DATA_DIR, STATE_FILE, ensure_dirs
@@ -19,6 +19,9 @@ class Track:
     # from `JukeboxState.updated_at` so unrelated saves (hooks, vibe changes)
     # don't poison the extrapolation base used by the statusline.
     position_sampled_at: float = 0.0
+    lyrics_key: str = ""
+    lyrics_text: str = ""
+    lyrics_pending: bool = False
     artwork_path: Optional[str] = None
     source: str = ""
 
@@ -47,7 +50,11 @@ def load() -> JukeboxState:
         return JukeboxState()
     try:
         raw = json.loads(STATE_FILE.read_text())
-        track = Track(**raw.pop("track", {}))
+        track_raw = raw.pop("track", {})
+        track_names = {f.name for f in fields(Track)}
+        state_names = {f.name for f in fields(JukeboxState)}
+        track = Track(**{k: v for k, v in track_raw.items() if k in track_names})
+        raw = {k: v for k, v in raw.items() if k in state_names}
         return JukeboxState(track=track, **raw)
     except Exception:
         return JukeboxState()

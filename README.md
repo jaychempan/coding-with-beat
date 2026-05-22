@@ -47,6 +47,12 @@ cd coding-with-beat
 ./install.sh
 ```
 
+The installer configures Claude Code to use the HTTP MCP endpoint at `http://127.0.0.1:8765/mcp`, saves that URL to `~/.coding-with-beat/mcp-url`, and on macOS starts a user LaunchAgent for the local MCP server. For debugging, you can run it by hand:
+
+```bash
+cwb server --host 127.0.0.1 --port 8765 --path /mcp
+```
+
 Open a new shell and a new Claude Code session. When `(•_•)` appears in the statusline, you're good.
 
 ---
@@ -113,6 +119,25 @@ Once installed, a statusline appears at the bottom of Claude Code:
 
 ---
 
+## SSH Remote Claude Code
+
+If Claude Code runs on a server while Apple Music runs on your local Mac, run the streamable HTTP MCP server on the Mac and reach it from the server through SSH reverse port forwarding:
+
+```bash
+# Local Mac: install and start the HTTP MCP LaunchAgent
+./install.sh
+
+# Local Mac: expose it to the server's 127.0.0.1:8765
+ssh -N -R 127.0.0.1:8765:127.0.0.1:8765 user@server
+
+# Server: install hooks/statusline and point them at the forwarded endpoint
+./install.sh --mcp-url http://127.0.0.1:8765/mcp
+```
+
+The remote Claude Code session, `/cwb`, statusline, hooks, and `cwb` CLI all use the same HTTP MCP URL. As long as the SSH tunnel is up, commands like `cwb play`, `cwb np`, `cwb next`, `cwb player`, and `cwb karaoke` control the Mac-side music client.
+
+---
+
 ## CLI
 
 ```
@@ -132,6 +157,7 @@ cwb lyrics              # lyrics window
 cwb history [n]         # last n played tracks
 cwb bar <show|hide|auto> # statusline visibility
 cwb status              # current state
+cwb server              # MCP streamable HTTP server
 ```
 
 ---

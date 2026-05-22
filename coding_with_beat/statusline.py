@@ -11,21 +11,23 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
-import subprocess
 import sys
 import time
 
 from . import state, focus, dj
-from .config import DATA_DIR, LYRICS_CACHE
-from .sources import get_source
-from .ui.lyrics import parse_lrc, _index_for_position
+from .mcp_client import MCPClientError, call_tool
+from .lyrics_snapshot import line_from_text
 from .ui.progress import render_progress, render_beat_wave
 
 
 # If our cached position sample is older than this, do a fast re-poll
 # of the source before rendering. ~50–150ms for AppleScript; acceptable.
 _STALE_AFTER = 2.5
+_STATUSLINE_MCP_TIMEOUT_ENV = "CWB_STATUSLINE_MCP_TIMEOUT"
+_LEGACY_STATUSLINE_MCP_TIMEOUT_ENV = "CC_JUKEBOX_STATUSLINE_MCP_TIMEOUT"
+_STATUSLINE_MCP_TIMEOUT_DEFAULT = 1.5
 _ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
 
 
@@ -39,19 +41,41 @@ def _mmss(seconds: float) -> str:
     return f"{s // 60:02d}:{s % 60:02d}"
 
 
+def _statusline_mcp_timeout() -> float:
+    raw = (
+        os.environ.get(_STATUSLINE_MCP_TIMEOUT_ENV, "")
+        or os.environ.get(_LEGACY_STATUSLINE_MCP_TIMEOUT_ENV, "")
+    )
+    if not raw:
+        return _STATUSLINE_MCP_TIMEOUT_DEFAULT
+    try:
+        return max(0.1, float(raw))
+    except ValueError:
+        return _STATUSLINE_MCP_TIMEOUT_DEFAULT
+
+
 def _maybe_refresh(st):
-    """If the position sample is stale, re-poll the active source.
-    Returns (possibly updated state, unsupported reason). Failures fall back to
-    cached state silently."""
-    base = st.track.position_sampled_at or st.updated_at
+    """Refresh track state through the configured HTTP MCP endpoint."""
+    # For no-track/unsupported states, only a real source/MCP sample should
+    # throttle refreshes. Hook saves update st.updated_at and must not mask a
+    # newly started track.
+    base = st.track.position_sampled_at or (st.updated_at if st.track.title else 0)
     if base and (time.time() - base) < _STALE_AFTER:
         return st, ""
     try:
-        src = get_source(st.source)
-        np = src.now_playing()
-    except Exception:
-        return st, ""
-    unsupported_reason = getattr(np, "unsupported_reason", None) or ""
+        known_lyrics_key = st.track.lyrics_key if st.track.lyrics_text else ""
+        data = json.loads(call_tool(
+            "now_playing_snapshot",
+            {"known_lyrics_key": known_lyrics_key},
+            timeout=_statusline_mcp_timeout(),
+        ))
+    except MCPClientError as e:
+        return st, f"MCP offline: {str(e).splitlines()[0]}"
+    except Exception as e:
+        return st, f"MCP snapshot failed: {e}"
+
+    unsupported_reason = str(data.get("unsupported_reason") or "")
+    source = str(data.get("source") or st.source)
     if unsupported_reason:
         st.track.title = ""
         st.track.artist = ""
@@ -59,25 +83,57 @@ def _maybe_refresh(st):
         st.track.duration = 0.0
         st.track.position = 0.0
         st.track.position_sampled_at = time.time()
+        st.track.lyrics_key = ""
+        st.track.lyrics_text = ""
+        st.track.lyrics_pending = False
         st.track.artwork_path = None
-        st.track.source = np.source
+        st.track.source = source
+        st.source = source
         st.playing = False
         try:
             state.save(st)
         except Exception:
             pass
         return st, unsupported_reason
-    if not np.title:
+    if not data.get("title"):
+        st.track.title = ""
+        st.track.artist = ""
+        st.track.album = ""
+        st.track.duration = 0.0
+        st.track.position = 0.0
+        st.track.position_sampled_at = time.time()
+        st.track.lyrics_key = ""
+        st.track.lyrics_text = ""
+        st.track.lyrics_pending = False
+        st.track.artwork_path = None
+        st.track.source = source
+        st.source = source
+        st.playing = bool(data.get("playing"))
+        try:
+            state.save(st)
+        except Exception:
+            pass
         return st, ""
-    st.track.title = np.title
-    st.track.artist = np.artist
-    st.track.album = np.album
-    st.track.duration = np.duration
-    st.track.position = np.position
+    st.source = source
+    st.track.title = str(data.get("title") or "")
+    st.track.artist = str(data.get("artist") or "")
+    st.track.album = str(data.get("album") or "")
+    st.track.duration = float(data.get("duration") or 0.0)
+    st.track.position = float(data.get("position") or 0.0)
+    # Use the local receive time as the extrapolation base. In SSH setups the
+    # Mac MCP server and the remote shell can have different wall clocks.
     st.track.position_sampled_at = time.time()
-    st.track.artwork_path = np.artwork_path
-    st.track.source = np.source
-    st.playing = np.playing
+    lyrics_key = str(data.get("lyrics_key") or "")
+    if lyrics_key != st.track.lyrics_key:
+        st.track.lyrics_text = ""
+    st.track.lyrics_key = lyrics_key
+    lyrics_text = data.get("lyrics_text")
+    if isinstance(lyrics_text, str) and lyrics_text:
+        st.track.lyrics_text = lyrics_text
+    st.track.lyrics_pending = bool(data.get("lyrics_pending"))
+    st.track.artwork_path = str(data.get("artwork_path") or "") or None
+    st.track.source = source
+    st.playing = bool(data.get("playing"))
     try:
         state.save(st)
     except Exception:
@@ -96,64 +152,6 @@ def _live_position(st) -> float:
 
 
 _KEY_RE = re.compile(r"[^a-zA-Z0-9一-鿿]+")
-_SOURCE_PREFIX = {"apple_music": "am", "local": "local", "qq_music": "qq"}
-
-
-def _cached_lyric_line(st, pos: float):
-    """Return the active LRC line for the current track, or None.
-    Reads only from the on-disk cache — no network calls in the statusline."""
-    t = st.track
-    if not t.title:
-        return None
-    key = _KEY_RE.sub("_", f"{t.artist}_{t.album}_{t.title}").strip("_")[:160]
-    prefix = _SOURCE_PREFIX.get(st.source, "am")
-    cache = LYRICS_CACHE / f"{prefix}_{key}.txt"
-    if not cache.exists():
-        return None
-    try:
-        txt = cache.read_text(encoding="utf-8")
-    except Exception:
-        return None
-    cues, is_lrc = parse_lrc(txt)
-    if not is_lrc:
-        return None
-    cues = [(ts, body) for ts, body in cues if body.strip()]
-    if not cues:
-        return None
-    idx = _index_for_position(cues, pos)
-    if idx < 0:
-        return None
-    return cues[idx][1]
-
-
-def _bg_fetch_lyrics(st) -> None:
-    """Spawn one background process to fetch+cache lyrics when none are cached.
-    A lock file under DATA_DIR prevents duplicate fetches for the same track."""
-    t = st.track
-    if not t.title:
-        return
-    key = _KEY_RE.sub("_", f"{t.artist}_{t.album}_{t.title}").strip("_")[:160]
-    prefix = _SOURCE_PREFIX.get(st.source, "am")
-    cache = LYRICS_CACHE / f"{prefix}_{key}.txt"
-    if cache.exists():
-        return
-    lock = DATA_DIR / f".lyfetch_{prefix}_{key}"
-    if lock.exists():
-        if (time.time() - lock.stat().st_mtime) < 45:
-            return  # still fetching
-        lock.unlink(missing_ok=True)
-    try:
-        lock.touch()
-        subprocess.Popen(
-            [sys.executable, "-m", "coding_with_beat", "_prefetch"],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            start_new_session=True,
-        )
-    except Exception:
-        pass
-
-
 # Accent colour per vibe — tints the progress bar, play icon, vibe chip, and quip.
 _VIBE_ACCENT: dict[str, tuple[int, int, int]] = {
     "build":   (155, 188,  15),  # GameBoy green
@@ -210,7 +208,10 @@ def render(term_width: int = 0) -> str:
         else:
             icon_seq = "\x1b[1;38;2;120;130;130m❚❚\x1b[0m"
         track = f"{icon_seq} \x1b[38;2;200;200;230m{title}\x1b[0m \x1b[38;2;120;130;130m— {artist}\x1b[0m {bar}"
-    elif unsupported_reason or st.source == "qq_music":
+    elif unsupported_reason:
+        msg = unsupported_reason.splitlines()[0][:54]
+        track = f"\x1b[38;2;120;130;130m{msg}\x1b[0m"
+    elif st.source == "qq_music":
         track = "\x1b[38;2;120;130;130mqq_music now-playing unsupported\x1b[0m"
     else:
         track = "\x1b[38;2;120;130;130mno track loaded — try /cwb play 周杰伦\x1b[0m"
@@ -252,7 +253,7 @@ def render(term_width: int = 0) -> str:
         else:
             chip = ""
     elif st.track.title:
-        lyric = _cached_lyric_line(st, pos)
+        lyric = line_from_text(st.track.lyrics_text, pos, st.track.duration).strip()
         if lyric:
             max_lyric = max(0, avail - 2)  # "♪ " prefix = 2 chars
             if max_lyric <= 0:
@@ -265,7 +266,6 @@ def render(term_width: int = 0) -> str:
                     f" \x1b[3;38;2;180;180;200m♪ {lyric}\x1b[0m"
                 )
         else:
-            _bg_fetch_lyrics(st)
             chip = f"  \x1b[38;2;55;58;72m♪\x1b[0m" if avail >= 3 else ""
     else:
         chip = f"  \x1b[38;2;55;58;72m♪\x1b[0m" if avail >= 3 else ""

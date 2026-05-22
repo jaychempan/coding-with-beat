@@ -1,28 +1,63 @@
-"""MCP server: exposes CC-Jukebox tools to Claude Code.
+"""MCP server: exposes coding-with-beat tools to Claude Code.
 
 Run with:
     python -m coding_with_beat.server
+    python -m coding_with_beat server
 """
 from __future__ import annotations
 
 import json
 import os
-import sys
 import time
 from typing import Optional
 
 from mcp.server.fastmcp import FastMCP
 
-from . import dj, focus, state, vibe
+from . import dj, focus, state
+from .lyrics_snapshot import current_text as current_lyrics_text, track_key
 from .sources import get_source
 from .ui import (
     boxed, render_cover, render_cover_gameboy,
-    render_progress, render_spectrum, render_spectrum_color,
+    render_progress, render_spectrum_color,
     retro_banner, render_lyrics_window,
 )
 
 
-mcp = FastMCP("cwb")
+MCP_HTTP_HOST_ENV = "CWB_MCP_HOST"
+MCP_HTTP_PORT_ENV = "CWB_MCP_PORT"
+MCP_HTTP_PATH_ENV = "CWB_MCP_PATH"
+_LEGACY_MCP_HTTP_HOST_ENV = "CC_JUKEBOX_MCP_HOST"
+_LEGACY_MCP_HTTP_PORT_ENV = "CC_JUKEBOX_MCP_PORT"
+_LEGACY_MCP_HTTP_PATH_ENV = "CC_JUKEBOX_MCP_PATH"
+CONTROL_REFRESH_DELAY = 0.4
+
+
+def _env_first(name: str, legacy_name: str, default: str) -> str:
+    return os.environ.get(name) or os.environ.get(legacy_name) or default
+
+
+def _env_int(name: str, default: int) -> int:
+    value = os.environ.get(name, "")
+    if not value:
+        return default
+    try:
+        return int(value)
+    except ValueError:
+        return default
+
+
+def _normalize_path(path: str) -> str:
+    return path if path.startswith("/") else f"/{path}"
+
+
+mcp = FastMCP(
+    "coding-with-beat",
+    host=_env_first(MCP_HTTP_HOST_ENV, _LEGACY_MCP_HTTP_HOST_ENV, "127.0.0.1"),
+    port=_env_int(MCP_HTTP_PORT_ENV, _env_int(_LEGACY_MCP_HTTP_PORT_ENV, 8765)),
+    streamable_http_path=_normalize_path(
+        _env_first(MCP_HTTP_PATH_ENV, _LEGACY_MCP_HTTP_PATH_ENV, "/mcp"),
+    ),
+)
 
 
 def _unsupported(source: str, feature: str, reason: str) -> str:
@@ -35,19 +70,62 @@ def _unsupported_reason(obj) -> str:
 
 def _refresh_now_playing():
     st = state.load()
+    old_key = track_key(st.track.source or st.source, st.track.artist, st.track.album, st.track.title)
     src = get_source(st.source)
     np = src.now_playing()
+    new_key = track_key(np.source or st.source, np.artist, np.album, np.title)
     st.track.title = np.title
     st.track.artist = np.artist
     st.track.album = np.album
     st.track.duration = np.duration
     st.track.position = np.position
     st.track.position_sampled_at = time.time()
+    if old_key != new_key:
+        st.track.lyrics_key = ""
+        st.track.lyrics_text = ""
+        st.track.lyrics_pending = False
     st.track.artwork_path = np.artwork_path
     st.track.source = np.source
     st.playing = np.playing
     state.save(st)
     return st, np
+
+
+def _refresh_after_control(delay: float = CONTROL_REFRESH_DELAY):
+    if delay > 0:
+        time.sleep(delay)
+    return _refresh_now_playing()
+
+
+def _now_playing_payload(st, np, known_lyrics_key: str = "") -> dict:
+    source = np.source or st.source
+    lyrics_key = track_key(source, np.artist or "", np.album or "", np.title or "")
+    lyrics_text = ""
+    lyrics_pending = False
+    if np.title and not _unsupported_reason(np):
+        lyrics_text, lyrics_pending = current_lyrics_text(
+            source,
+            np.artist or "",
+            np.album or "",
+            np.title or "",
+        )
+        if lyrics_key and lyrics_key == known_lyrics_key:
+            lyrics_text = ""
+    return {
+        "source": source,
+        "title": np.title or "",
+        "artist": np.artist or "",
+        "album": np.album or "",
+        "duration": float(np.duration or 0.0),
+        "position": float(np.position or 0.0),
+        "playing": bool(np.playing),
+        "artwork_path": np.artwork_path or "",
+        "lyrics_key": lyrics_key,
+        "lyrics_text": lyrics_text,
+        "lyrics_pending": lyrics_pending,
+        "unsupported_reason": _unsupported_reason(np),
+        "sampled_at": time.time(),
+    }
 
 
 @mcp.tool()
@@ -69,11 +147,24 @@ def now_playing() -> str:
 
 
 @mcp.tool()
+def now_playing_snapshot(known_lyrics_key: str = "") -> str:
+    """Return structured now-playing data as JSON for terminal integrations."""
+    st, np = _refresh_now_playing()
+    return json.dumps(_now_playing_payload(st, np, known_lyrics_key), ensure_ascii=False)
+
+
+@mcp.tool()
+def current_source() -> str:
+    """Return the currently selected music source name."""
+    return state.load().source
+
+
+@mcp.tool()
 def play() -> str:
     """Resume playback on the active source."""
     st = state.load()
     get_source(st.source).play()
-    _refresh_now_playing()
+    _refresh_after_control()
     return "▶ play"
 
 
@@ -100,7 +191,7 @@ def next_track() -> str:
     """Skip to the next track."""
     st = state.load()
     get_source(st.source).next()
-    _refresh_now_playing()
+    _refresh_after_control()
     return "⏭ next"
 
 
@@ -109,7 +200,7 @@ def prev_track() -> str:
     """Go to the previous track."""
     st = state.load()
     get_source(st.source).prev()
-    _refresh_now_playing()
+    _refresh_after_control()
     return "⏮ prev"
 
 
@@ -335,8 +426,48 @@ def session_intro() -> str:
     return "\n".join(parts)
 
 
-def main() -> None:
-    mcp.run()
+@mcp.tool()
+def status() -> str:
+    """Return a human-readable coding-with-beat status block."""
+    st, np = _refresh_now_playing()
+    f = focus.status()
+    lines = [
+        f"source : {st.source}",
+        f"vibe   : {st.vibe}  (mood={st.dj_mood})",
+        "focus  : "
+        + (f"{f.phase} — {f.remaining}s left" if f.active else "off"),
+    ]
+    if _unsupported_reason(np):
+        lines.append(f"track  : {_unsupported(np.source or st.source, 'now_playing', _unsupported_reason(np))}")
+    elif np.title:
+        lines.append(f"track  : {np.title} — {np.artist}")
+        lines.append(
+            f"         {int(np.position)}s / {int(np.duration)}s "
+            + ("▶" if np.playing else "❚❚")
+        )
+    else:
+        lines.append("track  : (none)")
+    return "\n".join(lines)
+
+
+def main(
+    host: str | None = None,
+    port: int | None = None,
+    path: str | None = None,
+    stateless_http: bool | None = None,
+    log_level: str | None = None,
+) -> None:
+    if host is not None:
+        mcp.settings.host = host
+    if port is not None:
+        mcp.settings.port = int(port)
+    if path is not None:
+        mcp.settings.streamable_http_path = _normalize_path(path)
+    if stateless_http is not None:
+        mcp.settings.stateless_http = stateless_http
+    if log_level is not None:
+        mcp.settings.log_level = log_level.upper()
+    mcp.run(transport="streamable-http")
 
 
 if __name__ == "__main__":

@@ -123,6 +123,7 @@ def main() -> int:
     """Hook entry point. Reads JSON from stdin, updates state, exits 0."""
     if os.environ.get("CWB_DISABLE_HOOK") == "1":
         return 0
+    raw = ""
     try:
         raw = sys.stdin.read()
         event = json.loads(raw) if raw.strip() else {}
