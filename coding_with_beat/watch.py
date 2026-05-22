@@ -16,6 +16,7 @@ Layout (adaptive to terminal size):
 from __future__ import annotations
 
 import json
+import math
 import shutil
 import signal
 import sys
@@ -38,6 +39,8 @@ from .ui.progress import render_progress, render_spectrum_color
 
 FETCH_EVERY = 2.0
 RENDER_EVERY = 0.05
+JUMP_ROWS = 3   # max rows the sprite can lift above ground
+_SPRITE_W = 10  # visible width of pixel-person frame
 
 _ACCENT = (155, 188, 15)
 _DIM = "\x1b[38;2;100;110;100m"
@@ -135,17 +138,18 @@ def _render_player_top(snap: dict, width: int, height: int, t: float) -> list[st
 
 
 def _render_lyrics_bottom(
-    lyrics_text: str, pos: float, dur: float, width: int, height: int, playing: bool
+    lyrics_text: str, pos: float, dur: float, width: int, height: int, playing: bool, t: float = 0.0
 ) -> list[str]:
-    """Bottom-left panel: lyrics (top) + 7-line pixel person (bottom-left corner)."""
-    sprite_lines = dj.dancing_sprite("groove" if playing else "neutral").split("\n")
-    sprite_h = len(sprite_lines)
+    """Bottom-left panel: lyrics (top) + animated pixel person walking/jumping below."""
+    mood = "groove" if playing else "neutral"
+    sprite_h = 7  # pixel-person frames are always 7 lines
+    stage_h = sprite_h + JUMP_ROWS  # rows reserved for sprite + jump headroom
 
-    # If the panel is too short to fit sprite + sep + 1 lyric, hide sprite.
-    if height <= sprite_h + 1:
-        sprite_lines = []
-        sprite_h = 0
-    lyrics_h = max(1, height - sprite_h - (1 if sprite_h else 0))  # 1 = separator
+    show_sprite = height > stage_h + 1  # need at least 1 lyric row + separator
+    if not show_sprite:
+        stage_h = 0
+
+    lyrics_h = max(1, height - stage_h - (1 if show_sprite else 0))
 
     if lyrics_text:
         raw = render_lyrics_window(lyrics_text, pos, dur, window=lyrics_h, width=width - 1)
@@ -157,7 +161,42 @@ def _render_lyrics_bottom(
         content.append("")
     content = content[:lyrics_h]
 
-    rows = content + ([_sep(width)] + sprite_lines if sprite_h else [])
+    if show_sprite:
+        # ── jump: pseudo-random per 4-second window via golden-ratio hash ──
+        bucket = int(t / 4.0)
+        will_jump = (math.sin(bucket * 1.6180339) + 1.0) / 2.0 > 0.4
+        if will_jump:
+            t_local = (t % 4.0) / 4.0
+            y_lift = max(0.0, math.sin(t_local * math.pi))
+            y = int(y_lift * JUMP_ROWS)
+        else:
+            y = 0
+
+        # ── horizontal walk: two incommensurable sine waves ──
+        max_x = max(0, width - _SPRITE_W)
+        x_frac = 0.5 + 0.4 * math.sin(t * 0.31) + 0.1 * math.sin(t * 0.73)
+        x_frac = max(0.0, min(1.0, x_frac))
+        x_offset = int(x_frac * max_x)
+
+        # ── frame: arms-up when airborne, shimmy direction otherwise ──
+        if will_jump and y > 0:
+            frame_idx = 1
+        else:
+            frame_idx = 2 if math.sin(t * 0.31) < 0 else 0
+
+        sprite_lines = dj.pixel_person_frame(mood, frame_idx).split("\n")
+
+        # Place sprite in vertical stage (y=0 → on ground; y=JUMP_ROWS → airborne)
+        top_blank = JUMP_ROWS - y
+        bottom_blank = y
+        stage_rows = [""] * top_blank + sprite_lines + [""] * bottom_blank
+
+        # Apply horizontal offset
+        positioned = [_pad(" " * x_offset + line, width) for line in stage_rows]
+        rows = content + [_sep(width)] + positioned
+    else:
+        rows = content
+
     while len(rows) < height:
         rows.append("")
     return [_pad(r, width) for r in rows[:height]]
@@ -242,6 +281,9 @@ def run(width: int = 0) -> int:
     raw = setup_raw_tty()
 
     enter_alt_screen()
+    # Re-read after alt screen is established; the first read may be stale.
+    sz[0] = shutil.get_terminal_size((80, 24))
+    _width[0] = sz[0].columns
 
     def _quit(*_):
         restore_tty(raw)
@@ -313,17 +355,16 @@ def run(width: int = 0) -> int:
                 total_w = _width[0]
                 h = sz[0].lines
                 # usable_h: everything except the very last terminal line.
-                # panels_h:  one row less — the hint bar sits at row usable_h,
-                #            spanning the full terminal width so it never overflows
-                #            into the queue column regardless of terminal size.
+                # sep_h:     full-width ── separator closing the panels.
+                # panels_h:  two rows less — panels end before the separator.
                 usable_h = h - 1
-                panels_h = usable_h - 1
+                sep_h = usable_h - 1
+                panels_h = sep_h - 1
                 left_w = max(20, int(total_w * 0.65))
                 right_w = max(10, total_w - left_w - 1)  # 1 col for │
 
                 # Player section height = exactly its content rows — no blank
                 # padding before the ────────┤ junction.
-                _sprite_h = len(dj.dancing_sprite("groove").split("\n"))  # 7
                 _player_rows = 5 + (1 if snap.get("artist") else 0)
                 top_h = _player_rows
                 bot_h = max(3, panels_h - top_h - 1)
@@ -333,7 +374,7 @@ def run(width: int = 0) -> int:
                 playing = snap.get("playing", False)
 
                 player_lines = _render_player_top(snap, left_w, top_h, now)
-                lyrics_lines = _render_lyrics_bottom(lyrics_text, pos, dur, left_w, bot_h, playing)
+                lyrics_lines = _render_lyrics_bottom(lyrics_text, pos, dur, left_w, bot_h, playing, now)
                 queue_lines = _render_queue_lines(queue, cur_idx, right_w, panels_h)
                 frame = _compose3(player_lines, lyrics_lines, queue_lines, left_w, panels_h)
 
@@ -346,6 +387,7 @@ def run(width: int = 0) -> int:
                 out = []
                 for i, line in enumerate(lines[:panels_h]):
                     out.append(f"\x1b[{i + 1};1H{line}\x1b[K")
+                out.append(f"\x1b[{sep_h};1H{_DIM}{'─' * total_w}{_RESET}\x1b[K")
                 out.append(f"\x1b[{usable_h};1H{_pad(hint_line, total_w)}\x1b[K")
                 out.append(f"\x1b[{usable_h + 1};1H\x1b[J")
                 sys.stdout.write("".join(out))
