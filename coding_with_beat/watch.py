@@ -16,8 +16,11 @@ from ._tui import (
     restore_tty,
     setup_raw_tty,
 )
+from . import dj
+from .config import DATA_DIR
 from .mcp_client import MCPClientError, call_tool
-from .ui.lyrics import render_lyrics_window
+from .ui.frame import _strip_ansi
+from .ui.lyrics import _display_width, render_lyrics_window
 from .ui.progress import render_progress, render_spectrum_color
 
 FETCH_EVERY = 2.0
@@ -27,6 +30,7 @@ _ACCENT = (155, 188, 15)
 _DIM = "\x1b[38;2;100;110;100m"
 _BOLD = "\x1b[1;38;2;220;230;220m"
 _GREEN = "\x1b[38;2;155;188;15m"
+_CUR = "\x1b[1;38;2;255;230;100m"
 _RESET = "\x1b[0m"
 
 
@@ -54,7 +58,44 @@ def _sep(width: int) -> str:
     return _DIM + "─" * max(1, width) + _RESET
 
 
-def _render(snap: dict, lyrics_text: str, width: int, t: float) -> str:
+def _vis_len(s: str) -> int:
+    return _display_width(_strip_ansi(s))
+
+
+def _pad(s: str, width: int) -> str:
+    """Pad an ANSI-escaped string to exactly `width` visible columns."""
+    return s + " " * max(0, width - _vis_len(s))
+
+
+def _trunc(s: str, width: int) -> str:
+    """Truncate a plain string to `width` visible chars, appending '…' if cut."""
+    if _display_width(s) <= width:
+        return s
+    lo, hi = 0, len(s)
+    while lo < hi:
+        mid = (lo + hi + 1) // 2
+        if _display_width(s[:mid]) <= width - 1:
+            lo = mid
+        else:
+            hi = mid - 1
+    return s[:lo] + "…"
+
+
+def _load_queue() -> tuple[list[dict], int]:
+    try:
+        tracks = json.loads((DATA_DIR / "last_results.json").read_text(encoding="utf-8"))
+    except Exception:
+        tracks = []
+    try:
+        cur_idx = int(
+            json.loads((DATA_DIR / "queue_index.json").read_text(encoding="utf-8")).get("index", -1)
+        )
+    except Exception:
+        cur_idx = -1
+    return tracks, cur_idx
+
+
+def _render_player_lines(snap: dict, lyrics_text: str, width: int, height: int, t: float) -> list[str]:
     title = snap.get("title") or "—"
     artist = snap.get("artist") or ""
     playing = snap.get("playing", False)
@@ -83,9 +124,50 @@ def _render(snap: dict, lyrics_text: str, width: int, t: float) -> str:
             rows.append(" " + line)
 
     rows.append(_sep(width))
+    mood = "groove" if playing else "neutral"
+    for line in dj.dancing_sprite(mood).split("\n"):
+        rows.append(line)
+    rows.append(_sep(width))
     rows.append(f" {_DIM}space pause  n next  p prev  l like  q quit{_RESET}")
     rows.append("")
-    return "\n".join(rows)
+
+    return [_pad(r, width) for r in rows]
+
+
+def _render_queue_lines(tracks: list[dict], cur_idx: int, width: int, height: int) -> list[str]:
+    header = _pad(f" {_DIM}Queue ({len(tracks)}){_RESET}", width)
+    rows: list[str] = ["", header, _sep(width)]
+
+    if not tracks:
+        rows.append(_pad(f" {_DIM}(run cwb list to load queue){_RESET}", width))
+    else:
+        visible = max(1, height - len(rows) - 1)
+        start = max(0, cur_idx - visible // 2) if cur_idx >= 0 else 0
+        end = min(len(tracks), start + visible)
+        start = max(0, end - visible)
+
+        for i in range(start, end):
+            num = f"{i + 1}."
+            title = _trunc(tracks[i].get("title", "?"), width - 6)
+            if i == cur_idx:
+                line = _pad(f" {_CUR}▶ {num:<3}{title}{_RESET}", width)
+            else:
+                line = _pad(f" {_DIM}{num:<3}{_RESET}{title}", width)
+            rows.append(line)
+
+    while len(rows) < height:
+        rows.append(" " * width)
+    return rows[:height]
+
+
+def _compose(left: list[str], right: list[str], height: int) -> str:
+    vsep = f"{_DIM}│{_RESET}"
+    out = []
+    for i in range(min(height, max(len(left), len(right)))):
+        l = left[i] if i < len(left) else ""
+        r = right[i] if i < len(right) else ""
+        out.append(f"{l}{vsep}{r}")
+    return "\n".join(out)
 
 
 def run(width: int = 0) -> int:
@@ -115,6 +197,8 @@ def run(width: int = 0) -> int:
     lyrics_key = ""
     last_fetch = 0.0
     last_render = 0.0
+    queue: list[dict] = []
+    cur_idx = -1
 
     try:
         while True:
@@ -148,10 +232,18 @@ def run(width: int = 0) -> int:
                     last_fetch = now
                 except MCPClientError:
                     pass
+                queue, cur_idx = _load_queue()
 
             if snap and now - last_render >= RENDER_EVERY:
-                frame = _render(snap, lyrics_text, _width[0], now)
+                total_w = _width[0]
                 height = sz[0].lines
+                left_w = max(20, int(total_w * 0.6))
+                right_w = max(10, total_w - left_w - 1)
+
+                player_lines = _render_player_lines(snap, lyrics_text, left_w, height, now)
+                queue_lines = _render_queue_lines(queue, cur_idx, right_w, height)
+                frame = _compose(player_lines, queue_lines, height)
+
                 lines = frame.split("\n")
                 out = []
                 for i, line in enumerate(lines[: height - 1]):
