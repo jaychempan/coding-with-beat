@@ -127,7 +127,6 @@ def _render_player_top(snap: dict, width: int, height: int, t: float) -> list[st
         _sep(width),
         " " + render_progress(pos, dur, max(1, width - 17), _ACCENT),
         " " + render_spectrum_color(pos, max(1, width - 2), t=t),
-        _sep(width),
     ]
 
     while len(rows) < height:
@@ -187,11 +186,17 @@ def _render_queue_lines(tracks: list[dict], cur_idx: int, width: int, height: in
         for i in range(start, end):
             num = f"{i + 1}."
             num_str = f"{num:>{num_w}}"
-            title = _trunc(tracks[i].get("title", "?"), title_w)
+            track = tracks[i]
+            title_str = _trunc(track.get("title", "?"), title_w)
+            artist = track.get("artist", "")
+            spare = title_w - _display_width(title_str) - 2
+            art_sfx = (
+                f"  {_DIM}{_trunc(artist, spare)}{_RESET}" if artist and spare > 0 else ""
+            )
             if i == cur_idx:
-                line = _pad(f" {_CUR}> {num_str} {title}{_RESET}", width)
+                line = _pad(f" {_CUR}> {num_str} {title_str}{_RESET}{art_sfx}", width)
             else:
-                line = _pad(f"   {_DIM}{num_str}{_RESET} {title}", width)
+                line = _pad(f"   {_DIM}{num_str}{_RESET} {title_str}{art_sfx}", width)
             rows.append(line)
 
     while len(rows) < height:
@@ -294,6 +299,15 @@ def run(width: int = 0) -> int:
                 except MCPClientError:
                     pass
                 queue, cur_idx = _load_queue()
+                # Keep queue highlight in sync even when Apple Music plays
+                # a track not triggered via cwb (queue_index.json would be stale).
+                if snap.get("title") and queue and cur_idx < len(queue):
+                    playing_title = snap["title"]
+                    if queue[cur_idx].get("title", "") != playing_title:
+                        for j, t in enumerate(queue):
+                            if t.get("title", "") == playing_title:
+                                cur_idx = j
+                                break
 
             if snap and now - last_render >= RENDER_EVERY:
                 total_w = _width[0]
@@ -328,7 +342,7 @@ def run(width: int = 0) -> int:
                 queue_lines = _render_queue_lines(queue, cur_idx, right_w, panels_h)
                 frame = _compose3(player_lines, lyrics_lines, queue_lines, left_w, panels_h)
 
-                hint = f"{_DIM}  spc pause  n next  p prev  l like  q quit{_RESET}"
+                hint = f"{_DIM}  space pause  n next  p prev  l like  q quit{_RESET}"
 
                 lines = frame.split("\n")
                 out = []
