@@ -138,27 +138,29 @@ def _render_player_top(snap: dict, width: int, height: int, t: float) -> list[st
 def _render_lyrics_bottom(
     lyrics_text: str, pos: float, dur: float, width: int, height: int, playing: bool
 ) -> list[str]:
-    """Bottom-left panel: lyrics + dancing sprite (bottom-left corner) + hint bar."""
-    sprite_lines = dj.dancing_sprite("groove" if playing else "neutral").split("\n")
+    """Bottom-left panel: lyrics (top) ─── 4-line sprite + hint (bottom-left)."""
+    # Small 4-line animated sprite from DANCE_FRAMES — fits neatly at the corner.
+    frame_idx = int(time.time() * 2)
+    mood = "groove" if playing else "neutral"
+    sprite_lines = dj.sprite_frame(mood, frame_idx).split("\n")
     sprite_h = len(sprite_lines)
     hint = f" {_DIM}space pause  n next  p prev  l like  q quit{_RESET}"
 
-    # Layout from top to bottom: lyrics | sprite | hint
-    lyrics_h = max(1, height - sprite_h - 1)
+    # Layout: [lyrics × lyrics_h] [sep] [sprite × sprite_h] [hint]
+    lyrics_h = max(1, height - sprite_h - 2)  # 2 = sep + hint
 
     if lyrics_text:
-        window = max(1, lyrics_h // 2)
-        raw = render_lyrics_window(lyrics_text, pos, dur, window=window, width=width - 1)
+        # Fill the whole lyrics section — no half-empty window.
+        raw = render_lyrics_window(lyrics_text, pos, dur, window=lyrics_h, width=width - 1)
         content = [" " + ln for ln in raw.split("\n")]
     else:
         content = [f" {_DIM}(no lyrics){_RESET}"]
 
     while len(content) < lyrics_h:
-        mid = len(content) // 2
-        content.insert(mid, "")
+        content.append("")
     content = content[:lyrics_h]
 
-    rows = content + sprite_lines + [hint]
+    rows = content + [_sep(width)] + sprite_lines + [hint]
     while len(rows) < height:
         rows.append("")
     return [_pad(r, width) for r in rows[:height]]
@@ -303,11 +305,11 @@ def run(width: int = 0) -> int:
                 left_w = max(20, int(total_w * 0.6))
                 right_w = max(10, total_w - left_w - 1)  # 1 col for │
 
-                # Compact player (no sprite): ~8 rows.
-                # Bottom gets the sprite + hint + remaining space for lyrics.
-                _sprite_h = len(dj.dancing_sprite("groove").split("\n"))
-                _min_top = 8   # blank + title + artist + sep + progress + spectrum + sep + pad
-                _min_bot = _sprite_h + 1 + 2  # sprite + hint + 2 lyrics lines
+                # Player section: compact 8 rows (no sprite).
+                # Bottom section: lyrics + sep + 4-line sprite + hint.
+                _SPRITE_H = 4  # DANCE_FRAMES sprite is always 4 lines
+                _min_top = 8
+                _min_bot = _SPRITE_H + 2 + 2  # sprite + sep + hint + 2 lyrics
                 if usable_h >= _min_top + 1 + _min_bot:
                     top_h = _min_top
                     bot_h = usable_h - top_h - 1
