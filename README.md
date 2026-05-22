@@ -21,8 +21,14 @@ A pixel-art DJ companion that lives inside Claude Code. It plays music, shows ly
 
 <table>
   <tr>
+    <th align="center" colspan="2">CLI (cwb watch / karaoke)</th>
+  </tr>
+  <tr>
     <td><img src="assets/screen_1.png"/></td>
     <td><img src="assets/screen_2.png"/></td>
+  </tr>
+  <tr>
+    <th align="center" colspan="2">Claude Statusline</th>
   </tr>
   <tr>
     <td colspan="2"><img src="assets/screen_3.png" width="100%"/></td>
