@@ -24,6 +24,8 @@ fi
 mkdir -p "$(dirname "$DEST")"
 if [ -d "$DEST/.git" ]; then
   echo "↻ updating coding-with-beat at $DEST"
+  # Discard auto-generated files that pip/setuptools may have dirtied.
+  git -C "$DEST" checkout -- '*.egg-info/' 2>/dev/null || true
   git -C "$DEST" pull --ff-only
 else
   echo "⤓ cloning coding-with-beat into $DEST"

@@ -628,7 +628,7 @@ class AppleMusic:
         import time
         for _ in range(attempts):
             np = self.now_playing()
-            if np.title and (
+            if np.title and np.playing and (
                 _track_matches(np.title, np.artist, query=query)
                 if not (target_title or target_artist)
                 else _track_matches_target(
@@ -888,13 +888,13 @@ end tell
              subscription for actual playback.
         """
         if _play_local_match(query):
-            np = self._wait_for_match(query=query)
+            np = self._wait_for_match(query=query, attempts=12, delay=0.5)
             if np:
                 return np
         tokens = _query_match_tokens(query)
 
         if len(tokens) > 1 and _play_local_tokens(tokens):
-            np = self._wait_for_match(query=query)
+            np = self._wait_for_match(query=query, attempts=12, delay=0.5)
             if np:
                 return np
 

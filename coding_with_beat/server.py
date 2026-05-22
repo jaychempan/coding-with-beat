@@ -335,10 +335,11 @@ def play_song(query: str) -> str:
     if _unsupported_reason(np) == "needs_library_add":
         title = np.title or "?"
         artist = np.artist or "—"
-        return (
-            f"Found \"{title} — {artist}\" in the Apple Music catalog, but full playback did not start.\n"
-            "Opened the Music.app search page. Add the track to your library, then try again.\n"
-            "(Automatic catalog playback requires an active Apple Music subscription.)"
+        # Encode title/artist so cwb_agent.py can parse them for i18n display.
+        return _unsupported(
+            "apple_music",
+            "play_song",
+            f"needs_library_add:{title}:{artist}",
         )
     if _unsupported_reason(np):
         return _unsupported(np.source or st.source, "play_song", _unsupported_reason(np))
@@ -409,25 +410,29 @@ def show_player(width: int = 36, with_lyrics: bool = True) -> str:
         progress,
         spec,
     ]
+    box_width = max(width + 4, 40)
+    inner_w = box_width - 2
     if with_lyrics and np.title:
         lrc = _current_lyrics()
         if lrc:
             lines.append("\x1b[38;2;90;90;105m─── lyrics ───\x1b[0m")
             lines.append(render_lyrics_window(
-                lrc, position=np.position, duration=np.duration, window=5
+                lrc, position=np.position, duration=np.duration, window=5,
+                width=inner_w,
             ))
     lines.append(f"\x1b[38;2;155;188;15m{buddy}\x1b[0m")
-    lines.append(f"\x1b[3;38;2;200;200;230m  “{quip}”\x1b[0m")
+    lines.append(f'\x1b[3;38;2;200;200;230m  "{quip}"\x1b[0m')
     body = "\n".join(lines)
-    return boxed(f"CWB · {st.source}", body, width=max(width + 4, 40))
+    return boxed(f"CWB · {st.source}", body, width=box_width)
 
 
 @mcp.tool()
-def show_lyrics(window: int = 7) -> str:
+def show_lyrics(window: int = 7, width: int = 0) -> str:
     """Render a karaoke-style lyrics window for the currently playing track.
     Pulls timed LRC lyrics from the active source (Apple Music falls back to
     NetEase's public lyric API when AppleScript can't read catalog lyrics).
-    Active line is picked by current playback position."""
+    Active line is picked by current playback position.
+    width: terminal column count for wrapping (0 = auto-detect)."""
     st, np = _refresh_now_playing()
     if _unsupported_reason(np):
         return _unsupported(np.source or st.source, "show_lyrics", _unsupported_reason(np))
@@ -437,7 +442,8 @@ def show_lyrics(window: int = 7) -> str:
     if not lrc:
         return f"(no lyrics found for: {np.title} — {np.artist})"
     return render_lyrics_window(
-        lrc, position=np.position, duration=np.duration, window=window
+        lrc, position=np.position, duration=np.duration, window=window,
+        width=width if width > 0 else None,
     )
 
 
@@ -447,7 +453,7 @@ def dj_say(mood: str = "") -> str:
     current vibe-derived mood. Useful for breaking up long debugging sessions."""
     st = state.load()
     m = mood or st.dj_mood or "neutral"
-    return f"{dj.face(m)}  “{dj.quip(m)}”"
+    return f'{dj.face(m)}  “{dj.quip(m)}”'
 
 
 @mcp.tool()

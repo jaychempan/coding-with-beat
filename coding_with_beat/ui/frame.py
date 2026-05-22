@@ -25,19 +25,35 @@ def _strip_ansi(s: str) -> str:
     return re.sub(r"\x1b\[[0-9;]*m", "", s)
 
 
+def _display_width(s: str) -> int:
+    total = 0
+    for ch in s:
+        cp = ord(ch)
+        if (0x1100 <= cp <= 0x115F or 0x2E80 <= cp <= 0x303E or
+                0x3040 <= cp <= 0x33FF or 0x3400 <= cp <= 0x4DBF or
+                0x4E00 <= cp <= 0x9FFF or 0xA000 <= cp <= 0xA4CF or
+                0xAC00 <= cp <= 0xD7AF or 0xF900 <= cp <= 0xFAFF or
+                0xFE10 <= cp <= 0xFE6F or 0xFF01 <= cp <= 0xFF60 or
+                0xFFE0 <= cp <= 0xFFE6):
+            total += 2
+        else:
+            total += 1
+    return total
+
+
 def boxed(title: str, body: str, width: int = 40, color: str = GB_GREEN) -> str:
     """Wrap body text in a chunky pixel frame with a title bar."""
     body_lines = body.splitlines() or [""]
-    inner_w = max(width - 2, len(_strip_ansi(title)) + 2)
+    inner_w = max(width - 2, _display_width(_strip_ansi(title)) + 2)
     for line in body_lines:
-        inner_w = max(inner_w, len(_strip_ansi(line)))
+        inner_w = max(inner_w, _display_width(_strip_ansi(line)))
     inner_w = min(inner_w, 120)
 
     top = f"{color}{CORNER_TL}{EDGE_H * inner_w}{CORNER_TR}{RESET}"
     bot = f"{color}{CORNER_BL}{EDGE_H_BOT * inner_w}{CORNER_BR}{RESET}"
 
     title_clean = _strip_ansi(title)
-    title_pad = inner_w - len(title_clean)
+    title_pad = inner_w - _display_width(title_clean)
     left = title_pad // 2
     right = title_pad - left
     title_line = f"{color}{EDGE_V}{' ' * left}\x1b[1m{title_clean}\x1b[0m{color}{' ' * right}{EDGE_V_R}{RESET}"
@@ -46,7 +62,7 @@ def boxed(title: str, body: str, width: int = 40, color: str = GB_GREEN) -> str:
 
     rows = [top, title_line, sep]
     for line in body_lines:
-        visible = len(_strip_ansi(line))
+        visible = _display_width(_strip_ansi(line))
         pad = max(0, inner_w - visible)
         rows.append(f"{color}{EDGE_V}{RESET}{line}{' ' * pad}{color}{EDGE_V_R}{RESET}")
     rows.append(bot)

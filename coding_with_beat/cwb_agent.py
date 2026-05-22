@@ -48,6 +48,7 @@ _ALLOWED_COMMANDS = {
     "search",
     "list",
     "play_number",
+    "update",
 }
 _SOURCES = {
     # English
@@ -120,14 +121,28 @@ _fp(r"^(?:search|搜索|找歌|查找)\s+(.+)$", cmd="search",
     args=lambda m: (m.group(1).strip(),))
 _fp(r"^(?:play|播放)\s+(\d+)$", cmd="play_number",
     args=lambda m: (m.group(1),))
-# Generic play <query>: trim at first Chinese comma / semicolon / period so that
-# a stray complaint appended to the command (e.g. "play 胡彦斌 红颜，为什么…") is
-# stripped to just the query.
-_fp(r"^(?:play|播放|听|放|来一首)\s+(.+)$", cmd="play",
-    args=lambda m: (re.split(r"[，；。,;]", m.group(1))[0].strip(),))
+_CLAUSE_SENTINEL = re.compile(
+    r"这个|这首|这种|这部分|这里|如果|不能|为什么|是不是|告诉|手动|弹窗|注意|会弹|会显示|为啥|怎么|可以吗|嘛$|吗$|呢$|啊$"
+)
+
+def _extract_play_query(m: "re.Match") -> tuple:
+    raw = m.group(1).strip()
+    # 1. Split at CJK punctuation
+    first = re.split(r"[，；。,;！？!?]", raw)[0].strip()
+    # 2. Split at clause-marker words that rarely appear in song/artist names
+    sentinel = _CLAUSE_SENTINEL.search(first)
+    if sentinel and sentinel.start() > 0:
+        candidate = first[: sentinel.start()].strip()
+        if candidate:
+            first = candidate
+    return (first,)
+
+# Generic play <query>: trim complaint text mixed into the command.
+_fp(r"^(?:play|播放|听|放|来一首)\s+(.+)$", cmd="play", args=_extract_play_query)
 _fp(r"^(help|usage|commands)$", cmd="help", args=lambda m: ("en",))
 _fp(r"^(帮助|命令|命令列表|怎么用)$", cmd="help", args=lambda m: ("zh",))
 _fp(r"^(welcome|欢迎|欢迎界面|启动界面)$", cmd="welcome")
+_fp(r"^(update|更新|升级)$", cmd="update")
 
 # ── volume ─────────────────────────────────────────────────────────────────
 _fp(r"^(?:volume|音量|调音量(?:到)?|把音量(?:调)?(?:到)?|设置音量(?:为)?)\s*(\d+)%?$", cmd="volume",
@@ -402,15 +417,19 @@ def run_child_claude(intent: str, *, timeout: Optional[int] = None) -> CwbPlan:
     return parse_claude_plan(proc.stdout)
 
 
-_PASSTHROUGH_COMMANDS = {"player", "status", "lyrics", "history", "help", "welcome", "search", "list"}
+_PASSTHROUGH_COMMANDS = {"player", "status", "lyrics", "history", "help", "welcome", "search", "list", "update"}
 
 _CJK_RE = re.compile(r"[　-鿿豈-﫿]")
 
 
+_ZH_VERBS = re.compile(
+    r"^(播放|听|放|来一首|暂停|停止|下一首|上一首|跳过|切换|收藏|喜欢|搜索|找歌|模式|音量|歌词|播放器|状态|历史|帮助|命令|状态栏|来源|卡拉)"
+)
+
 def _detect_lang(text: str) -> str:
-    """'zh' if any CJK character appears anywhere in the intent, else 'en'.
-    Both 'play 周杰伦' and '播放 周杰伦' produce Chinese output."""
-    return "zh" if _CJK_RE.search(text or "") else "en"
+    """'zh' if the leading command verb is Chinese, else 'en'.
+    'play 周杰伦' → en;  '播放 周杰伦' → zh."""
+    return "zh" if _ZH_VERBS.match((text or "").strip()) else "en"
 
 
 _T: dict[str, dict[str, str]] = {
@@ -519,9 +538,14 @@ def _format_result(plan: CwbPlan, code: int, output: str, lang: str = "zh") -> s
             query = " ".join(plan.args) if plan.args else ""
             if query:
                 # Distinguish "found on Apple Music catalog but not in library" from "not found at all"
-                if "(unsupported" in clean and "source=apple_music" in clean:
+                if "needs_library_add" in clean:
+                    # Found on Apple Music catalog but can't auto-add (no subscription).
+                    # Extract title/artist encoded as "needs_library_add:title:artist".
+                    import re as _re
+                    _m = _re.search(r"needs_library_add:(.+?):(.+)", clean)
+                    song_info = f"{_m.group(1)} — {_m.group(2)}" if _m else query
                     return _buddy_card("neutral", [
-                        t["needs_library"].format(q=query),
+                        t["needs_library"].format(q=song_info),
                         t["needs_library_hint"],
                         f'"{dj.quip("neutral")}"',
                     ])
