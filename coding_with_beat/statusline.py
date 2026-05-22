@@ -36,6 +36,52 @@ def _vlen(s: str) -> int:
     return len(_ANSI_RE.sub("", s))
 
 
+_CJK_RANGES = (
+    (0x1100, 0x115F), (0x2E80, 0xA4CF), (0xAC00, 0xD7AF),
+    (0xF900, 0xFAFF), (0xFE10, 0xFE6F), (0xFF01, 0xFF60), (0xFFE0, 0xFFE6),
+)
+
+
+def _cw(ch: str) -> int:
+    """Display-cell width of a single character (1 or 2)."""
+    cp = ord(ch)
+    return 2 if any(lo <= cp <= hi for lo, hi in _CJK_RANGES) else 1
+
+
+def _dw(s: str) -> int:
+    """Total display-cell width of a plain (no ANSI) string."""
+    return sum(_cw(c) for c in s)
+
+
+def _marquee(text: str, width: int, t: float, speed: float = 4.0) -> str:
+    """Return a fixed-`width`-cell slice of text, scrolling over time if too wide."""
+    dw = _dw(text)
+    if dw <= width:
+        return text + " " * (width - dw)
+    loop   = text + "  "          # two-space gap before the repeat
+    total  = _dw(loop)
+    offset = int(t * speed) % total
+    # Advance to `offset` display cells
+    doubled = loop * 2
+    start, acc = 0, 0
+    for i, ch in enumerate(doubled):
+        if acc >= offset:
+            start = i
+            break
+        acc += _cw(ch)
+    # Collect exactly `width` display cells from `start`
+    result, w = [], 0
+    for ch in doubled[start:]:
+        cw = _cw(ch)
+        if w + cw > width:
+            break
+        result.append(ch)
+        w += cw
+    if w < width:
+        result.append(" " * (width - w))
+    return "".join(result)
+
+
 def _mmss(seconds: float) -> str:
     s = max(0, int(seconds))
     return f"{s // 60:02d}:{s % 60:02d}"
@@ -192,8 +238,8 @@ def render(term_width: int = 0) -> str:
 
     # ── track line ─────────────────────────────────────────────
     if st.track.title:
-        title = st.track.title[:28]
-        artist = (st.track.artist or "—")[:18]
+        title  = _marquee(st.track.title,          20, now)
+        artist = _marquee(st.track.artist or "—",  12, now)
         bar = render_progress(pos, st.track.duration, width=14, accent=(ar, ag, ab))
         if st.playing:
             icon = _PLAY_PULSE[int(now) & 1]
