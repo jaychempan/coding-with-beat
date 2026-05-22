@@ -138,19 +138,17 @@ def _render_player_top(snap: dict, width: int, height: int, t: float) -> list[st
 def _render_lyrics_bottom(
     lyrics_text: str, pos: float, dur: float, width: int, height: int, playing: bool
 ) -> list[str]:
-    """Bottom-left panel: lyrics (top) ─── 4-line sprite + hint (bottom-left)."""
-    # Small 4-line animated sprite from DANCE_FRAMES — fits neatly at the corner.
-    frame_idx = int(time.time() * 2)
-    mood = "groove" if playing else "neutral"
-    sprite_lines = dj.sprite_frame(mood, frame_idx).split("\n")
+    """Bottom-left panel: lyrics (top) + 7-line pixel person (bottom-left corner)."""
+    sprite_lines = dj.dancing_sprite("groove" if playing else "neutral").split("\n")
     sprite_h = len(sprite_lines)
-    hint = f" {_DIM}space pause  n next  p prev  l like  q quit{_RESET}"
 
-    # Layout: [lyrics × lyrics_h] [sep] [sprite × sprite_h] [hint]
-    lyrics_h = max(1, height - sprite_h - 2)  # 2 = sep + hint
+    # If the panel is too short to fit the sprite, hide it.
+    if height <= sprite_h:
+        sprite_lines = []
+        sprite_h = 0
+    lyrics_h = max(1, height - sprite_h)
 
     if lyrics_text:
-        # Fill the whole lyrics section — no half-empty window.
         raw = render_lyrics_window(lyrics_text, pos, dur, window=lyrics_h, width=width - 1)
         content = [" " + ln for ln in raw.split("\n")]
     else:
@@ -160,7 +158,7 @@ def _render_lyrics_bottom(
         content.append("")
     content = content[:lyrics_h]
 
-    rows = content + [_sep(width)] + sprite_lines + [hint]
+    rows = content + sprite_lines
     while len(rows) < height:
         rows.append("")
     return [_pad(r, width) for r in rows[:height]]
@@ -300,22 +298,26 @@ def run(width: int = 0) -> int:
             if snap and now - last_render >= RENDER_EVERY:
                 total_w = _width[0]
                 h = sz[0].lines
-                # Usable rows: h-1 (last terminal line reserved to prevent scroll)
+                # usable_h: everything except the very last terminal line.
+                # panels_h:  one row less — the hint bar sits at row usable_h,
+                #            spanning the full terminal width so it never overflows
+                #            into the queue column regardless of terminal size.
                 usable_h = h - 1
+                panels_h = usable_h - 1
                 left_w = max(20, int(total_w * 0.6))
                 right_w = max(10, total_w - left_w - 1)  # 1 col for │
 
                 # Player section: compact 8 rows (no sprite).
-                # Bottom section: lyrics + sep + 4-line sprite + hint.
-                _SPRITE_H = 4  # DANCE_FRAMES sprite is always 4 lines
+                # Bottom section: lyrics + 7-line pixel person (no hint — moved outside).
+                _sprite_h = len(dj.dancing_sprite("groove").split("\n"))  # 7
                 _min_top = 8
-                _min_bot = _SPRITE_H + 2 + 2  # sprite + sep + hint + 2 lyrics
-                if usable_h >= _min_top + 1 + _min_bot:
+                _min_bot = _sprite_h + 2  # sprite + 2 lyrics min
+                if panels_h >= _min_top + 1 + _min_bot:
                     top_h = _min_top
-                    bot_h = usable_h - top_h - 1
+                    bot_h = panels_h - top_h - 1
                 else:
-                    top_h = max(5, usable_h // 2)
-                    bot_h = max(3, usable_h - top_h - 1)
+                    top_h = max(5, panels_h // 2)
+                    bot_h = max(3, panels_h - top_h - 1)
 
                 pos = _interp_pos(snap)
                 dur = float(snap.get("duration", 0.0))
@@ -323,13 +325,16 @@ def run(width: int = 0) -> int:
 
                 player_lines = _render_player_top(snap, left_w, top_h, now)
                 lyrics_lines = _render_lyrics_bottom(lyrics_text, pos, dur, left_w, bot_h, playing)
-                queue_lines = _render_queue_lines(queue, cur_idx, right_w, usable_h)
-                frame = _compose3(player_lines, lyrics_lines, queue_lines, left_w, usable_h)
+                queue_lines = _render_queue_lines(queue, cur_idx, right_w, panels_h)
+                frame = _compose3(player_lines, lyrics_lines, queue_lines, left_w, panels_h)
+
+                hint = f"{_DIM}  spc pause  n next  p prev  l like  q quit{_RESET}"
 
                 lines = frame.split("\n")
                 out = []
-                for i, line in enumerate(lines[:usable_h]):
+                for i, line in enumerate(lines[:panels_h]):
                     out.append(f"\x1b[{i + 1};1H{line}\x1b[K")
+                out.append(f"\x1b[{usable_h};1H{_pad(hint, total_w)}\x1b[K")
                 out.append(f"\x1b[{usable_h + 1};1H\x1b[J")
                 sys.stdout.write("".join(out))
                 sys.stdout.flush()
