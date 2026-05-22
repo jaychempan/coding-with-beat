@@ -1,4 +1,5 @@
 """Full-screen karaoke mode — local render from JSON snapshot."""
+
 from __future__ import annotations
 
 import json
@@ -7,25 +8,28 @@ import signal
 import sys
 import time
 
-from .mcp_client import MCPClientError, call_tool
 from ._tui import (
-    setup_raw_tty, restore_tty, read_key,
-    enter_alt_screen, exit_alt_screen, CLEAR,
+    CLEAR,
+    enter_alt_screen,
+    exit_alt_screen,
+    read_key,
+    restore_tty,
+    setup_raw_tty,
 )
-from .ui.progress import render_progress
-from .ui.lyrics import render_lyrics_wave, _display_width
+from .mcp_client import MCPClientError, call_tool
 from .ui.frame import _strip_ansi
+from .ui.lyrics import _display_width, render_lyrics_wave
+from .ui.progress import render_progress
 
-
-FETCH_EVERY  = 2.0
-RENDER_EVERY = 0.05   # 20 FPS
+FETCH_EVERY = 2.0
+RENDER_EVERY = 0.05
 LYRIC_WINDOW = 5
 
-_ACCENT  = (155, 188, 15)
-_DIM     = "\x1b[38;2;100;110;100m"
-_BOLD    = "\x1b[1;38;2;220;230;220m"
-_GREEN   = "\x1b[38;2;155;188;15m"
-_RESET   = "\x1b[0m"
+_ACCENT = (155, 188, 15)
+_DIM = "\x1b[38;2;100;110;100m"
+_BOLD = "\x1b[1;38;2;220;230;220m"
+_GREEN = "\x1b[38;2;155;188;15m"
+_RESET = "\x1b[0m"
 
 
 def _fetch(known_key: str = "") -> dict:
@@ -51,48 +55,44 @@ def _control(tool: str) -> None:
 def _center(text: str, width: int) -> str:
     """Center one ANSI-escaped line within `width` columns."""
     vis_w = _display_width(_strip_ansi(text))
-    pad   = max(0, (width - vis_w) // 2)
+    pad = max(0, (width - vis_w) // 2)
     return " " * pad + text
 
 
 def _render(snap: dict, lyrics_text: str, width: int, height: int, t: float) -> str:
-    title   = snap.get("title") or "—"
-    artist  = snap.get("artist") or ""
+    title = snap.get("title") or "—"
+    artist = snap.get("artist") or ""
     playing = snap.get("playing", False)
-    dur     = float(snap.get("duration", 0.0))
-    pos     = _interp_pos(snap)
+    dur = float(snap.get("duration", 0.0))
+    pos = _interp_pos(snap)
 
     icon = f"{_GREEN}▶{_RESET}" if playing else f"{_DIM}❚❚{_RESET}"
     header = f"{icon}  {_BOLD}{title}{_RESET}"
     if artist:
         header += f"  {_DIM}{artist}{_RESET}"
 
-    bar_w = min(width - 4, 48)
+    bar_w = max(1, min(width - 4, 48))
     progress_line = render_progress(pos, dur, bar_w, _ACCENT)
 
-    # Header block (2 lines)
     header_rows = [
         _center(header, width),
         _center(progress_line, width),
     ]
 
-    # Lyrics block
     if lyrics_text:
         lrc = render_lyrics_wave(lyrics_text, pos, dur, window=LYRIC_WINDOW, t=t, width=width)
         lrc_rows = [_center(line, width) for line in lrc.split("\n")]
     else:
         lrc_rows = [_center(f"{_DIM}(no lyrics){_RESET}", width)]
 
-    lrc_h = len(lrc_rows)
-    hint  = f"{_DIM}space pause  n next  p prev  l like  q quit{_RESET}"
+    hint = f"{_DIM}space pause  n next  p prev  l like  q quit{_RESET}"
 
-    # Vertical layout: 1 blank + 2 header + 1 blank + lrc + pad + 1 hint
-    top_blank    = 1
-    mid_blank    = 1
-    bottom_fixed = 1  # hint line
-    available    = height - top_blank - len(header_rows) - mid_blank - lrc_h - bottom_fixed
-    top_pad      = max(0, available // 2)
-    bot_pad      = max(0, available - top_pad)
+    top_blank = 1
+    mid_blank = 1
+    bottom_fixed = 1
+    available = height - top_blank - len(header_rows) - mid_blank - len(lrc_rows) - bottom_fixed
+    top_pad = max(0, available // 2)
+    bot_pad = max(0, available - top_pad)
 
     rows: list[str] = []
     rows.extend([""] * top_blank)
@@ -107,9 +107,9 @@ def _render(snap: dict, lyrics_text: str, width: int, height: int, t: float) -> 
 
 
 def run(width: int = 0) -> int:
-    sz     = [shutil.get_terminal_size((80, 24))]
+    sz = [shutil.get_terminal_size((80, 24))]
     _width = [width if width > 0 else sz[0].columns]
-    raw    = setup_raw_tty()
+    raw = setup_raw_tty()
 
     enter_alt_screen()
 
@@ -119,20 +119,20 @@ def run(width: int = 0) -> int:
         sys.exit(0)
 
     def _resize(*_):
-        sz[0]     = shutil.get_terminal_size((80, 24))
+        sz[0] = shutil.get_terminal_size((80, 24))
         _width[0] = sz[0].columns
         sys.stdout.write(CLEAR)
         sys.stdout.flush()
 
-    signal.signal(signal.SIGINT,   _quit)
-    signal.signal(signal.SIGTERM,  _quit)
+    signal.signal(signal.SIGINT, _quit)
+    signal.signal(signal.SIGTERM, _quit)
     signal.signal(signal.SIGWINCH, _resize)
 
-    snap:        dict  = {}
-    lyrics_text: str   = ""
-    lyrics_key:  str   = ""
-    last_fetch:  float = 0.0
-    last_render: float = 0.0
+    snap: dict = {}
+    lyrics_text = ""
+    lyrics_key = ""
+    last_fetch = 0.0
+    last_render = 0.0
 
     try:
         while True:
@@ -140,11 +140,14 @@ def run(width: int = 0) -> int:
             if key in ("q", "Q", "\x03"):
                 break
             if key == " ":
-                _control("toggle");     last_fetch = 0.0
+                _control("toggle")
+                last_fetch = 0.0
             elif key in ("n", "N"):
-                _control("next_track"); last_fetch = 0.0
+                _control("next_track")
+                last_fetch = 0.0
             elif key in ("p", "P"):
-                _control("prev_track"); last_fetch = 0.0
+                _control("prev_track")
+                last_fetch = 0.0
             elif key in ("l", "L"):
                 _control("like_current")
 
@@ -155,22 +158,22 @@ def run(width: int = 0) -> int:
                     new = _fetch(lyrics_key)
                     if new.get("lyrics_text"):
                         lyrics_text = new["lyrics_text"]
-                        lyrics_key  = new.get("lyrics_key", "")
+                        lyrics_key = new.get("lyrics_key", "")
                     elif new.get("lyrics_key") and new["lyrics_key"] != lyrics_key:
                         lyrics_text = ""
-                        lyrics_key  = new["lyrics_key"]
-                    snap       = new
+                        lyrics_key = new["lyrics_key"]
+                    snap = new
                     last_fetch = now
                 except MCPClientError:
                     pass
 
             if snap and now - last_render >= RENDER_EVERY:
                 height = sz[0].lines
-                frame  = _render(snap, lyrics_text, _width[0], height, now)
-                lines  = frame.split("\n")
-                out    = []
-                for i, line in enumerate(lines[:height - 1]):
-                    out.append(f"\x1b[{i+1};1H{line}\x1b[K")
+                frame = _render(snap, lyrics_text, _width[0], height, now)
+                lines = frame.split("\n")
+                out = []
+                for i, line in enumerate(lines[: height - 1]):
+                    out.append(f"\x1b[{i + 1};1H{line}\x1b[K")
                 last = min(len(lines), height - 1) + 1
                 out.append(f"\x1b[{last};1H\x1b[J")
                 sys.stdout.write("".join(out))

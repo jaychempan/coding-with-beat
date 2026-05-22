@@ -1,19 +1,22 @@
 """Shared TUI primitives for watch and karaoke modes."""
+
 from __future__ import annotations
 
 import sys
 
 HIDE_CURSOR = "\x1b[?25l"
 SHOW_CURSOR = "\x1b[?25h"
-ENTER_ALT   = "\x1b[?1049h"
-EXIT_ALT    = "\x1b[?1049l"
-HOME        = "\x1b[H"
-CLEAR       = "\x1b[2J"
+ENTER_ALT = "\x1b[?1049h"
+EXIT_ALT = "\x1b[?1049l"
+HOME = "\x1b[H"
+CLEAR = "\x1b[2J"
 
 
 def setup_raw_tty():
     try:
-        import termios, tty
+        import termios
+        import tty
+
         fd = sys.stdin.fileno()
         old = termios.tcgetattr(fd)
         tty.setraw(fd)
@@ -27,6 +30,7 @@ def restore_tty(raw_state) -> None:
         return
     try:
         import termios
+
         fd, old = raw_state
         termios.tcsetattr(fd, termios.TCSADRAIN, old)
     except Exception:
@@ -39,6 +43,7 @@ def read_key(raw_state) -> str:
         return ""
     try:
         import select
+
         if select.select([sys.stdin], [], [], 0)[0]:
             return sys.stdin.read(1)
     except Exception:

@@ -3,6 +3,7 @@
 State is persisted to ~/.coding-with-beat/local.json so we can resume / show position.
 The afplay process runs detached; we read PID + start time to compute position.
 """
+
 from __future__ import annotations
 
 import json
@@ -15,9 +16,8 @@ from typing import List, Optional
 
 from mutagen import File as MFile
 
-from ..config import DATA_DIR, COVER_CACHE, ensure_dirs
+from ..config import COVER_CACHE, DATA_DIR, ensure_dirs
 from .base import NowPlaying
-
 
 LOCAL_STATE = DATA_DIR / "local.json"
 DEFAULT_LIBRARY = Path(os.environ.get("CCJ_LOCAL_LIBRARY", Path.home() / "Music"))
@@ -148,20 +148,31 @@ class LocalFiles:
         self._stop_current()
         proc = subprocess.Popen(
             ["afplay", str(path)],
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
             start_new_session=True,
         )
         artwork = _extract_artwork(path)
         dur = _duration(path)
-        _write({
-            "pid": proc.pid, "path": str(path),
-            "started_at": time.time(), "paused_at": None, "paused_total": 0,
-            "duration": dur, "artwork": artwork,
-        })
+        _write(
+            {
+                "pid": proc.pid,
+                "path": str(path),
+                "started_at": time.time(),
+                "paused_at": None,
+                "paused_total": 0,
+                "duration": dur,
+                "artwork": artwork,
+            }
+        )
         return NowPlaying(
-            title=path.stem, album=path.parent.name,
-            duration=dur, position=0.0, playing=True,
-            artwork_path=artwork, source=self.name,
+            title=path.stem,
+            album=path.parent.name,
+            duration=dur,
+            position=0.0,
+            playing=True,
+            artwork_path=artwork,
+            source=self.name,
         )
 
     def play(self) -> None:
@@ -226,7 +237,8 @@ class LocalFiles:
         self._stop_current()
         proc = subprocess.Popen(
             ["afplay", "-t", "9999", str(path)],
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
             start_new_session=True,
         )
         s["pid"] = proc.pid

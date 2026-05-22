@@ -11,6 +11,7 @@ playback API. This backend therefore has two layers:
    granted Accessibility automation permissions. This cannot read the current
    QQMusic track or play arbitrary search results in the desktop app.
 """
+
 from __future__ import annotations
 
 import base64
@@ -26,9 +27,8 @@ import httpx
 
 from ..config import COVER_CACHE, DATA_DIR, LOG_FILE, LYRICS_CACHE, ensure_dirs
 from .apple_music import _netease_lyrics
-from .local import LocalFiles, _write, _read, _pid_alive
 from .base import NowPlaying, unsupported_now_playing
-
+from .local import LocalFiles, _pid_alive, _read, _write
 
 SEARCH_URL = "https://c.y.qq.com/soso/fcgi-bin/client_search_cp"
 LYRIC_URL = "https://c.y.qq.com/lyric/fcgi-bin/fcg_query_lyric_new.fcg"
@@ -112,7 +112,9 @@ def _run_osascript(script: str, timeout: float = 8.0) -> bool:
     try:
         p = subprocess.run(
             ["osascript", "-e", script],
-            capture_output=True, text=True, timeout=timeout,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
         )
     except Exception as e:
         _log(f"osascript exception: {e}")
@@ -154,22 +156,24 @@ class QQMusic(LocalFiles):
         self._client = httpx.Client(headers=HEADERS, timeout=8.0)
 
     def _save_track(self, track: dict, artwork: Optional[str], mode: str) -> None:
-        _write_qq_state({
-            "track": {
-                "title": track.get("title", ""),
-                "artist": track.get("artist", ""),
-                "album": track.get("album", ""),
-                "mid": track.get("mid", ""),
-                "albummid": track.get("albummid", ""),
-                "duration": _to_float(track.get("duration")),
-                "artwork": artwork,
-            },
-            "mode": mode,
-            "updated_at": time.time(),
-        })
+        _write_qq_state(
+            {
+                "track": {
+                    "title": track.get("title", ""),
+                    "artist": track.get("artist", ""),
+                    "album": track.get("album", ""),
+                    "mid": track.get("mid", ""),
+                    "albummid": track.get("albummid", ""),
+                    "duration": _to_float(track.get("duration")),
+                    "artwork": artwork,
+                },
+                "mode": mode,
+                "updated_at": time.time(),
+            }
+        )
 
     def _current_track(self) -> dict:
-        return (_read_qq_state().get("track") or {})
+        return _read_qq_state().get("track") or {}
 
     def _state_mode(self) -> str:
         return str(_read_qq_state().get("mode") or "")
@@ -192,11 +196,22 @@ class QQMusic(LocalFiles):
 
     def _api_search_once(self, query: str, limit: int, *, new_json: bool) -> List[dict]:
         params = {
-            "ct": 24, "qqmusic_ver": 1298,
-            "remoteplace": "txt.yqq.song", "searchid": 0, "t": 0,
-            "aggr": 1, "cr": 1, "catZhida": 1, "lossless": 0,
-            "flag_qc": 0, "p": 1, "n": limit, "w": query,
-            "format": "json", "inCharset": "utf8", "outCharset": "utf-8",
+            "ct": 24,
+            "qqmusic_ver": 1298,
+            "remoteplace": "txt.yqq.song",
+            "searchid": 0,
+            "t": 0,
+            "aggr": 1,
+            "cr": 1,
+            "catZhida": 1,
+            "lossless": 0,
+            "flag_qc": 0,
+            "p": 1,
+            "n": limit,
+            "w": query,
+            "format": "json",
+            "inCharset": "utf8",
+            "outCharset": "utf-8",
         }
         if new_json:
             params["new_json"] = 1
@@ -283,8 +298,7 @@ class QQMusic(LocalFiles):
         if not hits:
             return None
         h = hits[0]
-        artwork = self._download_cover(self._cover_url(h.get("albummid", "")),
-                                       key=re.sub(r"\W+", "_", h["title"])[:80])
+        artwork = self._download_cover(self._cover_url(h.get("albummid", "")), key=re.sub(r"\W+", "_", h["title"])[:80])
         # Try preview clip — QQ Music's public preview endpoint format.
         stream_mid = h.get("media_mid") or h.get("mid")
         preview = f"https://ws.stream.qqmusic.qq.com/C400{stream_mid}.m4a?fromtag=38"
@@ -322,7 +336,8 @@ class QQMusic(LocalFiles):
         if not title:
             return None
         key = re.sub(
-            r"[^a-zA-Z0-9一-鿿]+", "_",
+            r"[^a-zA-Z0-9一-鿿]+",
+            "_",
             track.get("mid") or f"{artist}_{album}_{title}",
         ).strip("_")[:160]
         cache = LYRICS_CACHE / f"qq_{key}.txt"
@@ -361,11 +376,7 @@ class QQMusic(LocalFiles):
         return text
 
     def _desktop_menu_item(self, item: str | int) -> bool:
-        target = (
-            f"menu item {item}"
-            if isinstance(item, int)
-            else f'menu item "{_script_quote(item)}"'
-        )
+        target = f"menu item {item}" if isinstance(item, int) else f'menu item "{_script_quote(item)}"'
         menu = _script_quote(QQ_PLAY_MENU)
         process = _script_quote(QQ_PROCESS)
         script = f'''
@@ -405,12 +416,7 @@ end tell
         s = _read()
         pid = s.get("pid")
         path = s.get("path")
-        return bool(
-            s.get("source") == self.name
-            and path == str(PREVIEW_FILE)
-            and pid
-            and _pid_alive(pid)
-        )
+        return bool(s.get("source") == self.name and path == str(PREVIEW_FILE) and pid and _pid_alive(pid))
 
     def _preview_selected(self) -> bool:
         s = _read()

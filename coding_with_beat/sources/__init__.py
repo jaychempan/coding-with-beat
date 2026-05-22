@@ -1,5 +1,5 @@
-from .base import MusicSource, NowPlaying
 from .apple_music import AppleMusic
+from .base import MusicSource, NowPlaying
 from .local import LocalFiles
 from .qq_music import QQMusic
 

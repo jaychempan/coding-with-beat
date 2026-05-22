@@ -15,29 +15,29 @@ DEFAULT_SOURCE = os.environ.get("CWB_SOURCE", "apple_music")
 GAMEBOY_PALETTE = [(15, 56, 15), (48, 98, 48), (139, 172, 15), (155, 188, 15)]
 
 VIBE_GENRES = {
-    "focus":   ["lofi", "ambient", "post-rock"],
-    "build":   ["synthwave", "electronic", "upbeat"],
-    "debug":   ["dark ambient", "tense"],
+    "focus": ["lofi", "ambient", "post-rock"],
+    "build": ["synthwave", "electronic", "upbeat"],
+    "debug": ["dark ambient", "tense"],
     "victory": ["chiptune", "j-pop", "celebration"],
-    "fail":    ["sad piano", "blues"],
-    "idle":    ["lofi", "jazz"],
-    "review":  ["classical", "acoustic"],
+    "fail": ["sad piano", "blues"],
+    "idle": ["lofi", "jazz"],
+    "review": ["classical", "acoustic"],
 }
 
 FILE_KIND_VIBES = {
-    "sql":      "focus",
-    "py":       "build",
-    "ts":       "build",
-    "tsx":      "build",
-    "js":       "build",
-    "jsx":      "build",
-    "go":       "build",
-    "rs":       "build",
-    "md":       "review",
-    "yaml":     "review",
-    "yml":      "review",
-    "json":     "review",
-    "toml":     "review",
+    "sql": "focus",
+    "py": "build",
+    "ts": "build",
+    "tsx": "build",
+    "js": "build",
+    "jsx": "build",
+    "go": "build",
+    "rs": "build",
+    "md": "review",
+    "yaml": "review",
+    "yml": "review",
+    "json": "review",
+    "toml": "review",
 }
 
 
