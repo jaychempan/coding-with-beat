@@ -39,7 +39,7 @@ from .ui.progress import render_progress, render_spectrum_color
 
 FETCH_EVERY = 2.0
 RENDER_EVERY = 0.05
-JUMP_ROWS = 3   # max rows the sprite can lift above ground
+JUMP_ROWS = 3  # max rows the sprite can lift above ground
 _SPRITE_W = 10  # visible width of pixel-person frame
 
 _ACCENT = (155, 188, 15)
@@ -103,9 +103,7 @@ def _load_queue() -> tuple[list[dict], int]:
     except Exception:
         tracks = []
     try:
-        cur_idx = int(
-            json.loads((DATA_DIR / "queue_index.json").read_text(encoding="utf-8")).get("index", -1)
-        )
+        cur_idx = int(json.loads((DATA_DIR / "queue_index.json").read_text(encoding="utf-8")).get("index", -1))
     except Exception:
         cur_idx = -1
     return tracks, cur_idx
@@ -229,9 +227,7 @@ def _render_queue_lines(tracks: list[dict], cur_idx: int, width: int, height: in
             title_str = _trunc(track.get("title", "?"), title_w)
             artist = track.get("artist", "")
             spare = title_w - _display_width(title_str) - 2
-            art_sfx = (
-                f"  {_DIM}{_trunc(artist, spare)}{_RESET}" if artist and spare > 0 else ""
-            )
+            art_sfx = f"  {_DIM}{_trunc(artist, spare)}{_RESET}" if artist and spare > 0 else ""
             if i == cur_idx:
                 line = _pad(f" {_CUR}> {num_str} {title_str}{_RESET}{art_sfx}", width)
             else:
@@ -264,14 +260,14 @@ def _compose3(
     for i in range(total_h):
         r = right[i] if i < len(right) else ""
         if i < top_h:
-            l = top_left[i]
-            out.append(f"{l}{vsep}{r}")
+            lc = top_left[i]
+            out.append(f"{lc}{vsep}{r}")
         elif i == top_h:
             out.append(f"{hjunction}{r}")
         else:
             bi = i - top_h - 1
-            l = bot_left[bi] if bi < len(bot_left) else " " * left_w
-            out.append(f"{l}{vsep}{r}")
+            lc = bot_left[bi] if bi < len(bot_left) else " " * left_w
+            out.append(f"{lc}{vsep}{r}")
     return "\n".join(out)
 
 
