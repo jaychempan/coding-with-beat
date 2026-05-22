@@ -441,21 +441,58 @@ def cmd_prefetch() -> int:
     return 0
 
 
+def _find_repo():
+    """Locate the coding-with-beat git repo via multiple fallbacks."""
+    import subprocess as _sp
+    from pathlib import Path as _Path
+    from .config import DATA_DIR
+
+    candidates = []
+
+    # 1. explicit repo-path file (written by install.sh)
+    repo_file = DATA_DIR / "repo-path"
+    if repo_file.exists():
+        candidates.append(_Path(repo_file.read_text().strip()))
+
+    # 2. bootstrap default clone location
+    candidates.append(_Path.home() / ".coding-with-beat" / "src")
+
+    # 3. editable install location from pip metadata
+    try:
+        r = _sp.run(
+            [sys.executable, "-m", "pip", "show", "coding-with-beat"],
+            capture_output=True, text=True,
+        )
+        for line in r.stdout.splitlines():
+            if line.lower().startswith("editable project location:"):
+                candidates.append(_Path(line.split(":", 1)[1].strip()))
+                break
+    except Exception:
+        pass
+
+    for p in candidates:
+        if (p / ".git").exists():
+            # persist for next time
+            try:
+                repo_file.write_text(str(p) + "\n")
+            except Exception:
+                pass
+            return p
+    return None
+
+
 def cmd_update() -> int:
     """update — pull latest changes from the git repo and restart the MCP server."""
     import subprocess as _sp
     from pathlib import Path as _Path
-    from .config import DATA_DIR
-    repo_file = DATA_DIR / "repo-path"
-    if not repo_file.exists():
-        print("error: repo path not found — re-run install.sh to register it")
-        return 1
-    repo = repo_file.read_text().strip()
-    if not (_Path(repo) / ".git").exists():
-        print(f"error: {repo} is not a git repository")
+
+    repo = _find_repo()
+    if repo is None:
+        print("error: could not find the coding-with-beat git repository.")
+        print("  Re-run the installer:  curl -LsSf https://raw.githubusercontent.com/jaychempan/coding-with-beat/main/bootstrap.sh | sh")
         return 1
     print(f"Pulling latest changes from {repo} ...", flush=True)
-    r = _sp.run(["git", "-C", repo, "pull"], text=True)
+    r = _sp.run(["git", "-C", str(repo), "pull"], text=True)
     if r.returncode != 0:
         print("error: git pull failed")
         return 1
