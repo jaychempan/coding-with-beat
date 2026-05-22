@@ -699,21 +699,22 @@ end tell
              subscription for actual playback.
         """
         import time
-        if _play_local_match(query):
-            for _ in range(4):
+
+        def _wait_playing(retries: int = 12, delay: float = 0.5) -> Optional[NowPlaying]:
+            """Poll until Music.app is actually playing (not just queued/buffering).
+            Streaming (subscription) tracks may take a few seconds to start."""
+            for _ in range(retries):
                 np = self.now_playing()
-                if np.title:
+                if np.title and np.playing:
                     return np
-                time.sleep(0.5)
-            return self.now_playing()
+                time.sleep(delay)
+            return self.now_playing() or None
+
+        if _play_local_match(query):
+            return _wait_playing()
         tokens = [t for t in query.split() if t.strip()]
         if len(tokens) > 1 and _play_local_tokens(tokens):
-            for _ in range(4):
-                np = self.now_playing()
-                if np.title:
-                    return np
-                time.sleep(0.5)
-            return self.now_playing()
+            return _wait_playing()
         # Fall back to iTunes catalog: search, add to library, and play.
         catalog_np = _play_catalog(query)
         if catalog_np is not None:
