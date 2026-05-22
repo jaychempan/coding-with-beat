@@ -89,7 +89,7 @@ def _render(snap: dict, lyrics_text: str, width: int, height: int, t: float) -> 
 
     top_blank = 1
     mid_blank = 1
-    bottom_fixed = 1
+    bottom_fixed = 2
     available = height - top_blank - len(header_rows) - mid_blank - len(lrc_rows) - bottom_fixed
     top_pad = max(0, available // 2)
     bot_pad = max(0, available - top_pad)
@@ -161,7 +161,11 @@ def run(width: int = 0) -> int:
                         lyrics_key = new.get("lyrics_key", "")
                     elif new.get("lyrics_key") and new["lyrics_key"] != lyrics_key:
                         lyrics_text = ""
-                        lyrics_key = new["lyrics_key"]
+                        # Only lock in the key when lyrics are confirmed unavailable.
+                        # If still pending, keep lyrics_key="" so next fetch re-requests
+                        # with known_key="" and receives the text once download finishes.
+                        if not new.get("lyrics_pending"):
+                            lyrics_key = new["lyrics_key"]
                     snap = new
                     last_fetch = now
                 except MCPClientError:
