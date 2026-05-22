@@ -541,7 +541,10 @@ def cmd_restart() -> int:
         return 0
 
     # Fallback: find and kill the process, then relaunch with same args
-    import os, signal, time
+    import os
+    import signal
+    import time
+
     r = _sp.run(["pgrep", "-f", "cwb server"], capture_output=True, text=True)
     pids = [int(p) for p in r.stdout.split() if p.strip()]
     for pid in pids:
@@ -553,15 +556,15 @@ def cmd_restart() -> int:
         time.sleep(1)
 
     # Re-launch with default args (same as what launchctl would use)
-    from .config import DATA_DIR
     log_dir = _Path.home() / ".coding-with-beat" / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
     stdout = open(log_dir / "server.log", "a")
     stderr = open(log_dir / "server.err.log", "a")
     _sp.Popen(
-        [sys.executable, "-m", "coding_with_beat", "server",
-         "--host", "127.0.0.1", "--port", "8765", "--path", "/mcp"],
-        stdout=stdout, stderr=stderr, start_new_session=True,
+        [sys.executable, "-m", "coding_with_beat", "server", "--host", "127.0.0.1", "--port", "8765", "--path", "/mcp"],
+        stdout=stdout,
+        stderr=stderr,
+        start_new_session=True,
     )
     print("MCP server restarted.")
     return 0
