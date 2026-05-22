@@ -636,7 +636,7 @@ def handle_prompt_expansion(event: dict) -> Optional[dict]:
     hook = (event.get("hook_event_name") or "").lower()
     if hook != "userpromptexpansion":
         return None
-    if (event.get("command_name") or "").lower() != "cwb":
+    if (event.get("command_name") or "").lstrip("/").lower() != "cwb":
         return None
     intent = event.get("command_args") or ""
     lang = _detect_lang(intent)

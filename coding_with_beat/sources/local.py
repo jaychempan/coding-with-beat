@@ -98,22 +98,42 @@ class LocalFiles:
         s = self._state()
         pid = s.get("pid")
         path = s.get("path")
-        if not pid or not path or not _pid_alive(pid):
-            return NowPlaying(source=self.name)
-        started = s.get("started_at", time.time())
         paused_at = s.get("paused_at")
-        position = (paused_at or time.time()) - started - s.get("paused_total", 0)
-        p = Path(path)
-        return NowPlaying(
-            title=p.stem,
-            artist=s.get("artist", ""),
-            album=p.parent.name,
-            duration=s.get("duration", 0.0),
-            position=max(0.0, position),
-            playing=paused_at is None,
-            artwork_path=s.get("artwork"),
-            source=self.name,
-        )
+
+        if not path:
+            return NowPlaying(source=self.name)
+
+        def _info(s: dict, playing: bool) -> NowPlaying:
+            p = Path(s["path"])
+            started = s.get("started_at", time.time())
+            pos_end = s.get("paused_at") or time.time()
+            position = pos_end - started - s.get("paused_total", 0)
+            return NowPlaying(
+                title=p.stem,
+                artist=s.get("artist", ""),
+                album=p.parent.name,
+                duration=s.get("duration", 0.0),
+                position=max(0.0, position),
+                playing=playing,
+                artwork_path=s.get("artwork"),
+                source=self.name,
+            )
+
+        if pid and _pid_alive(pid):
+            return _info(s, playing=True)
+
+        if paused_at is not None:
+            return _info(s, playing=False)
+
+        # Process died naturally (song ended) → auto-advance
+        if pid:
+            self.next()
+            s = self._state()
+            pid = s.get("pid")
+            if pid and s.get("path") and _pid_alive(pid):
+                return _info(s, playing=True)
+
+        return NowPlaying(source=self.name)
 
     def _stop_current(self) -> None:
         s = self._state()

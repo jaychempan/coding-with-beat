@@ -92,18 +92,21 @@ def _refresh_now_playing():
     src = get_source(st.source)
     np = src.now_playing()
     new_key = track_key(np.source or st.source, np.artist, np.album, np.title)
-    st.track.title = np.title
-    st.track.artist = np.artist
-    st.track.album = np.album
-    st.track.duration = np.duration
-    st.track.position = np.position
+    if np.title:
+        st.track.title = np.title
+        st.track.artist = np.artist
+        st.track.album = np.album
+        st.track.duration = np.duration
+        st.track.position = np.position
+        if np.artwork_path:
+            st.track.artwork_path = np.artwork_path
+        if np.source:
+            st.track.source = np.source
+        if old_key != new_key:
+            st.track.lyrics_key = ""
+            st.track.lyrics_text = ""
+            st.track.lyrics_pending = False
     st.track.position_sampled_at = time.time()
-    if old_key != new_key:
-        st.track.lyrics_key = ""
-        st.track.lyrics_text = ""
-        st.track.lyrics_pending = False
-    st.track.artwork_path = np.artwork_path
-    st.track.source = np.source
     st.playing = np.playing
     state.save(st)
     return st, np
@@ -204,9 +207,56 @@ def toggle() -> str:
     return "⇆ toggled"
 
 
+def _read_queue_index() -> int:
+    try:
+        f = DATA_DIR / "queue_index.json"
+        if f.exists():
+            return int(json.loads(f.read_text(encoding="utf-8")).get("index", -1))
+    except Exception:
+        pass
+    return -1
+
+
+def _write_queue_index(idx: int) -> None:
+    try:
+        (DATA_DIR / "queue_index.json").write_text(json.dumps({"index": idx}))
+    except Exception:
+        pass
+
+
+def _play_queue_at(idx: int) -> str:
+    """Play last_results[idx] the same way play_number does. Returns status string."""
+    results_file = DATA_DIR / "last_results.json"
+    try:
+        hits = json.loads(results_file.read_text(encoding="utf-8"))
+    except Exception:
+        hits = []
+    if not hits:
+        return ""
+    idx = idx % len(hits)
+    _write_queue_index(idx)
+    hit = hits[idx]
+    query = f"{hit['title']} {hit.get('artist', '')}".strip()
+    st = state.load()
+    src = get_source(st.source)
+    np = src.play_query(query)
+    _refresh_after_control()
+    title = (np.title if np else None) or hit.get("title", "?")
+    return f"[{idx + 1}/{len(hits)}] {title}"
+
+
 @mcp.tool()
 def next_track() -> str:
     """Skip to the next track."""
+    results_file = DATA_DIR / "last_results.json"
+    if results_file.exists():
+        try:
+            hits = json.loads(results_file.read_text(encoding="utf-8"))
+            if hits:
+                result = _play_queue_at(_read_queue_index() + 1)
+                return f"⏭ next  {result}"
+        except Exception:
+            pass
     st = state.load()
     get_source(st.source).next()
     _refresh_after_control()
@@ -216,6 +266,15 @@ def next_track() -> str:
 @mcp.tool()
 def prev_track() -> str:
     """Go to the previous track."""
+    results_file = DATA_DIR / "last_results.json"
+    if results_file.exists():
+        try:
+            hits = json.loads(results_file.read_text(encoding="utf-8"))
+            if hits:
+                result = _play_queue_at(_read_queue_index() - 1)
+                return f"⏮ prev  {result}"
+        except Exception:
+            pass
     st = state.load()
     get_source(st.source).prev()
     _refresh_after_control()
@@ -330,6 +389,7 @@ def play_number(number: int) -> str:
         return _unsupported(np.source or st.source, "play_number", _unsupported_reason(np))
     if not np.title:
         return _unsupported(st.source, "play_number", "The source returned no playable track.")
+    _write_queue_index(number - 1)
     _refresh_now_playing()
     return f"▶ now playing: {np.title} — {np.artist or '—'}  source={np.source}"
 

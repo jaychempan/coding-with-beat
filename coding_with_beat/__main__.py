@@ -32,6 +32,7 @@ Commands:
     seek <t>     — seek to position: seconds (90) or mm:ss (1:30)
     history [n]  — show last n tracks played (default 10)
     bar [mode]   — statusline visibility: show | hide | auto (print current if no arg)
+    restart      — restart the background MCP server
     help         — show command reference
 """
 from __future__ import annotations
@@ -510,6 +511,46 @@ def cmd_update() -> int:
     return 0
 
 
+def cmd_restart() -> int:
+    """restart — restart the background MCP server."""
+    import subprocess as _sp
+    from pathlib import Path as _Path
+
+    plist = _Path.home() / "Library/LaunchAgents/com.coding-with-beat.server.plist"
+    if plist.exists():
+        print("Restarting MCP server via launchctl ...")
+        _sp.run(["launchctl", "unload", str(plist)], capture_output=True)
+        _sp.run(["launchctl", "load", str(plist)], capture_output=True)
+        print("MCP server restarted.")
+        return 0
+
+    # Fallback: find and kill the process, then relaunch with same args
+    import os, signal, time
+    r = _sp.run(["pgrep", "-f", "cwb server"], capture_output=True, text=True)
+    pids = [int(p) for p in r.stdout.split() if p.strip()]
+    for pid in pids:
+        try:
+            os.kill(pid, signal.SIGTERM)
+        except ProcessLookupError:
+            pass
+    if pids:
+        time.sleep(1)
+
+    # Re-launch with default args (same as what launchctl would use)
+    from .config import DATA_DIR
+    log_dir = _Path.home() / ".coding-with-beat" / "logs"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    stdout = open(log_dir / "server.log", "a")
+    stderr = open(log_dir / "server.err.log", "a")
+    _sp.Popen(
+        [sys.executable, "-m", "coding_with_beat", "server",
+         "--host", "127.0.0.1", "--port", "8765", "--path", "/mcp"],
+        stdout=stdout, stderr=stderr, start_new_session=True,
+    )
+    print("MCP server restarted.")
+    return 0
+
+
 def cmd_server() -> int:
     import argparse
     from .server import main
@@ -558,6 +599,7 @@ def cmd_hook() -> int:
 COMMANDS = {
     "_prefetch": cmd_prefetch,
     "update": cmd_update,
+    "restart": cmd_restart,
     "server": cmd_server,
     "statusline": cmd_statusline,
     "hook": cmd_hook,
