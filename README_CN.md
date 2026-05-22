@@ -3,6 +3,7 @@
 ![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white)
 ![Platform](https://img.shields.io/badge/platform-macOS-000000?style=flat-square&logo=apple&logoColor=white)
 ![Claude Code](https://img.shields.io/badge/Claude_Code-compatible-c85f41?style=flat-square)
+![Codex CLI](https://img.shields.io/badge/Codex_CLI-compatible-10a37f?style=flat-square)
 ![MCP](https://img.shields.io/badge/MCP-28_tools-7c5cbf?style=flat-square)
 ![Apple Music](https://img.shields.io/badge/Apple_Music-supported-FC3C44?style=flat-square)
 ![Version](https://img.shields.io/badge/version-0.1.0-9bbc0f?style=flat-square)
@@ -15,15 +16,15 @@
 
 ![](assets/welcome_log.png)
 
-一个住在 Claude Code 里的像素风 DJ 小伙伴。它帮你放音乐、看歌词、在 commit 成功时庆祝，在测试挂掉时跟你一起崩溃。
+一个支持 Claude Code / Codex CLI / 终端 的复古像素 DJ 小伙伴。它帮你放音乐、看歌词、在 commit 成功时庆祝，在测试挂掉时跟你一起崩溃。
 
-[English](README.md) ／ [日本語](README_JP.md)
+[English](README.md) ／ [日本語](README_JP.md) ／ [Codex CLI 完整指南](README_CODEX.md)
 
 ---
 
 ## 功能
 
-- **MCP 服务器** — 向 Claude Code 暴露 28 个工具，直接说"放点 lofi"、"跳过这首"、"现在在放什么"就能用。
+- **MCP 服务器** — 暴露 28 个工具给你的 AI 助手，直接说"放点 lofi"、"跳过这首"、"现在在放什么"就能用。
 - **音乐源** — Apple Music（AppleScript 驱动，不用开 GUI）、本地文件（afplay）、QQ 音乐（搜索 + 预览）。
 - **像素 UI** — 专辑封面用半格 ANSI 字符渲染，支持 GameBoy 复古边框和伪频谱。
 - **DJ Buddy** — 一个戴耳机的像素小人，会根据你的工作状态换表情。
@@ -34,6 +35,8 @@
 ---
 
 ## 安装
+
+### Claude Code
 
 ```bash
 curl -LsSf https://raw.githubusercontent.com/jaychempan/coding-with-beat/main/bootstrap.sh | sh
@@ -47,19 +50,29 @@ cd coding-with-beat
 ./install.sh
 ```
 
-安装脚本会把 Claude Code 配成 HTTP MCP endpoint：`http://127.0.0.1:8765/mcp`，把 URL 写到 `~/.coding-with-beat/mcp-url`，并在 macOS 上安装/启动一个用户级 LaunchAgent。调试时也可以手动跑：
-
-```bash
-cwb server --host 127.0.0.1 --port 8765 --path /mcp
-```
+安装脚本会把 Claude Code 配成 HTTP MCP endpoint：`http://127.0.0.1:8765/mcp`，把 URL 写到 `~/.coding-with-beat/mcp-url`，并在 macOS 上安装/启动一个用户级 LaunchAgent。
 
 开一个新 shell 和新的 Claude Code 会话，状态栏里出现 `(•_•)` 就好了。
+
+### Codex CLI
+
+```bash
+git clone https://github.com/jaychempan/coding-with-beat.git
+cd coding-with-beat
+./install_codex.sh
+```
+
+没有 Codex CLI 会自动通过 npm 安装，并配置好 `~/.codex/config.toml`、hooks 和 `cwb` skill，让 Codex 直接识别音乐指令。代理自动检测。
+
+开一个新 shell 并启动 Codex 会话，状态栏里出现 `(•_•)` 就好了。
+
+Codex 集成完整说明（hooks、代理、情绪通知、状态栏替代方案）见 **[README_CODEX.md](README_CODEX.md)**。
 
 ---
 
 ## 用法
 
-### 直接跟 Claude 说
+### 直接跟 AI 说
 
 ```
 play some lofi
@@ -103,7 +116,7 @@ pause
 
 ## 状态栏
 
-安装后，Claude Code 底部会出现一行状态栏：
+安装后，AI CLI 底部会出现一行状态栏：
 
 ```
 (•_•) ⚡  ▶ 雨爱 — 杨丞琳  ██████░░░░░░░░  [build]  ▃▆█▆▃  │ ♪ 不忍揭曉的劇情
@@ -181,22 +194,24 @@ vim.o.statusline = "%f %m%r %= %{v:lua.cwb.text}"
 
 ---
 
-## SSH 远端 Claude Code
+## SSH 远端（服务器上的 Claude Code / Codex CLI）
 
-如果 Claude Code 跑在服务器上，而 Apple Music 跑在本机 Mac，推荐把 streamable HTTP MCP server 跑在 Mac 上，再用 SSH 反向端口转发给服务器：
+如果你的 AI CLI 跑在服务器上，而 Apple Music 跑在本机 Mac，推荐把 streamable HTTP MCP server 跑在 Mac 上，再用 SSH 反向端口转发给服务器：
 
 ```bash
 # 本机 Mac：安装并启动 HTTP MCP LaunchAgent
-./install.sh
+./install.sh          # Claude Code
+./install_codex.sh    # Codex CLI
 
 # 本机 Mac：把服务暴露到服务器的 127.0.0.1:8765
 ssh -N -R 127.0.0.1:8765:127.0.0.1:8765 user@server
 
 # 服务器：安装 hooks/statusline，并指向转发后的 endpoint
-./install.sh --mcp-url http://127.0.0.1:8765/mcp
+./install.sh --mcp-url http://127.0.0.1:8765/mcp          # Claude Code
+./install_codex.sh --mcp-url http://127.0.0.1:8765/mcp    # Codex CLI
 ```
 
-远端 Claude Code、`/cwb`、statusline、hooks 和 `cwb` 命令行都会使用同一个 HTTP MCP URL。只要 SSH 隧道还在，`cwb play`、`cwb np`、`cwb next`、`cwb player`、`cwb karaoke` 就会控制 Mac 上的音乐客户端。
+远端会话、`/cwb`、statusline、hooks 和 `cwb` 命令行都会使用同一个 HTTP MCP URL。只要 SSH 隧道还在，`cwb play`、`cwb np`、`cwb next`、`cwb player`、`cwb karaoke` 就会控制 Mac 上的音乐客户端。
 
 ---
 
@@ -249,8 +264,13 @@ cwb server              # MCP streamable HTTP 服务器
 ## 卸载
 
 ```bash
+# Claude Code
 ./uninstall.sh           # 移除配置、命令、PATH
 ./uninstall.sh --purge   # 同上 + 删除 ~/.coding-with-beat/
+
+# Codex CLI
+./uninstall_codex.sh           # 移除 Codex 配置、skill、LaunchAgent
+./uninstall_codex.sh --purge   # 同上 + 删除 ~/.coding-with-beat/
 ```
 
 ---

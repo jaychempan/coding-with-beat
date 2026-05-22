@@ -618,6 +618,12 @@ def cmd_hook() -> int:
     return main()
 
 
+def cmd_codex_hook() -> int:
+    from .codex_vibe import main
+
+    return main()
+
+
 COMMANDS = {
     "_prefetch": cmd_prefetch,
     "update": cmd_update,
@@ -625,6 +631,7 @@ COMMANDS = {
     "server": cmd_server,
     "statusline": cmd_statusline,
     "hook": cmd_hook,
+    "codex_hook": cmd_codex_hook,
     "init": cmd_init,
     "status": cmd_status,
     "welcome": cmd_welcome,
