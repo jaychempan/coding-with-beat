@@ -19,6 +19,9 @@ Commands:
     source [name] — print or set source (apple_music | local | qq_music)
     karaoke      — full-screen centred lyrics from the MCP server (Ctrl-C to exit)
     play [query] — resume current track, or search & play if a query is given
+    play <n>     — play track #n from the last search or list results
+    search <q>   — search library + Apple Music catalog and show numbered results
+    list [n]     — list all library tracks (default 100)
     pause        — pause playback
     next         — skip to next track
     prev         — go to previous track
@@ -176,6 +179,17 @@ def cmd_karaoke() -> int:
     return run(width=width)
 
 
+def cmd_list() -> int:
+    """list [n] — show all library tracks (default 100)."""
+    limit = 100
+    if len(sys.argv) > 2:
+        try:
+            limit = int(sys.argv[2])
+        except ValueError:
+            pass
+    return _mcp_print("list_library", {"limit": limit})
+
+
 def cmd_search() -> int:
     """search <query> — list matching tracks from library and Apple Music catalog."""
     query = " ".join(sys.argv[2:]).strip()
@@ -189,8 +203,23 @@ def cmd_play() -> int:
     """play [query] — resume if no query, otherwise search and play."""
     query = " ".join(sys.argv[2:]).strip()
     if query:
+        if query.isdigit():
+            return _mcp_print("play_number", {"number": int(query)})
         return _mcp_print("play_song", {"query": query})
     return _mcp_print("play")
+
+
+def cmd_play_number() -> int:
+    """play_number <n> — play track #n from the last search or list results."""
+    if len(sys.argv) < 3:
+        print("error: usage: play_number <n>")
+        return 2
+    try:
+        n = int(sys.argv[2])
+    except ValueError:
+        print("error: argument must be a positive integer")
+        return 2
+    return _mcp_print("play_number", {"number": n})
 
 
 def cmd_pause() -> int:
@@ -313,6 +342,9 @@ def cmd_help() -> int:
             "",
             sec("播放控制"),
             row("play [歌名 / song]",    "播放 / 搜索播放"),
+            row("play <序号>",            "按编号播放（来自搜索或列表结果）"),
+            row("search <关键词>",        "搜索资料库 + Apple Music 目录"),
+            row("list [n]",              "列出资料库所有歌曲（默认100首）"),
             row("pause / 暂停",           "暂停"),
             row("next  / 下一首",         "下一首"),
             row("prev  / 上一首",         "上一首"),
@@ -349,6 +381,9 @@ def cmd_help() -> int:
             "",
             sec("Playback"),
             row("play [query]",           "Resume or search & play"),
+            row("play <n>",               "Play track #n from last search or list"),
+            row("search <query>",         "Search library + Apple Music catalog"),
+            row("list [n]",               "List all library tracks (default 100)"),
             row("pause",                  "Pause playback"),
             row("next",                   "Skip to next track"),
             row("prev",                   "Go to previous track"),
@@ -467,8 +502,10 @@ COMMANDS = {
     "watch": cmd_watch,
     "source": cmd_source,
     "karaoke": cmd_karaoke,
+    "list": cmd_list,
     "search": cmd_search,
     "play": cmd_play,
+    "play_number": cmd_play_number,
     "pause": cmd_pause,
     "next": cmd_next,
     "prev": cmd_prev,
@@ -488,6 +525,8 @@ COMMANDS = {
     "播放": cmd_play,
     "搜索": cmd_search,
     "找歌": cmd_search,
+    "列表": cmd_list,
+    "资料库": cmd_list,
     "收藏": cmd_like,
     "歌词": cmd_lyrics,
     "播放器": cmd_player,

@@ -46,6 +46,8 @@ _ALLOWED_COMMANDS = {
     "help",
     "welcome",
     "search",
+    "list",
+    "play_number",
 }
 _SOURCES = {
     # English
@@ -112,8 +114,17 @@ _fp(r"^(player|播放器|显示播放器|打开播放器)$", cmd="player")
 _fp(r"^(play|播放|继续|继续播放|resume)$", cmd="play")
 _fp(r"^(history|播放历史|最近播放|听歌记录|历史)(?:\s+(\d+))?$", cmd="history",
     args=lambda m: (m.group(2),) if m.group(2) else ())
+_fp(r"^(?:list|列表|资料库)(?:\s+(\d+))?$", cmd="list",
+    args=lambda m: (m.group(1),) if m.group(1) else ())
 _fp(r"^(?:search|搜索|找歌|查找)\s+(.+)$", cmd="search",
     args=lambda m: (m.group(1).strip(),))
+_fp(r"^(?:play|播放)\s+(\d+)$", cmd="play_number",
+    args=lambda m: (m.group(1),))
+# Generic play <query>: trim at first Chinese comma / semicolon / period so that
+# a stray complaint appended to the command (e.g. "play 胡彦斌 红颜，为什么…") is
+# stripped to just the query.
+_fp(r"^(?:play|播放|听|放|来一首)\s+(.+)$", cmd="play",
+    args=lambda m: (re.split(r"[，；。,;]", m.group(1))[0].strip(),))
 _fp(r"^(help|usage|commands)$", cmd="help", args=lambda m: ("en",))
 _fp(r"^(帮助|命令|命令列表|怎么用)$", cmd="help", args=lambda m: ("zh",))
 _fp(r"^(welcome|欢迎|欢迎界面|启动界面)$", cmd="welcome")
@@ -184,6 +195,7 @@ Valid commands and args:
 - bar: ["show" | "hide" | "auto"] — statusline visibility (auto = only when playing)
 - history: [] or ["n"] — show last n played tracks
 - search: ["query"] — list matching tracks from library and Apple Music catalog
+- list: [] or ["n"] — list all library tracks (default 100)
 
 Choose status for an empty or ambiguous intent. Preserve Chinese song names and
 artist names verbatim. Put a play search query in args as one string when
@@ -324,6 +336,16 @@ def normalize_plan(data: dict[str, Any]) -> CwbPlan:
     if command == "help":
         lang = args[0] if args and args[0] in ("en", "zh") else "en"
         return CwbPlan(command, (lang,), note)
+    if command == "play_number":
+        if len(args) != 1:
+            raise CwbAgentError("play_number requires exactly one argument (a number)")
+        try:
+            n = int(args[0])
+            if n < 1:
+                raise ValueError
+        except ValueError:
+            raise CwbAgentError("play_number argument must be a positive integer")
+        return CwbPlan(command, (str(n),), note)
     if command != "play" and args:
         raise CwbAgentError(f"{command} does not accept arguments")
     if command == "play" and any(len(arg) > 300 for arg in args):
@@ -380,7 +402,7 @@ def run_child_claude(intent: str, *, timeout: Optional[int] = None) -> CwbPlan:
     return parse_claude_plan(proc.stdout)
 
 
-_PASSTHROUGH_COMMANDS = {"player", "status", "lyrics", "history", "help", "welcome", "search"}
+_PASSTHROUGH_COMMANDS = {"player", "status", "lyrics", "history", "help", "welcome", "search", "list"}
 
 _CJK_RE = re.compile(r"[　-鿿豈-﫿]")
 
@@ -510,12 +532,14 @@ def _format_result(plan: CwbPlan, code: int, output: str, lang: str = "zh") -> s
                     f'"{dj.quip("sad")}"',
                 ])
             return _buddy_card("sad", [t["no_track"], f'"{dj.quip("sad")}"'])
+        if plan.command == "play_number":
+            return _buddy_card("sad", [clean or t["cmd_fail"].format(cmd="play_number"), f'"{dj.quip("sad")}"'])
         if plan.command in ("np", "pause", "next", "prev", "like"):
             return _buddy_card("neutral", [t["no_track"], f'"{dj.quip("neutral")}"'])
         return _buddy_card("sad", [clean or t["cmd_fail"].format(cmd=plan.command)])
 
     track = clean or ""
-    if plan.command in ("play", "next", "prev"):
+    if plan.command in ("play", "next", "prev", "play_number"):
         action = {
             "next": t["next"],
             "prev": t["prev"],

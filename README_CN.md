@@ -3,7 +3,7 @@
 ![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white)
 ![Platform](https://img.shields.io/badge/platform-macOS-000000?style=flat-square&logo=apple&logoColor=white)
 ![Claude Code](https://img.shields.io/badge/Claude_Code-compatible-c85f41?style=flat-square)
-![MCP](https://img.shields.io/badge/MCP-21_tools-7c5cbf?style=flat-square)
+![MCP](https://img.shields.io/badge/MCP-28_tools-7c5cbf?style=flat-square)
 ![Apple Music](https://img.shields.io/badge/Apple_Music-supported-FC3C44?style=flat-square)
 ![Version](https://img.shields.io/badge/version-0.1.0-9bbc0f?style=flat-square)
 ![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)
@@ -23,7 +23,7 @@
 
 ## 功能
 
-- **MCP 服务器** — 向 Claude Code 暴露 21 个工具，直接说"放点 lofi"、"跳过这首"、"现在在放什么"就能用。
+- **MCP 服务器** — 向 Claude Code 暴露 28 个工具，直接说"放点 lofi"、"跳过这首"、"现在在放什么"就能用。
 - **音乐源** — Apple Music（AppleScript 驱动，不用开 GUI）、本地文件（afplay）、QQ 音乐（搜索 + 预览）。
 - **像素 UI** — 专辑封面用半格 ANSI 字符渲染，支持 GameBoy 复古边框和伪频谱。
 - **DJ Buddy** — 一个戴耳机的像素小人，会根据你的工作状态换表情。
@@ -73,6 +73,9 @@ pause
 ```
 /cwb play 周杰伦          # 搜索并播放
 /cwb play lofi beats      # 播放 lofi
+/cwb search 周杰伦        # 搜索资料库 + Apple Music，显示编号列表
+/cwb play 2               # 播放搜索或列表结果中的第 2 首
+/cwb list                 # 列出资料库所有歌曲
 /cwb next / 下一首
 /cwb pause / 暂停
 /cwb np                   # 当前播放
@@ -142,6 +145,9 @@ ssh -N -R 127.0.0.1:8765:127.0.0.1:8765 user@server
 
 ```
 cwb play [query]        # 搜索并播放，或继续播放
+cwb play <n>            # 播放上次搜索或列表结果中的第 n 首
+cwb search <query>      # 搜索资料库 + Apple Music 目录（带编号列表）
+cwb list [n]            # 列出资料库所有歌曲（默认100首）
 cwb pause               # 暂停
 cwb next                # 下一首
 cwb prev                # 上一首

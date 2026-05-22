@@ -3,7 +3,7 @@
 ![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white)
 ![Platform](https://img.shields.io/badge/platform-macOS-000000?style=flat-square&logo=apple&logoColor=white)
 ![Claude Code](https://img.shields.io/badge/Claude_Code-compatible-c85f41?style=flat-square)
-![MCP](https://img.shields.io/badge/MCP-21_tools-7c5cbf?style=flat-square)
+![MCP](https://img.shields.io/badge/MCP-28_tools-7c5cbf?style=flat-square)
 ![Apple Music](https://img.shields.io/badge/Apple_Music-supported-FC3C44?style=flat-square)
 ![Version](https://img.shields.io/badge/version-0.1.0-9bbc0f?style=flat-square)
 ![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)
@@ -23,7 +23,7 @@ A pixel-art DJ companion that lives inside Claude Code. It plays music, shows ly
 
 ## Features
 
-- **MCP server** — 21 tools so you can tell Claude "play some lofi", "skip this", "what's playing" and it just works.
+- **MCP server** — 28 tools so you can tell Claude "play some lofi", "skip this", "what's playing" and it just works.
 - **Music sources** — Apple Music (AppleScript, no GUI needed), local files (afplay), QQ Music (search + preview).
 - **Pixel UI** — Album art in half-block ANSI, GameBoy retro border, pseudo-spectrum equalizer.
 - **DJ Buddy** — A headphones-wearing pixel character that reacts to your coding state. Tests failing? It panics with you.
@@ -73,6 +73,9 @@ pause
 ```
 /cwb play 周杰伦          # search and play
 /cwb play lofi beats
+/cwb search 周杰伦        # search library + Apple Music, show numbered list
+/cwb play 2               # play track #2 from last search / list results
+/cwb list                 # list all library tracks
 /cwb next
 /cwb pause
 /cwb np                   # now playing
@@ -142,6 +145,9 @@ The remote Claude Code session, `/cwb`, statusline, hooks, and `cwb` CLI all use
 
 ```
 cwb play [query]        # search and play, or resume
+cwb play <n>            # play track #n from last search or list results
+cwb search <query>      # search library + Apple Music catalog (numbered list)
+cwb list [n]            # list all library tracks (default 100)
 cwb pause               # pause
 cwb next                # next track
 cwb prev                # previous track

@@ -14,6 +14,7 @@ from typing import Optional
 from mcp.server.fastmcp import FastMCP
 
 from . import dj, focus, state
+from .config import DATA_DIR
 from .lyrics_snapshot import current_text as current_lyrics_text, track_key
 from .sources import get_source
 from .ui import (
@@ -245,6 +246,27 @@ def set_play_mode(mode: str) -> str:
 
 
 @mcp.tool()
+def list_library(limit: int = 100) -> str:
+    """List all tracks in the library of the current source."""
+    st = state.load()
+    src = get_source(st.source)
+    fn = getattr(src, "list_library", None)
+    if not callable(fn):
+        return f"(list not supported for source={st.source})"
+    hits = fn(limit=limit)
+    if not hits:
+        return "(library is empty)"
+    try:
+        (DATA_DIR / "last_results.json").write_text(json.dumps(hits, ensure_ascii=False))
+    except Exception:
+        pass
+    return "\n".join(
+        f"{i+1}. {h['title']} — {h.get('artist','?')} · {h.get('album','?')}"
+        for i, h in enumerate(hits)
+    )
+
+
+@mcp.tool()
 def search(query: str, limit: int = 8) -> str:
     """Search the current source for tracks matching the query. Returns a
     numbered list. Use this before play_song if multiple matches are likely."""
@@ -252,11 +274,43 @@ def search(query: str, limit: int = 8) -> str:
     hits = get_source(st.source).search(query, limit=limit)
     if not hits:
         return f"(no matches for '{query}' in source={st.source})"
+    try:
+        (DATA_DIR / "last_results.json").write_text(json.dumps(hits, ensure_ascii=False))
+    except Exception:
+        pass
     lines = []
     for i, h in enumerate(hits):
         tag = " [资料库]" if h.get("source") == "library" else " [Apple Music]" if h.get("source") == "apple_music" else ""
         lines.append(f"{i+1}. {h['title']} — {h.get('artist','?')} · {h.get('album','?')}{tag}")
     return "\n".join(lines)
+
+
+@mcp.tool()
+def play_number(number: int) -> str:
+    """Play a track by its 1-based index from the last search or list results."""
+    results_file = DATA_DIR / "last_results.json"
+    if not results_file.exists():
+        return "(no match — no last results, run 'search' or 'list' first)"
+    try:
+        hits = json.loads(results_file.read_text(encoding="utf-8"))
+    except Exception:
+        return "(no match — could not read last results)"
+    if not hits or number < 1 or number > len(hits):
+        count = len(hits) if hits else 0
+        return f"(no match — #{number} out of range, last results had {count} items)"
+    hit = hits[number - 1]
+    query = f"{hit['title']} {hit.get('artist', '')}".strip()
+    st = state.load()
+    src = get_source(st.source)
+    np = src.play_query(query)
+    if not np:
+        return f"(no match for '{query}' in source={st.source})"
+    if _unsupported_reason(np):
+        return _unsupported(np.source or st.source, "play_number", _unsupported_reason(np))
+    if not np.title:
+        return _unsupported(st.source, "play_number", "The source returned no playable track.")
+    _refresh_now_playing()
+    return f"▶ now playing: {np.title} — {np.artist or '—'}  source={np.source}"
 
 
 @mcp.tool()
@@ -267,6 +321,14 @@ def play_song(query: str) -> str:
     np = src.play_query(query)
     if not np:
         return f"(no match for '{query}' in source={st.source})"
+    if _unsupported_reason(np) == "needs_library_add":
+        title = np.title or "?"
+        artist = np.artist or "—"
+        return (
+            f"在 Apple Music 目录中找到「{title} — {artist}」，但无法自动播放。\n"
+            f"已在 Music.app 中打开搜索页面，请手动添加到资料库后重新播放。\n"
+            f"（需要激活的 Apple Music 订阅才能自动添加并播放）"
+        )
     if _unsupported_reason(np):
         return _unsupported(np.source or st.source, "play_song", _unsupported_reason(np))
     if not np.title:

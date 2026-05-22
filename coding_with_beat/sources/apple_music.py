@@ -603,6 +603,35 @@ end tell
             items.extend(_search_catalog_api(query, remaining))
         return items
 
+    def list_library(self, limit: int = 100) -> List[dict]:
+        """Return all tracks in the library, sorted by name, up to limit."""
+        script = f'''
+tell application "Music"
+    set SEP to (ASCII character 31)
+    set out to ""
+    set allTracks to every track of library playlist 1
+    set n to count of allTracks
+    if n > {limit} then set n to {limit}
+    repeat with i from 1 to n
+        set t to item i of allTracks
+        set out to out & (name of t as string) & SEP & (artist of t as string) & SEP & (album of t as string) & linefeed
+    end repeat
+    return out
+end tell
+'''
+        try:
+            raw = _osa(script)
+        except Exception:
+            return []
+        items = []
+        for line in raw.splitlines():
+            if not line.strip():
+                continue
+            parts = line.split("\x1f")
+            if len(parts) >= 3:
+                items.append({"title": parts[0], "artist": parts[1], "album": parts[2]})
+        return items
+
     def lyrics(self) -> Optional[str]:
         """Static lyrics for the current track via AppleScript. Synced timing
         isn't reliably exposed, so callers should estimate the current line
@@ -671,4 +700,15 @@ end tell
                     return np
                 time.sleep(0.5)
             return self.now_playing()
+        # Fall back to iTunes catalog: search, add to library, and play.
+        catalog_np = _play_catalog(query)
+        if catalog_np is not None:
+            if catalog_np.unsupported_reason:
+                return catalog_np  # found on catalog but couldn't play; caller handles messaging
+            for _ in range(5):
+                time.sleep(0.8)
+                np = self.now_playing()
+                if np.title:
+                    return np
+            return catalog_np
         return None
