@@ -41,6 +41,7 @@ FETCH_EVERY = 2.0
 RENDER_EVERY = 0.05
 JUMP_ROWS = 3  # max rows the sprite can lift above ground
 _SPRITE_W = 10  # visible width of pixel-person frame
+_NUM_TIMEOUT = 0.8  # seconds before auto-confirming a typed number
 
 _ACCENT = (155, 188, 15)
 _DIM = "\x1b[38;2;100;110;100m"
@@ -303,10 +304,22 @@ def run(width: int = 0) -> int:
     last_render = 0.0
     queue: list[dict] = []
     cur_idx = -1
+    num_buf = ""
+    num_ts = 0.0
 
     try:
         while True:
             key = read_key(raw)
+
+            # Flush number buffer on timeout even without new key
+            if num_buf and time.time() - num_ts >= _NUM_TIMEOUT:
+                try:
+                    call_tool("play_number", {"number": int(num_buf)})
+                    last_fetch = 0.0
+                except MCPClientError:
+                    pass
+                num_buf = ""
+
             if key in ("q", "Q", "\x03"):
                 break
             if key == " ":
@@ -320,6 +333,18 @@ def run(width: int = 0) -> int:
                 last_fetch = 0.0
             elif key in ("l", "L"):
                 _control("like_current")
+            elif key and key.isdigit():
+                num_buf += key
+                num_ts = time.time()
+            elif key in ("\r", "\n") and num_buf:
+                try:
+                    call_tool("play_number", {"number": int(num_buf)})
+                    last_fetch = 0.0
+                except MCPClientError:
+                    pass
+                num_buf = ""
+            elif key == "\x1b":  # ESC cancels number input
+                num_buf = ""
 
             now = time.time()
 
@@ -374,8 +399,12 @@ def run(width: int = 0) -> int:
                 queue_lines = _render_queue_lines(queue, cur_idx, right_w, panels_h)
                 frame = _compose3(player_lines, lyrics_lines, queue_lines, left_w, panels_h)
 
-                hint_text = "space pause  n next  p prev  l like  q quit"
-                hint_styled = f"{_DIM}{hint_text}{_RESET}"
+                if num_buf:
+                    hint_text = f">> {num_buf}_   Enter confirm  Esc cancel"
+                    hint_styled = f"{_GREEN}{hint_text}{_RESET}"
+                else:
+                    hint_text = "space pause  n next  p prev  l like  q quit  0-9 go to #"
+                    hint_styled = f"{_DIM}{hint_text}{_RESET}"
                 hint_pad = max(0, (total_w - len(hint_text)) // 2)
                 hint_line = " " * hint_pad + hint_styled
 
