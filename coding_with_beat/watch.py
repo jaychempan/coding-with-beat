@@ -321,17 +321,12 @@ def run(width: int = 0) -> int:
                 left_w = max(20, int(total_w * 0.65))
                 right_w = max(10, total_w - left_w - 1)  # 1 col for │
 
-                # Player section: compact 8 rows (no sprite).
-                # Bottom section: lyrics + 7-line pixel person (no hint — moved outside).
+                # Player section height = exactly its content rows — no blank
+                # padding before the ────────┤ junction.
                 _sprite_h = len(dj.dancing_sprite("groove").split("\n"))  # 7
-                _min_top = 8
-                _min_bot = _sprite_h + 2  # sprite + 2 lyrics min
-                if panels_h >= _min_top + 1 + _min_bot:
-                    top_h = _min_top
-                    bot_h = panels_h - top_h - 1
-                else:
-                    top_h = max(5, panels_h // 2)
-                    bot_h = max(3, panels_h - top_h - 1)
+                _player_rows = 5 + (1 if snap.get("artist") else 0)
+                top_h = _player_rows
+                bot_h = max(3, panels_h - top_h - 1)
 
                 pos = _interp_pos(snap)
                 dur = float(snap.get("duration", 0.0))
@@ -342,13 +337,16 @@ def run(width: int = 0) -> int:
                 queue_lines = _render_queue_lines(queue, cur_idx, right_w, panels_h)
                 frame = _compose3(player_lines, lyrics_lines, queue_lines, left_w, panels_h)
 
-                hint = f"{_DIM}  space pause  n next  p prev  l like  q quit{_RESET}"
+                hint_text = "space pause  n next  p prev  l like  q quit"
+                hint_styled = f"{_DIM}{hint_text}{_RESET}"
+                hint_pad = max(0, (total_w - len(hint_text)) // 2)
+                hint_line = " " * hint_pad + hint_styled
 
                 lines = frame.split("\n")
                 out = []
                 for i, line in enumerate(lines[:panels_h]):
                     out.append(f"\x1b[{i + 1};1H{line}\x1b[K")
-                out.append(f"\x1b[{usable_h};1H{_pad(hint, total_w)}\x1b[K")
+                out.append(f"\x1b[{usable_h};1H{_pad(hint_line, total_w)}\x1b[K")
                 out.append(f"\x1b[{usable_h + 1};1H\x1b[J")
                 sys.stdout.write("".join(out))
                 sys.stdout.flush()
