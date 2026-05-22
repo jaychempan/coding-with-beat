@@ -1,4 +1,16 @@
-"""Compact real-time watch mode — local render from JSON snapshot."""
+"""Compact real-time watch mode — local render from JSON snapshot.
+
+Layout (adaptive to terminal size):
+  ┌─── left 60% ───┬─── right 40% ───┐
+  │  player        │                 │
+  │  progress      │  queue list     │
+  │  spectrum      │  (full height)  │
+  │  DJ buddy      │                 │
+  ├────────────────┤                 │
+  │  lyrics        │                 │
+  │  hint bar      │                 │
+  └────────────────┴─────────────────┘
+"""
 
 from __future__ import annotations
 
@@ -8,6 +20,7 @@ import signal
 import sys
 import time
 
+from . import dj
 from ._tui import (
     CLEAR,
     enter_alt_screen,
@@ -16,7 +29,6 @@ from ._tui import (
     restore_tty,
     setup_raw_tty,
 )
-from . import dj
 from .config import DATA_DIR
 from .mcp_client import MCPClientError, call_tool
 from .ui.frame import _strip_ansi
@@ -63,12 +75,12 @@ def _vis_len(s: str) -> int:
 
 
 def _pad(s: str, width: int) -> str:
-    """Pad an ANSI-escaped string to exactly `width` visible columns."""
+    """Pad an ANSI string to exactly `width` visible columns."""
     return s + " " * max(0, width - _vis_len(s))
 
 
 def _trunc(s: str, width: int) -> str:
-    """Truncate a plain string to `width` visible chars, appending '…' if cut."""
+    """Truncate a plain string to `width` visible chars."""
     if _display_width(s) <= width:
         return s
     lo, hi = 0, len(s)
@@ -95,7 +107,8 @@ def _load_queue() -> tuple[list[dict], int]:
     return tracks, cur_idx
 
 
-def _render_player_lines(snap: dict, lyrics_text: str, width: int, height: int, t: float) -> list[str]:
+def _render_player_top(snap: dict, width: int, height: int, t: float) -> list[str]:
+    """Top-left panel: title, progress, spectrum, dancing sprite."""
     title = snap.get("title") or "—"
     artist = snap.get("artist") or ""
     playing = snap.get("playing", False)
@@ -103,70 +116,114 @@ def _render_player_lines(snap: dict, lyrics_text: str, width: int, height: int, 
     pos = _interp_pos(snap)
 
     icon = f"{_GREEN}▶{_RESET}" if playing else f"{_DIM}❚❚{_RESET}"
-    artist_part = f"  {_DIM}·  {artist}{_RESET}" if artist else ""
-    title_line = f" {icon}  {_BOLD}{title}{_RESET}{artist_part}"
-
-    bar_w = max(1, width - 16)
-    spec_w = max(1, width - 2)
-
-    rows = [
+    rows: list[str] = [
         "",
-        title_line,
+        f" {icon}  {_BOLD}{_trunc(title, width - 6)}{_RESET}",
+    ]
+    if artist:
+        rows.append(f"    {_DIM}{_trunc(artist, width - 5)}{_RESET}")
+    rows += [
         _sep(width),
-        " " + render_progress(pos, dur, bar_w, _ACCENT),
-        " " + render_spectrum_color(pos, spec_w, t=t),
+        " " + render_progress(pos, dur, max(1, width - 17), _ACCENT),
+        " " + render_spectrum_color(pos, max(1, width - 2), t=t),
+        _sep(width),
     ]
 
-    if lyrics_text:
+    # Dancing sprite if there's room
+    sprite_lines = dj.dancing_sprite("groove" if playing else "neutral").split("\n")
+    if height - len(rows) >= len(sprite_lines) + 1:
+        rows.extend(sprite_lines)
         rows.append(_sep(width))
-        lrc = render_lyrics_window(lyrics_text, pos, dur, window=3, width=width)
-        for line in lrc.split("\n"):
-            rows.append(" " + line)
 
-    rows.append(_sep(width))
-    mood = "groove" if playing else "neutral"
-    for line in dj.dancing_sprite(mood).split("\n"):
-        rows.append(line)
-    rows.append(_sep(width))
-    rows.append(f" {_DIM}space pause  n next  p prev  l like  q quit{_RESET}")
-    rows.append("")
+    # Fill remaining rows
+    while len(rows) < height:
+        rows.append("")
+    return [_pad(r, width) for r in rows[:height]]
 
-    return [_pad(r, width) for r in rows]
+
+def _render_lyrics_bottom(
+    lyrics_text: str, pos: float, dur: float, width: int, height: int
+) -> list[str]:
+    """Bottom-left panel: lyrics + hint bar."""
+    hint = f" {_DIM}space pause  n next  p prev  l like  q quit{_RESET}"
+    content_h = max(1, height - 2)  # reserve 1 for sep + 1 for hint
+
+    if lyrics_text:
+        window = max(1, content_h // 2)
+        raw = render_lyrics_window(lyrics_text, pos, dur, window=window, width=width - 1)
+        content = [" " + ln for ln in raw.split("\n")]
+    else:
+        content = [f" {_DIM}(no lyrics){_RESET}"]
+
+    # Vertically center the content
+    while len(content) < content_h:
+        mid = len(content) // 2
+        content.insert(mid, "")
+    content = content[:content_h]
+
+    rows = content + [_sep(width), hint]
+    while len(rows) < height:
+        rows.append("")
+    return [_pad(r, width) for r in rows[:height]]
 
 
 def _render_queue_lines(tracks: list[dict], cur_idx: int, width: int, height: int) -> list[str]:
+    """Right panel: scrollable queue list, no line wrapping."""
     header = _pad(f" {_DIM}Queue ({len(tracks)}){_RESET}", width)
     rows: list[str] = ["", header, _sep(width)]
 
     if not tracks:
-        rows.append(_pad(f" {_DIM}(run cwb list to load queue){_RESET}", width))
+        rows.append(_pad(f" {_DIM}run cwb list to load queue{_RESET}", width))
     else:
-        visible = max(1, height - len(rows) - 1)
+        visible = max(1, height - len(rows))
+        # Scroll so current track is centered
         start = max(0, cur_idx - visible // 2) if cur_idx >= 0 else 0
         end = min(len(tracks), start + visible)
         start = max(0, end - visible)
 
         for i in range(start, end):
             num = f"{i + 1}."
-            title = _trunc(tracks[i].get("title", "?"), width - 6)
+            title = _trunc(tracks[i].get("title", "?"), width - 7)
             if i == cur_idx:
-                line = _pad(f" {_CUR}▶ {num:<3}{title}{_RESET}", width)
+                line = _pad(f" {_CUR}▶ {num:<3} {title}{_RESET}", width)
             else:
-                line = _pad(f" {_DIM}{num:<3}{_RESET}{title}", width)
+                line = _pad(f"   {_DIM}{num:<3}{_RESET} {title}", width)
             rows.append(line)
 
     while len(rows) < height:
         rows.append(" " * width)
-    return rows[:height]
+    return [_pad(r, width) for r in rows[:height]]
 
 
-def _compose(left: list[str], right: list[str], height: int) -> str:
+def _compose3(
+    top_left: list[str],
+    bot_left: list[str],
+    right: list[str],
+    left_w: int,
+    total_h: int,
+) -> str:
+    """Merge three panels into a frame.
+
+    Rows 0..top_h-1  : top_left │ right
+    Row  top_h       : ──────────┤ right   (horizontal divider)
+    Rows top_h+1..   : bot_left  │ right
+    """
     vsep = f"{_DIM}│{_RESET}"
+    top_h = len(top_left)
+    hjunction = _DIM + "─" * left_w + "┤" + _RESET
+
     out = []
-    for i in range(min(height, max(len(left), len(right)))):
-        l = left[i] if i < len(left) else ""
+    for i in range(total_h):
         r = right[i] if i < len(right) else ""
-        out.append(f"{l}{vsep}{r}")
+        if i < top_h:
+            l = top_left[i]
+            out.append(f"{l}{vsep}{r}")
+        elif i == top_h:
+            out.append(f"{hjunction}{r}")
+        else:
+            bi = i - top_h - 1
+            l = bot_left[bi] if bi < len(bot_left) else " " * left_w
+            out.append(f"{l}{vsep}{r}")
     return "\n".join(out)
 
 
@@ -236,20 +293,36 @@ def run(width: int = 0) -> int:
 
             if snap and now - last_render >= RENDER_EVERY:
                 total_w = _width[0]
-                height = sz[0].lines
+                h = sz[0].lines
+                # Usable rows: h-1 (last terminal line reserved to prevent scroll)
+                usable_h = h - 1
                 left_w = max(20, int(total_w * 0.6))
-                right_w = max(10, total_w - left_w - 1)
+                right_w = max(10, total_w - left_w - 1)  # 1 col for │
+                # Left split: top=player, bottom=lyrics, divider=1 row
+                top_h = max(8, usable_h // 2)
+                bot_h = max(3, usable_h - top_h - 1)
 
-                player_lines = _render_player_lines(snap, lyrics_text, left_w, height, now)
-                queue_lines = _render_queue_lines(queue, cur_idx, right_w, height)
-                frame = _compose(player_lines, queue_lines, height)
+                # Ensure top_h is tall enough for the sprite when possible
+                _sprite_h = len(dj.dancing_sprite("groove").split("\n"))
+                _min_top = 7 + _sprite_h + 2  # basic rows + sep + sprite + sep
+                _min_bot = 5
+                if usable_h >= _min_top + _min_bot + 1:
+                    top_h = max(_min_top, usable_h // 2)
+                    bot_h = usable_h - top_h - 1
+
+                pos = _interp_pos(snap)
+                dur = float(snap.get("duration", 0.0))
+
+                player_lines = _render_player_top(snap, left_w, top_h, now)
+                lyrics_lines = _render_lyrics_bottom(lyrics_text, pos, dur, left_w, bot_h)
+                queue_lines = _render_queue_lines(queue, cur_idx, right_w, usable_h)
+                frame = _compose3(player_lines, lyrics_lines, queue_lines, left_w, usable_h)
 
                 lines = frame.split("\n")
                 out = []
-                for i, line in enumerate(lines[: height - 1]):
+                for i, line in enumerate(lines[:usable_h]):
                     out.append(f"\x1b[{i + 1};1H{line}\x1b[K")
-                last = min(len(lines), height - 1) + 1
-                out.append(f"\x1b[{last};1H\x1b[J")
+                out.append(f"\x1b[{usable_h + 1};1H\x1b[J")
                 sys.stdout.write("".join(out))
                 sys.stdout.flush()
                 last_render = now
