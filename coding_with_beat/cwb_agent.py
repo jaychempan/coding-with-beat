@@ -641,5 +641,4 @@ def handle_prompt_expansion(event: dict) -> Optional[dict]:
     return {
         "decision": "block",
         "reason": f"{_CWB_HEADER}\n{message}",
-        "suppressOutput": True,
     }
