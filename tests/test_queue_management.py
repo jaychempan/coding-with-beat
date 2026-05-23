@@ -288,3 +288,69 @@ class TestPlayNumber(unittest.TestCase):
         data = srv._load_queue_file("search")
         self.assertEqual(data["expected_title"], "MySong")
         self.assertEqual(data["index"], 0)
+
+
+class TestNextPrev(unittest.TestCase):
+    def setUp(self):
+        self.tmp = _make_tmp()
+        self.p_data = mock.patch.object(srv, "DATA_DIR", self.tmp)
+        self.p_data.start()
+
+    def tearDown(self):
+        self.p_data.stop()
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def _fake_play_queue_at(self, calls):
+        def _fake(idx, queue_name=None):
+            calls.append((idx, queue_name))
+            return f"[{idx+1}] played"
+        return _fake
+
+    def test_next_track_advances_search_queue(self):
+        tracks = [{"title": f"S{i}", "artist": ""} for i in range(3)]
+        srv._write_queue_file("search", {"tracks": tracks, "index": 0, "expected_title": "S0"})
+        srv._write_active_mode(mode="search")
+
+        calls = []
+        with mock.patch.object(srv, "_play_queue_at", side_effect=self._fake_play_queue_at(calls)):
+            result = srv.next_track()
+
+        self.assertEqual(calls[0], (1, "search"))
+        self.assertIn("next", result)
+
+    def test_next_track_falls_back_to_library_when_search_exhausted(self):
+        srch_tracks = [{"title": "S0", "artist": ""}]
+        lib_tracks = [{"title": "L0", "artist": ""}, {"title": "L1", "artist": ""}]
+        srv._write_queue_file("search", {"tracks": srch_tracks, "index": 0, "expected_title": "S0"})
+        srv._write_queue_file("library", {"tracks": lib_tracks, "index": 1, "expected_title": "L1"})
+        srv._write_active_mode(mode="search")
+
+        calls = []
+        with mock.patch.object(srv, "_play_queue_at", side_effect=self._fake_play_queue_at(calls)):
+            result = srv.next_track()
+
+        # Should fall back to library at its current index
+        self.assertEqual(calls[0][1], "library")
+        self.assertIn("library", result)
+
+    def test_prev_track_goes_back_in_active_queue(self):
+        tracks = [{"title": f"S{i}", "artist": ""} for i in range(3)]
+        srv._write_queue_file("library", {"tracks": tracks, "index": 2, "expected_title": "S2"})
+        srv._write_active_mode(mode="library")
+
+        calls = []
+        with mock.patch.object(srv, "_play_queue_at", side_effect=self._fake_play_queue_at(calls)):
+            result = srv.prev_track()
+
+        self.assertEqual(calls[0], (1, "library"))
+
+    def test_next_track_clears_one_off_file(self):
+        srv._one_off_file().write_text("{}")
+        tracks = [{"title": "S0", "artist": ""}, {"title": "S1", "artist": ""}]
+        srv._write_queue_file("library", {"tracks": tracks, "index": 0, "expected_title": "S0"})
+        srv._write_active_mode(mode="library")
+
+        with mock.patch.object(srv, "_play_queue_at", return_value="ok"):
+            srv.next_track()
+
+        self.assertFalse(srv._one_off_file().exists())

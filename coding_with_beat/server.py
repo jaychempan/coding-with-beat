@@ -278,22 +278,6 @@ def toggle() -> str:
     return "⇆ toggled"
 
 
-def _read_queue_index() -> int:
-    try:
-        f = DATA_DIR / "queue_index.json"
-        if f.exists():
-            return int(json.loads(f.read_text(encoding="utf-8")).get("index", -1))
-    except Exception:
-        pass
-    return -1
-
-
-def _write_queue_index(idx: int) -> None:
-    try:
-        (DATA_DIR / "queue_index.json").write_text(json.dumps({"index": idx}))
-    except Exception:
-        pass
-
 
 def _play_queue_at(idx: int, queue_name: str | None = None) -> str:
     """Play queue_name[idx]. queue_name defaults to the active mode."""
@@ -322,15 +306,21 @@ def _play_queue_at(idx: int, queue_name: str | None = None) -> str:
 def next_track() -> str:
     """Skip to the next track."""
     _one_off_file().unlink(missing_ok=True)
-    results_file = DATA_DIR / "last_results.json"
-    if results_file.exists():
-        try:
-            hits = json.loads(results_file.read_text(encoding="utf-8"))
-            if hits:
-                result = _play_queue_at(_read_queue_index() + 1)
-                return f"⏭ next  {result}"
-        except Exception:
-            pass
+    am = _read_active_mode()
+    mode = am.get("mode", "library")
+    qdata = _load_queue_file(mode)
+    hits = qdata.get("tracks", [])
+    if hits:
+        next_idx = qdata.get("index", 0) + 1
+        if next_idx < len(hits):
+            result = _play_queue_at(next_idx, mode)
+            return f"⏭ next  {result}"
+        if mode == "search":
+            lib_data = _load_queue_file("library")
+            if lib_data.get("tracks"):
+                _write_active_mode(mode="library")
+                result = _play_queue_at(lib_data.get("index", 0), "library")
+                return f"⏭ next (→ library)  {result}"
     st = state.load()
     get_source(st.source).next()
     _refresh_after_control()
@@ -341,15 +331,15 @@ def next_track() -> str:
 def prev_track() -> str:
     """Go to the previous track."""
     _one_off_file().unlink(missing_ok=True)
-    results_file = DATA_DIR / "last_results.json"
-    if results_file.exists():
-        try:
-            hits = json.loads(results_file.read_text(encoding="utf-8"))
-            if hits:
-                result = _play_queue_at(_read_queue_index() - 1)
-                return f"⏮ prev  {result}"
-        except Exception:
-            pass
+    am = _read_active_mode()
+    mode = am.get("mode", "library")
+    qdata = _load_queue_file(mode)
+    hits = qdata.get("tracks", [])
+    if hits:
+        prev_idx = qdata.get("index", 0) - 1
+        if prev_idx >= 0:
+            result = _play_queue_at(prev_idx, mode)
+            return f"⏮ prev  {result}"
     st = state.load()
     get_source(st.source).prev()
     _refresh_after_control()
