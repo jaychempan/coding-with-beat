@@ -36,6 +36,7 @@ _LEGACY_MCP_HTTP_HOST_ENV = "CC_JUKEBOX_MCP_HOST"
 _LEGACY_MCP_HTTP_PORT_ENV = "CC_JUKEBOX_MCP_PORT"
 _LEGACY_MCP_HTTP_PATH_ENV = "CC_JUKEBOX_MCP_PATH"
 CONTROL_REFRESH_DELAY = 0.4
+_ONE_OFF_FILE = DATA_DIR / "one_off_queue.json"
 
 
 def _env_first(name: str, legacy_name: str, default: str) -> str:
@@ -172,10 +173,29 @@ def now_playing() -> str:
     )
 
 
+def _maybe_resume_queue(np) -> None:
+    """If a one-off song just ended (title changed), resume the saved queue."""
+    if not _ONE_OFF_FILE.exists():
+        return
+    try:
+        data = json.loads(_ONE_OFF_FILE.read_text(encoding="utf-8"))
+    except Exception:
+        _ONE_OFF_FILE.unlink(missing_ok=True)
+        return
+    one_off_title = data.get("one_off_title", "")
+    resume_index = int(data.get("resume_index", 0))
+    if not np.title or np.title == one_off_title:
+        return  # still on the one-off song (or nothing playing yet)
+    # Title changed → one-off ended; resume the queue
+    _ONE_OFF_FILE.unlink(missing_ok=True)
+    _play_queue_at(resume_index)
+
+
 @mcp.tool()
 def now_playing_snapshot(known_lyrics_key: str = "") -> str:
     """Return structured now-playing data as JSON for terminal integrations."""
     st, np = _refresh_now_playing()
+    _maybe_resume_queue(np)
     return json.dumps(_now_playing_payload(st, np, known_lyrics_key), ensure_ascii=False)
 
 
@@ -253,6 +273,7 @@ def _play_queue_at(idx: int) -> str:
 @mcp.tool()
 def next_track() -> str:
     """Skip to the next track."""
+    _ONE_OFF_FILE.unlink(missing_ok=True)
     results_file = DATA_DIR / "last_results.json"
     if results_file.exists():
         try:
@@ -271,6 +292,7 @@ def next_track() -> str:
 @mcp.tool()
 def prev_track() -> str:
     """Go to the previous track."""
+    _ONE_OFF_FILE.unlink(missing_ok=True)
     results_file = DATA_DIR / "last_results.json"
     if results_file.exists():
         try:
@@ -407,6 +429,7 @@ def play_number(number: int) -> str:
 @mcp.tool()
 def play_song(query: str) -> str:
     """Search for and start playing the first match for 'query'."""
+    has_queue = (DATA_DIR / "last_results.json").exists()
     st = state.load()
     src = get_source(st.source)
     np = src.play_query(query)
@@ -420,6 +443,17 @@ def play_song(query: str) -> str:
         return _unsupported(np.source or st.source, "play_song", _unsupported_reason(np))
     if not np.title:
         return _unsupported(st.source, "play_song", "The source returned no playable track.")
+    if has_queue:
+        # Remember where to resume after this one-off song finishes
+        try:
+            _ONE_OFF_FILE.write_text(
+                json.dumps({"one_off_title": np.title, "resume_index": _read_queue_index() + 1}),
+                encoding="utf-8",
+            )
+        except Exception:
+            pass
+    else:
+        _ONE_OFF_FILE.unlink(missing_ok=True)
     _refresh_now_playing()
     return f"▶ now playing: {np.title} — {np.artist or '—'}  source={np.source}"
 

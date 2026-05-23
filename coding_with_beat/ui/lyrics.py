@@ -133,7 +133,7 @@ def render_lyrics_window(
             cues = [(t, b) for t, b in cues if b.strip()]
             lines = [c[1] for c in cues]
         else:
-            lines = [l for line in text.splitlines() if (l := _INLINE_TS_RE.sub("", line).strip())]
+            lines = [ln for line in text.splitlines() if (ln := _INLINE_TS_RE.sub("", line).strip())]
 
     if not lines:
         return f"{DIM}(no lyrics){RESET}"
@@ -220,7 +220,7 @@ def render_lyrics_wave(
             cues = [(ts, b) for ts, b in cues if b.strip()]
             lines = [c[1] for c in cues]
         else:
-            lines = [l for line in text.splitlines() if (l := _INLINE_TS_RE.sub("", line).strip())]
+            lines = [ln for line in text.splitlines() if (ln := _INLINE_TS_RE.sub("", line).strip())]
 
     if not lines:
         return f"{DIM}(no lyrics){RESET}"
