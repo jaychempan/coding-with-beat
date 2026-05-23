@@ -43,6 +43,8 @@ def _one_off_file():
 
 
 def _queue_file(name: str):
+    if name not in ("library", "search"):
+        raise ValueError(f"unknown queue name: {name!r}")
     return DATA_DIR / ("library_queue.json" if name == "library" else "search_queue.json")
 
 
@@ -70,13 +72,15 @@ def _read_active_mode() -> dict:
 
 
 def _write_active_mode(mode: str | None = None, context: str | None = None) -> None:
+    if mode is None and context is None:
+        return
     current = _read_active_mode()
     if mode is not None:
         current["mode"] = mode
     if context is not None:
         current["context"] = context
     try:
-        (DATA_DIR / "active_mode.json").write_text(json.dumps(current), encoding="utf-8")
+        (DATA_DIR / "active_mode.json").write_text(json.dumps(current, ensure_ascii=False), encoding="utf-8")
     except Exception:
         pass
 
