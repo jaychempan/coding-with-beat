@@ -464,7 +464,9 @@ def play_number(number: int) -> str:
 @mcp.tool()
 def play_song(query: str) -> str:
     """Search for and start playing the first match for 'query'."""
-    has_queue = (DATA_DIR / "last_results.json").exists()
+    am = _read_active_mode()
+    _active_mode = am.get("mode", "library")
+    has_queue = bool(_load_queue_file(_active_mode).get("tracks"))
     st = state.load()
     src = get_source(st.source)
     np = src.play_query(query)
@@ -482,7 +484,7 @@ def play_song(query: str) -> str:
         # Remember where to resume after this one-off song finishes
         try:
             _one_off_file().write_text(
-                json.dumps({"one_off_title": np.title, "resume_index": _read_queue_index() + 1}),
+                json.dumps({"one_off_title": np.title, "resume_index": _load_queue_file(_active_mode).get("index", 0) + 1}),
                 encoding="utf-8",
             )
         except Exception:
