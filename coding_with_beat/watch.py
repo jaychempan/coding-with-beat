@@ -79,6 +79,7 @@ def _control_async(tool: str) -> None:
     """Fire a control command in a background thread so the render loop stays live."""
     if not _control_lock.acquire(blocking=False):
         return  # previous command still running; skip
+
     def _run():
         try:
             call_tool(tool)
@@ -86,6 +87,7 @@ def _control_async(tool: str) -> None:
             pass
         finally:
             _control_lock.release()
+
     threading.Thread(target=_run, daemon=True).start()
 
 
@@ -333,6 +335,7 @@ def run(width: int = 0) -> int:
             if num_buf and time.time() - num_ts >= _NUM_TIMEOUT:
                 n = int(num_buf)
                 num_buf = ""
+
                 def _play_n(n=n):
                     if not _control_lock.acquire(blocking=False):
                         return
@@ -342,6 +345,7 @@ def run(width: int = 0) -> int:
                         pass
                     finally:
                         _control_lock.release()
+
                 threading.Thread(target=_play_n, daemon=True).start()
                 last_fetch = time.time() - FETCH_EVERY + 1.5
 
@@ -364,6 +368,7 @@ def run(width: int = 0) -> int:
             elif key in ("\r", "\n") and num_buf:
                 n = int(num_buf)
                 num_buf = ""
+
                 def _play_n(n=n):
                     if not _control_lock.acquire(blocking=False):
                         return
@@ -373,6 +378,7 @@ def run(width: int = 0) -> int:
                         pass
                     finally:
                         _control_lock.release()
+
                 threading.Thread(target=_play_n, daemon=True).start()
                 last_fetch = time.time() - FETCH_EVERY + 1.5
             elif key == "\x1b":  # ESC cancels number input
@@ -399,11 +405,7 @@ def run(width: int = 0) -> int:
                 # a track not triggered via cwb (queue_index.json would be stale).
                 if snap.get("title") and queue:
                     playing_title = snap["title"]
-                    need_scan = (
-                        cur_idx < 0
-                        or cur_idx >= len(queue)
-                        or queue[cur_idx].get("title", "") != playing_title
-                    )
+                    need_scan = cur_idx < 0 or cur_idx >= len(queue) or queue[cur_idx].get("title", "") != playing_title
                     if need_scan:
                         for j, t in enumerate(queue):
                             if t.get("title", "") == playing_title:

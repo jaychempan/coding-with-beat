@@ -32,8 +32,16 @@ _ANSI_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
 
 # Display commands → let Codex handle via MCP (proper multi-line output)
 _DISPLAY_COMMANDS = {
-    "list", "search", "np", "now_playing", "status",
-    "history", "player", "help", "lyrics", "welcome",
+    "list",
+    "search",
+    "np",
+    "now_playing",
+    "status",
+    "history",
+    "player",
+    "help",
+    "lyrics",
+    "welcome",
 }
 
 # Mood changes that deserve a visible notification in Codex
@@ -45,6 +53,7 @@ _CWB_PREFIXES = ("/cwb", "cwb ")
 
 
 # ── helpers ───────────────────────────────────────────────────────────────────
+
 
 def _strip_ansi(text: str) -> str:
     return _ANSI_RE.sub("", text)
@@ -115,6 +124,7 @@ def _maybe_auto_play() -> None:
 
 # ── UserPromptSubmit → cwb command routing ───────────────────────────────────
 
+
 def _handle_user_prompt(event: dict) -> dict | None:
     """Route 'cwb …' / '/cwb …' prompts.
 
@@ -128,7 +138,7 @@ def _handle_user_prompt(event: dict) -> dict | None:
     intent: str | None = None
     for prefix in _CWB_PREFIXES:
         if lower.startswith(prefix):
-            intent = prompt[len(prefix):].strip()
+            intent = prompt[len(prefix) :].strip()
             break
     if intent is None:
         return None
@@ -159,6 +169,7 @@ def _handle_user_prompt(event: dict) -> dict | None:
 
 
 # ── main ─────────────────────────────────────────────────────────────────────
+
 
 def main() -> int:
     if os.environ.get("CWB_DISABLE_HOOK") == "1":
@@ -192,7 +203,7 @@ def main() -> int:
 
     # ── tool use: vibe tracking + surface significant mood changes ────────────
     if hook in ("pretooluse", "posttooluse"):
-        prev_mood = (state.load().dj_mood or "")
+        prev_mood = state.load().dj_mood or ""
         result = handle_hook(event)
         msg = _vibe_message(prev_mood, result.get("mood", ""), result.get("vibe", ""))
         if msg:
@@ -208,10 +219,14 @@ def main() -> int:
     if hook == "subagentstart":
         handle_hook(event)
         quip = dj.quip("focus")
-        print(json.dumps({
-            "continue": True,
-            "systemMessage": f'🤖 DJ Buddy: "{quip}" (subagent online)',
-        }))
+        print(
+            json.dumps(
+                {
+                    "continue": True,
+                    "systemMessage": f'🤖 DJ Buddy: "{quip}" (subagent online)',
+                }
+            )
+        )
         return 0
 
     if hook == "subagentstop":
