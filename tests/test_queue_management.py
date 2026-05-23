@@ -75,3 +75,109 @@ class TestActiveMode(unittest.TestCase):
         srv._write_active_mode(mode="search", context="search")
         result = srv._read_active_mode()
         self.assertEqual(result, {"mode": "search", "context": "search"})
+
+
+class TestListLibraryWritesQueue(unittest.TestCase):
+    def setUp(self):
+        self.tmp = _make_tmp()
+        self.p_data = mock.patch.object(srv, "DATA_DIR", self.tmp)
+        self.p_data.start()
+
+    def tearDown(self):
+        self.p_data.stop()
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def test_list_library_writes_library_queue_json(self):
+        fake_tracks = [{"title": "A", "artist": "X", "album": "Y"}]
+
+        class FakeSrc:
+            name = "apple_music"
+            def list_library(self, limit=100):
+                return fake_tracks
+
+        with (
+            mock.patch.object(srv, "get_source", return_value=FakeSrc()),
+            mock.patch.object(srv.state, "load", return_value=srv.state.JukeboxState()),
+        ):
+            srv.list_library(limit=1)
+
+        data = srv._load_queue_file("library")
+        self.assertEqual(data["tracks"], fake_tracks)
+        self.assertEqual(data["index"], 0)
+        self.assertEqual(srv._read_active_mode()["context"], "library")
+
+    def test_list_library_does_not_touch_search_queue(self):
+        search_data = {"tracks": [{"title": "S"}], "index": 2, "expected_title": "S"}
+        srv._write_queue_file("search", search_data)
+
+        class FakeSrc:
+            name = "apple_music"
+            def list_library(self, limit=100):
+                return [{"title": "L", "artist": "", "album": ""}]
+
+        with (
+            mock.patch.object(srv, "get_source", return_value=FakeSrc()),
+            mock.patch.object(srv.state, "load", return_value=srv.state.JukeboxState()),
+        ):
+            srv.list_library()
+
+        self.assertEqual(srv._load_queue_file("search"), search_data)
+
+
+class TestSearchWritesQueue(unittest.TestCase):
+    def setUp(self):
+        self.tmp = _make_tmp()
+        self.p_data = mock.patch.object(srv, "DATA_DIR", self.tmp)
+        self.p_data.start()
+
+    def tearDown(self):
+        self.p_data.stop()
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def test_search_writes_search_queue_json(self):
+        fake_hits = [{"title": "Hit", "artist": "B", "album": "C", "source": "library"}]
+
+        class FakeSrc:
+            def search(self, query, limit=8):
+                return fake_hits
+
+        with (
+            mock.patch.object(srv, "get_source", return_value=FakeSrc()),
+            mock.patch.object(srv.state, "load", return_value=srv.state.JukeboxState()),
+        ):
+            srv.search("hit")
+
+        data = srv._load_queue_file("search")
+        self.assertEqual(data["tracks"], fake_hits)
+        self.assertEqual(srv._read_active_mode()["context"], "search")
+
+    def test_search_does_not_touch_library_queue(self):
+        lib_data = {"tracks": [{"title": "L"}], "index": 5, "expected_title": "L"}
+        srv._write_queue_file("library", lib_data)
+
+        class FakeSrc:
+            def search(self, query, limit=8):
+                return [{"title": "S", "artist": "", "album": ""}]
+
+        with (
+            mock.patch.object(srv, "get_source", return_value=FakeSrc()),
+            mock.patch.object(srv.state, "load", return_value=srv.state.JukeboxState()),
+        ):
+            srv.search("s")
+
+        self.assertEqual(srv._load_queue_file("library"), lib_data)
+
+    def test_search_does_not_change_active_mode(self):
+        srv._write_active_mode(mode="library")
+
+        class FakeSrc:
+            def search(self, query, limit=8):
+                return [{"title": "S", "artist": "", "album": ""}]
+
+        with (
+            mock.patch.object(srv, "get_source", return_value=FakeSrc()),
+            mock.patch.object(srv.state, "load", return_value=srv.state.JukeboxState()),
+        ):
+            srv.search("s")
+
+        self.assertEqual(srv._read_active_mode()["mode"], "library")

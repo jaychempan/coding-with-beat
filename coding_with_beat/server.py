@@ -405,10 +405,8 @@ def list_library(limit: int = 100) -> str:
     hits = fn(limit=limit)
     if not hits:
         return "(library is empty)"
-    try:
-        (DATA_DIR / "last_results.json").write_text(json.dumps(hits, ensure_ascii=False))
-    except Exception:
-        pass
+    _write_queue_file("library", {"tracks": hits, "index": 0, "expected_title": ""})
+    _write_active_mode(context="library")
     return "\n".join(
         f"{i + 1}. {h['title']} — {h.get('artist', '?')} · {h.get('album', '?')}" for i, h in enumerate(hits)
     )
@@ -422,10 +420,8 @@ def search(query: str, limit: int = 8) -> str:
     hits = get_source(st.source).search(query, limit=limit)
     if not hits:
         return f"(no matches for '{query}' in source={st.source})"
-    try:
-        (DATA_DIR / "last_results.json").write_text(json.dumps(hits, ensure_ascii=False))
-    except Exception:
-        pass
+    _write_queue_file("search", {"tracks": hits, "index": 0, "expected_title": ""})
+    _write_active_mode(context="search")
     lines = []
     for i, h in enumerate(hits):
         tag = (
