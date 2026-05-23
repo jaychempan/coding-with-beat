@@ -17,13 +17,13 @@ from pathlib import Path
 
 TAG = "coding-with-beat"
 DEFAULT_MCP_URL = "http://127.0.0.1:8765/mcp"
-HOOK_TIMEOUT = 180   # UserPromptSubmit (/cwb) may spawn a child claude process
+HOOK_TIMEOUT = 180  # UserPromptSubmit (/cwb) may spawn a child claude process
 
 
 # ── TOML patcher (no external deps) ──────────────────────────────────────────
 
 _MCP_SECTION_RE = re.compile(
-    r'\[mcp_servers\.coding-with-beat\][^\[]*',
+    r"\[mcp_servers\.coding-with-beat\][^\[]*",
     re.DOTALL,
 )
 
@@ -55,6 +55,7 @@ def remove_config_toml(path: Path) -> None:
 
 
 # ── hooks.json patcher ────────────────────────────────────────────────────────
+
 
 def _hook_entry(python: str, timeout: int = 5) -> dict:
     return {
@@ -137,6 +138,7 @@ def remove_hooks(hooks: dict) -> dict:
 
 # ── skill installer ───────────────────────────────────────────────────────────
 
+
 def install_skill(repo: Path, codex_dir: Path) -> None:
     src = repo / "codex_skills" / "cwb" / "SKILL.md"
     if not src.exists():
@@ -152,10 +154,12 @@ def remove_skill(codex_dir: Path) -> None:
     skill_dir = codex_dir / "skills" / "cwb"
     if skill_dir.exists():
         import shutil
+
         shutil.rmtree(skill_dir)
 
 
 # ── CLI ───────────────────────────────────────────────────────────────────────
+
 
 def main() -> int:
     ap = argparse.ArgumentParser(description="Patch ~/.codex/ for coding-with-beat")

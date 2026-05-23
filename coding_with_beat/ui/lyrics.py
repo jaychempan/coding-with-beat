@@ -64,6 +64,7 @@ def _wrap_text(line: str, max_w: int) -> List[str]:
 
 
 _LRC_RE = re.compile(r"\[(\d+):(\d+(?:\.\d+)?)\]")
+_INLINE_TS_RE = re.compile(r"<(\d+):(\d+(?:\.\d+)?)>")
 
 
 def parse_lrc(text: str) -> Tuple[List[Tuple[float, str]], bool]:
@@ -73,13 +74,22 @@ def parse_lrc(text: str) -> Tuple[List[Tuple[float, str]], bool]:
     has_ts = False
     for raw in text.splitlines():
         stamps = _LRC_RE.findall(raw)
-        if not stamps:
+        inline_stamps = _INLINE_TS_RE.findall(raw)
+        if not stamps and not inline_stamps:
             continue
         has_ts = True
-        body = _LRC_RE.sub("", raw).strip()
-        for mm, ss in stamps:
+        body = _LRC_RE.sub("", raw)
+        body = _INLINE_TS_RE.sub("", body).strip()
+        if stamps:
+            for mm, ss in stamps:
+                t = int(mm) * 60 + float(ss)
+                cues.append((t, body))
+        else:
+            # Enhanced LRC with only per-character timestamps — use the first as line time
+            mm, ss = inline_stamps[0]
             t = int(mm) * 60 + float(ss)
-            cues.append((t, body))
+            if body:
+                cues.append((t, body))
     cues.sort(key=lambda x: x[0])
     return cues, has_ts
 
@@ -123,7 +133,7 @@ def render_lyrics_window(
             cues = [(t, b) for t, b in cues if b.strip()]
             lines = [c[1] for c in cues]
         else:
-            lines = [line.strip() for line in text.splitlines() if line.strip()]
+            lines = [l for line in text.splitlines() if (l := _INLINE_TS_RE.sub("", line).strip())]
 
     if not lines:
         return f"{DIM}(no lyrics){RESET}"
@@ -210,7 +220,7 @@ def render_lyrics_wave(
             cues = [(ts, b) for ts, b in cues if b.strip()]
             lines = [c[1] for c in cues]
         else:
-            lines = [line.strip() for line in text.splitlines() if line.strip()]
+            lines = [l for line in text.splitlines() if (l := _INLINE_TS_RE.sub("", line).strip())]
 
     if not lines:
         return f"{DIM}(no lyrics){RESET}"
