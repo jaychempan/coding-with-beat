@@ -140,9 +140,7 @@ class LocalFiles:
                 # Interrupted before the song ended; treat as paused at last position.
                 s["pid"] = None
                 s["paused_at"] = (
-                    float(s.get("started_at") or time.time())
-                    + float(s.get("paused_total") or 0.0)
-                    + last_pos
+                    float(s.get("started_at") or time.time()) + float(s.get("paused_total") or 0.0) + last_pos
                 )
                 _write(s)
                 return _info(s, playing=False)

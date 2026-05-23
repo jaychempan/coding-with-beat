@@ -1,4 +1,3 @@
-import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -119,7 +118,11 @@ class ServerPlaybackMessageTest(unittest.TestCase):
             with mock.patch.object(server, "DATA_DIR", data_dir):
                 server._write_queue_file(
                     "search",
-                    {"tracks": [{"title": "孤勇者", "artist": "陈奕迅", "source": "apple_music"}], "index": 0, "expected_title": ""},
+                    {
+                        "tracks": [{"title": "孤勇者", "artist": "陈奕迅", "source": "apple_music"}],
+                        "index": 0,
+                        "expected_title": "",
+                    },
                 )
                 server._write_active_mode(context="search")
             with (
