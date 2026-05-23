@@ -123,6 +123,7 @@ Natural-language commands work too: `skip this track`, `pause`, `what's playing`
 | `n` | Next |
 | `p` | Previous |
 | `l` | Like |
+| `0-9` | Type a track number + `Enter` to jump to it |
 | `q` | Quit |
 
 ---
