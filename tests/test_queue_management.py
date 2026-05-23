@@ -430,3 +430,103 @@ class TestPlaySongAndResume(unittest.TestCase):
 
         self.assertEqual(played, [])
         self.assertTrue(srv._one_off_file().exists())
+
+
+class TestAutoAdvance(unittest.TestCase):
+    def setUp(self):
+        self.tmp = _make_tmp()
+        self.p_data = mock.patch.object(srv, "DATA_DIR", self.tmp)
+        self.p_data.start()
+        # Reset module-level state tracker between tests
+        srv._np_state.update({"title": "", "position": 0.0, "duration": 0.0})
+
+    def tearDown(self):
+        self.p_data.stop()
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def _make_np(self, title, position=0.0, duration=200.0, playing=True):
+        from coding_with_beat.sources.base import NowPlaying
+        np = NowPlaying()
+        np.title = title; np.artist = "A"; np.album = "B"
+        np.duration = duration; np.position = position
+        np.playing = playing; np.source = "apple_music"
+        return np
+
+    def test_auto_advance_triggers_on_natural_end(self):
+        """Title change after position near duration → advance queue."""
+        tracks = [{"title": "S0", "artist": ""}, {"title": "S1", "artist": ""}]
+        srv._write_queue_file("library", {"tracks": tracks, "index": 0, "expected_title": "S0"})
+        srv._write_active_mode(mode="library")
+
+        # Simulate previous snapshot: S0 at 198s / 200s (near end)
+        srv._np_state.update({"title": "S0", "position": 198.0, "duration": 200.0})
+
+        played = []
+        with mock.patch.object(srv, "_play_queue_at", side_effect=lambda idx, qn=None: played.append((idx, qn))):
+            srv._auto_advance_if_needed(self._make_np("S1", position=0.0, duration=200.0))
+
+        self.assertEqual(played[0], (1, "library"))
+
+    def test_auto_advance_does_not_trigger_on_external_switch(self):
+        """Title change when position was mid-song → external switch, no advance."""
+        tracks = [{"title": "S0", "artist": ""}, {"title": "S1", "artist": ""}]
+        srv._write_queue_file("library", {"tracks": tracks, "index": 0, "expected_title": "S0"})
+        srv._write_active_mode(mode="library")
+
+        # Previous snapshot: S0 at 60s / 200s (mid-song)
+        srv._np_state.update({"title": "S0", "position": 60.0, "duration": 200.0})
+
+        played = []
+        with mock.patch.object(srv, "_play_queue_at", side_effect=lambda idx, qn=None: played.append((idx, qn))):
+            srv._auto_advance_if_needed(self._make_np("External Song"))
+
+        self.assertEqual(played, [])
+
+    def test_auto_advance_does_not_trigger_when_title_unchanged(self):
+        srv._np_state.update({"title": "S0", "position": 198.0, "duration": 200.0})
+        played = []
+        with mock.patch.object(srv, "_play_queue_at", side_effect=lambda idx, qn=None: played.append((idx, qn))):
+            srv._auto_advance_if_needed(self._make_np("S0"))
+        self.assertEqual(played, [])
+
+    def test_auto_advance_falls_back_to_library_when_search_exhausted(self):
+        srch = [{"title": "S0", "artist": ""}]
+        lib = [{"title": "L0", "artist": ""}, {"title": "L1", "artist": ""}]
+        srv._write_queue_file("search", {"tracks": srch, "index": 0, "expected_title": "S0"})
+        srv._write_queue_file("library", {"tracks": lib, "index": 1, "expected_title": "L1"})
+        srv._write_active_mode(mode="search")
+
+        srv._np_state.update({"title": "S0", "position": 198.0, "duration": 200.0})
+
+        played = []
+        with mock.patch.object(srv, "_play_queue_at", side_effect=lambda idx, qn=None: played.append((idx, qn))):
+            srv._auto_advance_if_needed(self._make_np("something new"))
+
+        # Should fall back to library at its saved index
+        self.assertEqual(played[0][1], "library")
+        self.assertEqual(srv._read_active_mode()["mode"], "library")
+
+    def test_auto_advance_skips_when_one_off_active(self):
+        srv._one_off_file().write_text(json.dumps({"one_off_title": "OO", "resume_mode": "library", "resume_index": 0}))
+        srv._np_state.update({"title": "OO", "position": 198.0, "duration": 200.0})
+
+        played = []
+        with mock.patch.object(srv, "_play_queue_at", side_effect=lambda idx, qn=None: played.append((idx, qn))):
+            srv._auto_advance_if_needed(self._make_np("Next Song"))
+
+        self.assertEqual(played, [])
+
+    def test_auto_advance_only_fires_for_cwb_managed_tracks(self):
+        """If expected_title doesn't match prev title, it's not a cwb track."""
+        tracks = [{"title": "CWB Song", "artist": ""}]
+        srv._write_queue_file("library", {"tracks": tracks, "index": 0, "expected_title": "CWB Song"})
+        srv._write_active_mode(mode="library")
+
+        # Previous track was something else (not cwb-managed)
+        srv._np_state.update({"title": "External Track", "position": 198.0, "duration": 200.0})
+
+        played = []
+        with mock.patch.object(srv, "_play_queue_at", side_effect=lambda idx, qn=None: played.append((idx, qn))):
+            srv._auto_advance_if_needed(self._make_np("Another External"))
+
+        self.assertEqual(played, [])

@@ -85,6 +85,54 @@ def _write_active_mode(mode: str | None = None, context: str | None = None) -> N
         pass
 
 
+_NATURAL_END_THRESHOLD = 5.0
+_np_state: dict = {"title": "", "position": 0.0, "duration": 0.0}
+
+
+def _auto_advance_if_needed(np) -> None:
+    """Auto-advance the active queue when a cwb-managed track ends naturally.
+
+    Distinguishes natural end (position near duration) from external switch
+    (position mid-song) so cwb does not steal control when the user clicks
+    a different song in Music.app.
+    """
+    current_title = np.title or ""
+    current_position = float(np.position or 0.0)
+    current_duration = float(np.duration or 0.0)
+
+    prev_title = _np_state["title"]
+    prev_position = _np_state["position"]
+    prev_duration = _np_state["duration"]
+
+    _np_state["title"] = current_title
+    _np_state["position"] = current_position
+    _np_state["duration"] = current_duration
+
+    if not current_title or current_title == prev_title:
+        return
+    if _one_off_file().exists():
+        return  # _maybe_resume_queue handles one-off resumption
+    if prev_duration <= 0 or prev_position < prev_duration - _NATURAL_END_THRESHOLD:
+        return  # external switch
+
+    am = _read_active_mode()
+    mode = am.get("mode", "library")
+    qdata = _load_queue_file(mode)
+    if qdata.get("expected_title", "") != prev_title:
+        return  # track was not cwb-managed
+
+    hits = qdata.get("tracks", [])
+    next_idx = qdata.get("index", 0) + 1
+
+    if mode == "search" and next_idx >= len(hits):
+        lib_data = _load_queue_file("library")
+        if lib_data.get("tracks"):
+            _write_active_mode(mode="library")
+            _play_queue_at(lib_data.get("index", 0), "library")
+    elif next_idx < len(hits):
+        _play_queue_at(next_idx, mode)
+
+
 def _env_first(name: str, legacy_name: str, default: str) -> str:
     return os.environ.get(name) or os.environ.get(legacy_name) or default
 
@@ -243,6 +291,7 @@ def now_playing_snapshot(known_lyrics_key: str = "") -> str:
     """Return structured now-playing data as JSON for terminal integrations."""
     st, np = _refresh_now_playing()
     _maybe_resume_queue(np)
+    _auto_advance_if_needed(np)
     return json.dumps(_now_playing_payload(st, np, known_lyrics_key), ensure_ascii=False)
 
 
