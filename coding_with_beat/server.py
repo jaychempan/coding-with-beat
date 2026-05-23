@@ -697,12 +697,14 @@ async def smart_search(description: str, limit: int = 8) -> str:
     _write_active_mode(context="search")
 
     lines = []
+    has_catalog = False
     for i, h in enumerate(merged):
         src = h.get("source", "")
         if src == "library":
             tag = " [资料库]"
         elif src == "apple_music":
             tag = " [Apple Music]"
+            has_catalog = True
         elif src == "local":
             tag = " [本地]"
         else:
@@ -710,6 +712,8 @@ async def smart_search(description: str, limit: int = 8) -> str:
         lines.append(
             f"{i + 1}. {h['title']} — {h.get('artist', '?')} · {h.get('album', '?')}{tag}"
         )
+    if has_catalog:
+        lines.append("\n💡 [Apple Music] 曲目需要先添加到资料库才能播放。用 play_number() 尝试，Music.app 会自动打开。")
     return "\n".join(lines)
 
 
