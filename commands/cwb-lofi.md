@@ -20,6 +20,13 @@ cat /tmp/cwb_lofi_3.txt
 
 Display results in three groups with labels, renumber globally (1, 2, 3… across all groups):
 
-**🎧 Lofi Hip Hop** · **🌧 Lofi Jazz Rain** · **🛏 Chillhop**
+**🎧 Lofi Hip Hop**
+(results from angle 1)
+
+**🌧 Lofi Jazz Rain**
+(results from angle 2)
+
+**🛏 Chillhop**
+(results from angle 3)
 
 End with: 喜欢哪首？说编号我来播。
