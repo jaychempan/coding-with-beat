@@ -36,7 +36,49 @@ _LEGACY_MCP_HTTP_HOST_ENV = "CC_JUKEBOX_MCP_HOST"
 _LEGACY_MCP_HTTP_PORT_ENV = "CC_JUKEBOX_MCP_PORT"
 _LEGACY_MCP_HTTP_PATH_ENV = "CC_JUKEBOX_MCP_PATH"
 CONTROL_REFRESH_DELAY = 0.4
-_ONE_OFF_FILE = DATA_DIR / "one_off_queue.json"
+
+
+def _one_off_file():
+    return DATA_DIR / "one_off_queue.json"
+
+
+def _queue_file(name: str):
+    return DATA_DIR / ("library_queue.json" if name == "library" else "search_queue.json")
+
+
+def _load_queue_file(name: str) -> dict:
+    """Load library or search queue. Returns dict with tracks, index, expected_title."""
+    try:
+        return json.loads(_queue_file(name).read_text(encoding="utf-8"))
+    except Exception:
+        return {"tracks": [], "index": 0, "expected_title": ""}
+
+
+def _write_queue_file(name: str, data: dict) -> None:
+    try:
+        _queue_file(name).write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+    except Exception:
+        pass
+
+
+def _read_active_mode() -> dict:
+    """Returns {mode, context}. Defaults to library for both."""
+    try:
+        return json.loads((DATA_DIR / "active_mode.json").read_text(encoding="utf-8"))
+    except Exception:
+        return {"mode": "library", "context": "library"}
+
+
+def _write_active_mode(mode: str | None = None, context: str | None = None) -> None:
+    current = _read_active_mode()
+    if mode is not None:
+        current["mode"] = mode
+    if context is not None:
+        current["context"] = context
+    try:
+        (DATA_DIR / "active_mode.json").write_text(json.dumps(current), encoding="utf-8")
+    except Exception:
+        pass
 
 
 def _env_first(name: str, legacy_name: str, default: str) -> str:
@@ -175,19 +217,19 @@ def now_playing() -> str:
 
 def _maybe_resume_queue(np) -> None:
     """If a one-off song just ended (title changed), resume the saved queue."""
-    if not _ONE_OFF_FILE.exists():
+    if not _one_off_file().exists():
         return
     try:
-        data = json.loads(_ONE_OFF_FILE.read_text(encoding="utf-8"))
+        data = json.loads(_one_off_file().read_text(encoding="utf-8"))
     except Exception:
-        _ONE_OFF_FILE.unlink(missing_ok=True)
+        _one_off_file().unlink(missing_ok=True)
         return
     one_off_title = data.get("one_off_title", "")
     resume_index = int(data.get("resume_index", 0))
     if not np.title or np.title == one_off_title:
         return  # still on the one-off song (or nothing playing yet)
     # Title changed → one-off ended; resume the queue
-    _ONE_OFF_FILE.unlink(missing_ok=True)
+    _one_off_file().unlink(missing_ok=True)
     _play_queue_at(resume_index)
 
 
@@ -273,7 +315,7 @@ def _play_queue_at(idx: int) -> str:
 @mcp.tool()
 def next_track() -> str:
     """Skip to the next track."""
-    _ONE_OFF_FILE.unlink(missing_ok=True)
+    _one_off_file().unlink(missing_ok=True)
     results_file = DATA_DIR / "last_results.json"
     if results_file.exists():
         try:
@@ -292,7 +334,7 @@ def next_track() -> str:
 @mcp.tool()
 def prev_track() -> str:
     """Go to the previous track."""
-    _ONE_OFF_FILE.unlink(missing_ok=True)
+    _one_off_file().unlink(missing_ok=True)
     results_file = DATA_DIR / "last_results.json"
     if results_file.exists():
         try:
@@ -446,14 +488,14 @@ def play_song(query: str) -> str:
     if has_queue:
         # Remember where to resume after this one-off song finishes
         try:
-            _ONE_OFF_FILE.write_text(
+            _one_off_file().write_text(
                 json.dumps({"one_off_title": np.title, "resume_index": _read_queue_index() + 1}),
                 encoding="utf-8",
             )
         except Exception:
             pass
     else:
-        _ONE_OFF_FILE.unlink(missing_ok=True)
+        _one_off_file().unlink(missing_ok=True)
     _refresh_now_playing()
     return f"▶ now playing: {np.title} — {np.artist or '—'}  source={np.source}"
 
