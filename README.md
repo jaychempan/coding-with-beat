@@ -6,7 +6,6 @@
 ![Codex CLI](https://img.shields.io/badge/Codex_CLI-compatible-10a37f?style=flat-square)
 ![MCP](https://img.shields.io/badge/MCP-28_tools-7c5cbf?style=flat-square)
 ![Apple Music](https://img.shields.io/badge/Apple_Music-supported-FC3C44?style=flat-square)
-![Version](https://img.shields.io/badge/version-0.1.0-9bbc0f?style=flat-square)
 ![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)
 [![Website](https://img.shields.io/badge/website-codebeat.top-9bbc0f?style=flat-square)](https://codebeat.top)
 
