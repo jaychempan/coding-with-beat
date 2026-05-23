@@ -36,7 +36,130 @@ _LEGACY_MCP_HTTP_HOST_ENV = "CC_JUKEBOX_MCP_HOST"
 _LEGACY_MCP_HTTP_PORT_ENV = "CC_JUKEBOX_MCP_PORT"
 _LEGACY_MCP_HTTP_PATH_ENV = "CC_JUKEBOX_MCP_PATH"
 CONTROL_REFRESH_DELAY = 0.4
-_ONE_OFF_FILE = DATA_DIR / "one_off_queue.json"
+
+
+def _one_off_file():
+    return DATA_DIR / "one_off_queue.json"
+
+
+def _queue_file(name: str):
+    if name not in ("library", "search"):
+        raise ValueError(f"unknown queue name: {name!r}")
+    return DATA_DIR / ("library_queue.json" if name == "library" else "search_queue.json")
+
+
+def _load_queue_file(name: str) -> dict:
+    """Load library or search queue. Returns dict with tracks, index, expected_title."""
+    try:
+        data = json.loads(_queue_file(name).read_text(encoding="utf-8"))
+        if data.get("tracks"):
+            return data
+    except Exception:
+        pass
+    # Legacy fallback: last_results.json + queue_index.json for search queue
+    if name == "search":
+        try:
+            raw = json.loads((DATA_DIR / "last_results.json").read_text(encoding="utf-8"))
+            if isinstance(raw, list) and raw:
+                try:
+                    idx = int(json.loads((DATA_DIR / "queue_index.json").read_text(encoding="utf-8")).get("index", -1))
+                except Exception:
+                    idx = -1
+                return {"tracks": raw, "index": idx, "expected_title": ""}
+        except Exception:
+            pass
+    return {"tracks": [], "index": 0, "expected_title": ""}
+
+
+def _write_queue_file(name: str, data: dict) -> None:
+    try:
+        _queue_file(name).write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+    except Exception:
+        pass
+
+
+def _read_active_mode() -> dict:
+    """Returns {mode, context}. Defaults to library for both."""
+    try:
+        return json.loads((DATA_DIR / "active_mode.json").read_text(encoding="utf-8"))
+    except Exception:
+        # Legacy fallback: if last_results.json exists, treat as search mode
+        if (DATA_DIR / "last_results.json").exists():
+            return {"mode": "search", "context": "search"}
+        return {"mode": "library", "context": "library"}
+
+
+def _write_active_mode(mode: str | None = None, context: str | None = None) -> None:
+    if mode is None and context is None:
+        return
+    current = _read_active_mode()
+    if mode is not None:
+        current["mode"] = mode
+    if context is not None:
+        current["context"] = context
+    try:
+        (DATA_DIR / "active_mode.json").write_text(json.dumps(current, ensure_ascii=False), encoding="utf-8")
+    except Exception:
+        pass
+
+
+_NATURAL_END_THRESHOLD = 5.0
+# Max gap between two consecutive polls before auto-advance is suppressed.
+# A large gap (e.g. server busy during a slow search) makes position data
+# unreliable, so we skip auto-advance to avoid false positives.
+_MAX_POLL_GAP = 12.0
+_np_state: dict = {"title": "", "position": 0.0, "duration": 0.0, "sampled_at": 0.0}
+
+
+def _auto_advance_if_needed(np) -> None:
+    """Auto-advance the active queue when a cwb-managed track ends naturally.
+
+    Distinguishes natural end (position near duration) from external switch
+    (position mid-song) so cwb does not steal control when the user clicks
+    a different song in Music.app.
+    """
+    now = time.time()
+    current_title = np.title or ""
+    current_position = float(np.position or 0.0)
+    current_duration = float(np.duration or 0.0)
+
+    prev_title = _np_state["title"]
+    prev_position = _np_state["position"]
+    prev_duration = _np_state["duration"]
+    prev_sampled_at = _np_state["sampled_at"]
+
+    _np_state["title"] = current_title
+    _np_state["position"] = current_position
+    _np_state["duration"] = current_duration
+    _np_state["sampled_at"] = now
+
+    if current_title == prev_title or not prev_title:
+        return
+    if _one_off_file().exists():
+        return  # _maybe_resume_queue handles one-off resumption
+    # If the server was busy (e.g. slow search) the position sample is stale —
+    # skip to avoid triggering a false auto-advance.
+    if prev_sampled_at > 0 and now - prev_sampled_at > _MAX_POLL_GAP:
+        return
+    if prev_duration <= 0 or prev_position < prev_duration - _NATURAL_END_THRESHOLD:
+        return  # external switch
+
+    am = _read_active_mode()
+    mode = am.get("mode", "library")
+    qdata = _load_queue_file(mode)
+    if qdata.get("expected_title", "") != prev_title:
+        return  # track was not cwb-managed
+
+    hits = qdata.get("tracks", [])
+    next_idx = qdata.get("index", 0) + 1
+
+    if mode == "search" and next_idx >= len(hits):
+        lib_data = _load_queue_file("library")
+        if lib_data.get("tracks"):
+            _write_active_mode(mode="library")
+            _play_queue_at(lib_data.get("index", 0), "library")
+    elif next_idx < len(hits):
+        _play_queue_at(next_idx, mode)
 
 
 def _env_first(name: str, legacy_name: str, default: str) -> str:
@@ -124,27 +247,76 @@ def _refresh_after_control(delay: float = CONTROL_REFRESH_DELAY):
     return _refresh_now_playing()
 
 
+def _queue_expected_hit() -> dict:
+    """Return the queue's current expected track dict, or {} if unavailable."""
+    try:
+        am = _read_active_mode()
+        qdata = _load_queue_file(am.get("mode", "library"))
+        expected = qdata.get("expected_title", "")
+        if not expected:
+            return {}
+        idx = qdata.get("index", 0)
+        hits = qdata.get("tracks", [])
+        hit = hits[idx] if 0 <= idx < len(hits) else {}
+        hit["_expected_title"] = expected
+        return hit
+    except Exception:
+        return {}
+
+
 def _now_playing_payload(st, np, known_lyrics_key: str = "") -> dict:
     source = np.source or st.source
-    lyrics_key = track_key(source, np.artist or "", np.album or "", np.title or "")
+    unsupported = _unsupported_reason(np)
+    if not np.title and not unsupported and st.track.title:
+        # Source reports nothing (stopped / transitioning): fall back to last known state.
+        title = st.track.title
+        artist = st.track.artist or ""
+        album = st.track.album or ""
+        duration = float(st.track.duration or 0.0)
+        cached_pos = float(st.track.position or 0.0)
+        sampled_at = float(st.track.position_sampled_at or 0.0)
+        if st.playing and sampled_at > 0:
+            position = min(cached_pos + (time.time() - sampled_at), duration)
+        else:
+            position = cached_pos
+        source = st.track.source or source
+    elif not np.playing and not unsupported:
+        # Paused: if cwb's queue has moved to a different track, show that track
+        # so the display stays in sync with next/prev even when playback is stuck.
+        qhit = _queue_expected_hit()
+        expected = qhit.get("_expected_title", "")
+        if expected and expected != (np.title or ""):
+            title = expected
+            artist = qhit.get("artist", "") or (np.artist or "")
+            album = qhit.get("album", "") or (np.album or "")
+            duration = float(qhit.get("duration", 0.0) or np.duration or 0.0)
+            position = 0.0
+        else:
+            title = np.title or ""
+            artist = np.artist or ""
+            album = np.album or ""
+            duration = float(np.duration or 0.0)
+            position = float(np.position or 0.0)
+    else:
+        title = np.title or ""
+        artist = np.artist or ""
+        album = np.album or ""
+        duration = float(np.duration or 0.0)
+        position = float(np.position or 0.0)
+    lyrics_key = track_key(source, artist, album, title)
     lyrics_text = ""
     lyrics_pending = False
-    if np.title and not _unsupported_reason(np):
-        lyrics_text, lyrics_pending = current_lyrics_text(
-            source,
-            np.artist or "",
-            np.album or "",
-            np.title or "",
-        )
+    if title and not unsupported:
+        lyrics_text, lyrics_pending = current_lyrics_text(source, artist, album, title)
         if lyrics_key and lyrics_key == known_lyrics_key:
             lyrics_text = ""
     return {
         "source": source,
-        "title": np.title or "",
-        "artist": np.artist or "",
-        "album": np.album or "",
-        "duration": float(np.duration or 0.0),
-        "position": float(np.position or 0.0),
+        "title": title,
+        "artist": artist,
+        "album": album,
+        "duration": duration,
+        "position": position,
         "playing": bool(np.playing),
         "artwork_path": np.artwork_path or "",
         "lyrics_key": lyrics_key,
@@ -175,20 +347,21 @@ def now_playing() -> str:
 
 def _maybe_resume_queue(np) -> None:
     """If a one-off song just ended (title changed), resume the saved queue."""
-    if not _ONE_OFF_FILE.exists():
+    if not _one_off_file().exists():
         return
     try:
-        data = json.loads(_ONE_OFF_FILE.read_text(encoding="utf-8"))
+        data = json.loads(_one_off_file().read_text(encoding="utf-8"))
     except Exception:
-        _ONE_OFF_FILE.unlink(missing_ok=True)
+        _one_off_file().unlink(missing_ok=True)
         return
     one_off_title = data.get("one_off_title", "")
+    resume_mode = data.get("resume_mode", "library")
     resume_index = int(data.get("resume_index", 0))
     if not np.title or np.title == one_off_title:
-        return  # still on the one-off song (or nothing playing yet)
-    # Title changed → one-off ended; resume the queue
-    _ONE_OFF_FILE.unlink(missing_ok=True)
-    _play_queue_at(resume_index)
+        return
+    _one_off_file().unlink(missing_ok=True)
+    _write_active_mode(mode=resume_mode)
+    _play_queue_at(resume_index, resume_mode)
 
 
 @mcp.tool()
@@ -196,6 +369,7 @@ def now_playing_snapshot(known_lyrics_key: str = "") -> str:
     """Return structured now-playing data as JSON for terminal integrations."""
     st, np = _refresh_now_playing()
     _maybe_resume_queue(np)
+    _auto_advance_if_needed(np)
     return json.dumps(_now_playing_payload(st, np, known_lyrics_key), ensure_ascii=False)
 
 
@@ -214,6 +388,51 @@ def play() -> str:
     return "▶ play"
 
 
+def _resume_from_state(st, src, np) -> str:
+    """Resume or unpause. If the right track is already paused, just unpause.
+    Otherwise re-search for the last known track and seek to its saved position."""
+    if np.title and np.title == st.track.title:
+        src.play()
+        _refresh_now_playing()
+        return "▶ play"
+    if not st.track.title:
+        src.play()
+        _refresh_now_playing()
+        return "▶ play"
+    query = f"{st.track.title} {st.track.artist or ''}".strip()
+    played = src.play_query(query)
+    if not played or not played.title:
+        return f"(could not resume '{st.track.title}' — not found in source={st.source})"
+    last_pos = float(st.track.position or 0.0)
+    if last_pos > 5:
+        for _ in range(4):
+            time.sleep(0.6)
+            try:
+                src.seek(last_pos)
+            except Exception:
+                pass
+            check = src.now_playing()
+            if check.position >= last_pos - 3:
+                break
+    _refresh_now_playing()
+    return f"▶ resumed: {played.title} — {played.artist or '—'} at {int(last_pos)}s"
+
+
+@mcp.tool()
+def resume() -> str:
+    """Resume the last known track from its saved position.
+    If the right track is already paused, just unpauses it.
+    Useful after an interruption (e.g. catalog popup) cleared the player."""
+    st = state.load()
+    if not st.track.title:
+        return "(nothing to resume — no last track recorded)"
+    src = get_source(st.source)
+    np = src.now_playing()
+    if np.title == st.track.title and np.playing:
+        return f"▶ already playing: {np.title}"
+    return _resume_from_state(st, src, np)
+
+
 @mcp.tool()
 def pause() -> str:
     """Pause playback on the active source."""
@@ -225,64 +444,63 @@ def pause() -> str:
 
 @mcp.tool()
 def toggle() -> str:
-    """Toggle play/pause."""
+    """Toggle play/pause. If interrupted (nothing loaded in the player), resumes
+    the last known track from its saved position instead of doing nothing."""
     st = state.load()
-    get_source(st.source).toggle()
-    _refresh_now_playing()
-    return "⇆ toggled"
+    src = get_source(st.source)
+    np = src.now_playing()
+    if np.playing:
+        src.pause()
+        _refresh_now_playing()
+        return "❚❚ paused"
+    return _resume_from_state(st, src, np)
 
 
-def _read_queue_index() -> int:
-    try:
-        f = DATA_DIR / "queue_index.json"
-        if f.exists():
-            return int(json.loads(f.read_text(encoding="utf-8")).get("index", -1))
-    except Exception:
-        pass
-    return -1
-
-
-def _write_queue_index(idx: int) -> None:
-    try:
-        (DATA_DIR / "queue_index.json").write_text(json.dumps({"index": idx}))
-    except Exception:
-        pass
-
-
-def _play_queue_at(idx: int) -> str:
-    """Play last_results[idx] the same way play_number does. Returns status string."""
-    results_file = DATA_DIR / "last_results.json"
-    try:
-        hits = json.loads(results_file.read_text(encoding="utf-8"))
-    except Exception:
-        hits = []
+def _play_queue_at(idx: int, queue_name: str | None = None) -> str:
+    """Play queue_name[idx]. queue_name defaults to the active mode."""
+    if queue_name is None:
+        queue_name = _read_active_mode().get("mode", "library")
+    qdata = _load_queue_file(queue_name)
+    hits = qdata.get("tracks", [])
     if not hits:
         return ""
     idx = idx % len(hits)
-    _write_queue_index(idx)
     hit = hits[idx]
     query = f"{hit['title']} {hit.get('artist', '')}".strip()
     st = state.load()
     src = get_source(st.source)
     np = src.play_query(query)
     _refresh_after_control()
-    title = (np.title if np else None) or hit.get("title", "?")
+    title = (np.title if np and not _unsupported_reason(np) else None) or hit.get("title", "?")
+    qdata["index"] = idx
+    qdata["expected_title"] = title
+    _write_queue_file(queue_name, qdata)
+    _write_active_mode(mode=queue_name)
     return f"[{idx + 1}/{len(hits)}] {title}"
 
 
 @mcp.tool()
 def next_track() -> str:
     """Skip to the next track."""
-    _ONE_OFF_FILE.unlink(missing_ok=True)
-    results_file = DATA_DIR / "last_results.json"
-    if results_file.exists():
-        try:
-            hits = json.loads(results_file.read_text(encoding="utf-8"))
-            if hits:
-                result = _play_queue_at(_read_queue_index() + 1)
-                return f"⏭ next  {result}"
-        except Exception:
-            pass
+    _one_off_file().unlink(missing_ok=True)
+    am = _read_active_mode()
+    mode = am.get("mode", "library")
+    qdata = _load_queue_file(mode)
+    hits = qdata.get("tracks", [])
+    if hits:
+        next_idx = qdata.get("index", 0) + 1
+        if next_idx < len(hits):
+            result = _play_queue_at(next_idx, mode)
+            return f"⏭ next  {result}"
+        if mode == "search":
+            lib_data = _load_queue_file("library")
+            if lib_data.get("tracks"):
+                _write_active_mode(mode="library", context="library")
+                result = _play_queue_at(lib_data.get("index", 0), "library")
+                return f"⏭ next (→ library)  {result}"
+        if mode == "library":
+            result = _play_queue_at(0, "library")
+            return f"⏭ next (wrap → 1)  {result}"
     st = state.load()
     get_source(st.source).next()
     _refresh_after_control()
@@ -292,16 +510,25 @@ def next_track() -> str:
 @mcp.tool()
 def prev_track() -> str:
     """Go to the previous track."""
-    _ONE_OFF_FILE.unlink(missing_ok=True)
-    results_file = DATA_DIR / "last_results.json"
-    if results_file.exists():
-        try:
-            hits = json.loads(results_file.read_text(encoding="utf-8"))
-            if hits:
-                result = _play_queue_at(_read_queue_index() - 1)
-                return f"⏮ prev  {result}"
-        except Exception:
-            pass
+    _one_off_file().unlink(missing_ok=True)
+    am = _read_active_mode()
+    mode = am.get("mode", "library")
+    qdata = _load_queue_file(mode)
+    hits = qdata.get("tracks", [])
+    if hits:
+        prev_idx = qdata.get("index", 0) - 1
+        if prev_idx >= 0:
+            result = _play_queue_at(prev_idx, mode)
+            return f"⏮ prev  {result}"
+        if mode == "search":
+            lib_data = _load_queue_file("library")
+            if lib_data.get("tracks"):
+                _write_active_mode(mode="library", context="library")
+                result = _play_queue_at(lib_data.get("index", 0), "library")
+                return f"⏮ prev (→ library)  {result}"
+        if mode == "library":
+            result = _play_queue_at(len(hits) - 1, "library")
+            return f"⏮ prev (wrap → {len(hits)})  {result}"
     st = state.load()
     get_source(st.source).prev()
     _refresh_after_control()
@@ -349,37 +576,38 @@ def set_play_mode(mode: str) -> str:
 
 
 @mcp.tool()
-def list_library(limit: int = 100) -> str:
+async def list_library(limit: int = 100) -> str:
     """List all tracks in the library of the current source."""
+    import asyncio
+
     st = state.load()
     src = get_source(st.source)
     fn = getattr(src, "list_library", None)
     if not callable(fn):
         return f"(list not supported for source={st.source})"
-    hits = fn(limit=limit)
+    hits = await asyncio.to_thread(fn, limit)
+    _write_queue_file("library", {"tracks": hits or [], "index": 0, "expected_title": ""})
+    _write_active_mode(context="library")
     if not hits:
         return "(library is empty)"
-    try:
-        (DATA_DIR / "last_results.json").write_text(json.dumps(hits, ensure_ascii=False))
-    except Exception:
-        pass
     return "\n".join(
         f"{i + 1}. {h['title']} — {h.get('artist', '?')} · {h.get('album', '?')}" for i, h in enumerate(hits)
     )
 
 
 @mcp.tool()
-def search(query: str, limit: int = 8) -> str:
+async def search(query: str, limit: int = 8) -> str:
     """Search the current source for tracks matching the query. Returns a
-    numbered list. Use this before play_song if multiple matches are likely."""
+    numbered list. Does NOT affect current playback. Only call play_number
+    or play_song if the user explicitly asks to play a specific result."""
+    import asyncio
+
     st = state.load()
-    hits = get_source(st.source).search(query, limit=limit)
+    hits = await asyncio.to_thread(get_source(st.source).search, query, limit)
     if not hits:
         return f"(no matches for '{query}' in source={st.source})"
-    try:
-        (DATA_DIR / "last_results.json").write_text(json.dumps(hits, ensure_ascii=False))
-    except Exception:
-        pass
+    _write_queue_file("search", {"tracks": hits, "index": 0, "expected_title": ""})
+    _write_active_mode(context="search")
     lines = []
     for i, h in enumerate(hits):
         tag = (
@@ -396,13 +624,10 @@ def search(query: str, limit: int = 8) -> str:
 @mcp.tool()
 def play_number(number: int) -> str:
     """Play a track by its 1-based index from the last search or list results."""
-    results_file = DATA_DIR / "last_results.json"
-    if not results_file.exists():
-        return "(no match — no last results, run 'search' or 'list' first)"
-    try:
-        hits = json.loads(results_file.read_text(encoding="utf-8"))
-    except Exception:
-        return "(no match — could not read last results)"
+    am = _read_active_mode()
+    context = am.get("context", "library")
+    qdata = _load_queue_file(context)
+    hits = qdata.get("tracks", [])
     if not hits or number < 1 or number > len(hits):
         count = len(hits) if hits else 0
         return f"(no match — #{number} out of range, last results had {count} items)"
@@ -411,6 +636,16 @@ def play_number(number: int) -> str:
     st = state.load()
     src = get_source(st.source)
     np = src.play_query(query)
+
+    # Always update queue position so next/prev stay aligned, even when the
+    # track can't be played (catalog track, no subscription, etc.).
+    effective_title = (np.title if np and not _unsupported_reason(np) else None) or hit.get("title", "?")
+    qdata["index"] = number - 1
+    qdata["expected_title"] = effective_title
+    _write_queue_file(context, qdata)
+    _write_active_mode(mode=context)
+    _one_off_file().unlink(missing_ok=True)
+
     if not np:
         return f"(no match for '{query}' in source={st.source})"
     if _unsupported_reason(np) == "preview_playing":
@@ -421,7 +656,6 @@ def play_number(number: int) -> str:
         return _unsupported(np.source or st.source, "play_number", _unsupported_reason(np))
     if not np.title:
         return _unsupported(st.source, "play_number", "The source returned no playable track.")
-    _write_queue_index(number - 1)
     _refresh_now_playing()
     return f"▶ now playing: {np.title} — {np.artist or '—'}  source={np.source}"
 
@@ -429,7 +663,10 @@ def play_number(number: int) -> str:
 @mcp.tool()
 def play_song(query: str) -> str:
     """Search for and start playing the first match for 'query'."""
-    has_queue = (DATA_DIR / "last_results.json").exists()
+    am = _read_active_mode()
+    mode = am.get("mode", "library")
+    qdata = _load_queue_file(mode)
+    has_queue = bool(qdata.get("tracks"))
     st = state.load()
     src = get_source(st.source)
     np = src.play_query(query)
@@ -444,16 +681,21 @@ def play_song(query: str) -> str:
     if not np.title:
         return _unsupported(st.source, "play_song", "The source returned no playable track.")
     if has_queue:
-        # Remember where to resume after this one-off song finishes
         try:
-            _ONE_OFF_FILE.write_text(
-                json.dumps({"one_off_title": np.title, "resume_index": _read_queue_index() + 1}),
+            _one_off_file().write_text(
+                json.dumps(
+                    {
+                        "one_off_title": np.title,
+                        "resume_mode": mode,
+                        "resume_index": qdata.get("index", 0) + 1,
+                    }
+                ),
                 encoding="utf-8",
             )
         except Exception:
             pass
     else:
-        _ONE_OFF_FILE.unlink(missing_ok=True)
+        _one_off_file().unlink(missing_ok=True)
     _refresh_now_playing()
     return f"▶ now playing: {np.title} — {np.artist or '—'}  source={np.source}"
 

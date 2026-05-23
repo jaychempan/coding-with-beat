@@ -54,12 +54,18 @@ cd coding-with-beat
 ### Codex CLI
 
 ```bash
+curl -LsSf https://raw.githubusercontent.com/jaychempan/coding-with-beat/main/bootstrap_codex.sh | sh
+```
+
+手動インストール：
+
+```bash
 git clone https://github.com/jaychempan/coding-with-beat.git
 cd coding-with-beat
 ./install_codex.sh
 ```
 
-Codex CLI が未インストールの場合は npm で自動インストールし、`~/.codex/config.toml`・hooks・`cwb` スキルを設定します。プロキシは自動検出されます。
+Codex CLI が未インストールの場合は npm で自動インストールし、`~/.codex/config.toml`・hooks・`cwb` スキルを設定します。プロキシは自動検出されます。再実行しても安全で、完了済みのステップは自動的にスキップされます。
 
 フック、プロキシ、気分通知、ステータスライン代替の完全ガイドは **[README_CODEX.md](README_CODEX.md)** を参照してください。
 
@@ -103,6 +109,7 @@ lofi をかけて
 | `n` | 次の曲 |
 | `p` | 前の曲 |
 | `l` | お気に入り |
+| `0-9` | 曲番号を入力して `Enter` でジャンプ |
 | `q` | 終了 |
 
 ---

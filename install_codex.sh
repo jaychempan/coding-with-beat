@@ -101,9 +101,13 @@ else
 fi
 
 VENV_PY="$VENV/bin/python"
-"$VENV_PY" -m pip install --quiet --upgrade pip
-"$VENV_PY" -m pip install --quiet -e "$REPO"
-ok "coding-with-beat installed"
+if [ -x "$VENV/bin/cwb" ]; then
+  ok "coding-with-beat already installed — skipping pip"
+else
+  "$VENV_PY" -m pip install --quiet --upgrade pip
+  "$VENV_PY" -m pip install --quiet -e "$REPO"
+  ok "coding-with-beat installed"
+fi
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 3. Symlink cwb to ~/.local/bin/
@@ -113,7 +117,12 @@ mkdir -p "$BIN_DIR"
 TARGET="$VENV/bin/cwb"
 LINK="$BIN_DIR/cwb"
 [ -x "$TARGET" ] || die "expected $TARGET to exist after install"
-[ -L "$LINK" ] || [ ! -e "$LINK" ] && ln -sfn "$TARGET" "$LINK" && ok "linked cwb -> $TARGET"
+if [ "$(readlink "$LINK" 2>/dev/null)" = "$TARGET" ]; then
+  ok "cwb already linked"
+elif [ -L "$LINK" ] || [ ! -e "$LINK" ]; then
+  ln -sfn "$TARGET" "$LINK"
+  ok "linked cwb -> $TARGET"
+fi
 
 inject_path() {
   local rc="$1"; [ -f "$rc" ] || return 0
@@ -279,6 +288,19 @@ with open(plist, "wb") as f: plistlib.dump(data, f)
 PY
 
   local domain="gui/$(id -u)"
+  # Skip restart if the server is already responding at the configured URL
+  if "$VENV_PY" - "$host" "$port" 2>/dev/null <<'PY'
+import socket, sys
+try:
+    with socket.create_connection((sys.argv[1], int(sys.argv[2])), timeout=0.5):
+        raise SystemExit(0)
+except OSError:
+    raise SystemExit(1)
+PY
+  then
+    ok "MCP server already running at $MCP_URL"
+    return 0
+  fi
   launchctl bootout "$domain" "$plist" >/dev/null 2>&1 || true
   if launchctl bootstrap "$domain" "$plist" >/dev/null 2>&1; then
     launchctl kickstart -k "$domain/$label" >/dev/null 2>&1 || true

@@ -32,7 +32,7 @@ from ._tui import (
     restore_tty,
     setup_raw_tty,
 )
-from .config import DATA_DIR
+from .config import DATA_DIR, STATE_FILE
 from .mcp_client import MCPClientError, call_tool
 from .ui.frame import _strip_ansi
 from .ui.lyrics import _display_width, render_lyrics_window
@@ -51,6 +51,69 @@ _GREEN = "\x1b[38;2;155;188;15m"
 _CUR = "\x1b[1;38;2;255;230;100m"
 _RESET = "\x1b[0m"
 
+_CC_QUIP_TTL = 7.0  # seconds a CC quip stays visible in watch
+_cc_state_cache: list = [None, 0.0]  # [dict | None, timestamp]
+_CC_STATE_CACHE_TTL = 0.8
+
+
+def _load_cc_state() -> dict:
+    """Read dj_mood/dj_quip/dj_quip_at from state.json (cached)."""
+    now = time.time()
+    if _cc_state_cache[0] is not None and now - _cc_state_cache[1] < _CC_STATE_CACHE_TTL:
+        return _cc_state_cache[0]
+    try:
+        raw = json.loads(STATE_FILE.read_text(encoding="utf-8"))
+        result = {
+            "dj_mood": raw.get("dj_mood") or "neutral",
+            "dj_quip": raw.get("dj_quip") or "",
+            "dj_quip_at": float(raw.get("dj_quip_at") or 0.0),
+        }
+    except Exception:
+        result = {"dj_mood": "neutral", "dj_quip": "", "dj_quip_at": 0.0}
+    _cc_state_cache[0] = result
+    _cc_state_cache[1] = now
+    return result
+
+
+def _speech_bubble(text: str, sprite_x: int, width: int) -> list[str]:
+    """Return 3 display lines: top border, text, downward pointer — bubble above sprite."""
+    max_t = max(4, min(width - sprite_x - 4, 28))
+    if len(text) > max_t:
+        text = text[: max_t - 1] + "…"
+    inner = len(text) + 2  # one space padding each side
+    # Center bubble over the sprite
+    bx = max(0, min(sprite_x + _SPRITE_W // 2 - (inner + 2) // 2, width - inner - 2))
+    ptr_x = sprite_x + _SPRITE_W // 2  # ▼ points at sprite center
+
+    top = " " * bx + _DIM + "╭" + "─" * inner + "╮" + _RESET
+    mid = " " * bx + _DIM + "│" + _RESET + " " + _BOLD + text + _RESET + " " + _DIM + "│" + _RESET
+    bot = " " * ptr_x + _DIM + "▼" + _RESET
+
+    return [_pad(top, width), _pad(mid, width), _pad(bot, width)]
+
+
+def _snap_from_state_file() -> dict:
+    """Build a minimal snap from state.json so watch has something to show before
+    the first server response arrives (covers server restarts and cold starts)."""
+    try:
+        data = json.loads((DATA_DIR / "state.json").read_text(encoding="utf-8"))
+        track = data.get("track", {})
+        if not track.get("title"):
+            return {}
+        return {
+            "title": track.get("title", ""),
+            "artist": track.get("artist", ""),
+            "album": track.get("album", ""),
+            "duration": float(track.get("duration") or 0.0),
+            "position": float(track.get("position") or 0.0),
+            "playing": bool(data.get("playing", False)),
+            "source": track.get("source") or data.get("source", ""),
+            "artwork_path": track.get("artwork_path") or "",
+            "sampled_at": float(track.get("position_sampled_at") or 0.0),
+        }
+    except Exception:
+        return {}
+
 
 def _fetch(known_key: str = "") -> dict:
     raw = call_tool("now_playing_snapshot", {"known_lyrics_key": known_key})
@@ -66,6 +129,24 @@ def _interp_pos(snap: dict) -> float:
 
 
 _control_lock = threading.Lock()
+_fetch_lock = threading.Lock()
+_fetch_result: list[dict | None] = [None]  # [0] holds latest completed fetch
+
+
+def _fetch_async(known_key: str) -> None:
+    """Fire a snapshot fetch in a background thread; store result in _fetch_result."""
+    if not _fetch_lock.acquire(blocking=False):
+        return  # previous fetch still in flight; skip — render loop uses old snap
+
+    def _run():
+        try:
+            _fetch_result[0] = _fetch(known_key)
+        except MCPClientError:
+            pass
+        finally:
+            _fetch_lock.release()
+
+    threading.Thread(target=_run, daemon=True).start()
 
 
 def _control(tool: str) -> None:
@@ -119,14 +200,30 @@ def _trunc(s: str, width: int) -> str:
 
 
 def _load_queue() -> tuple[list[dict], int]:
+    # Use context (last listed/searched) for display, not mode (currently playing).
+    # This mirrors the old last_results.json behaviour: the panel always shows
+    # whatever the user most recently loaded, whether or not playback has started.
     try:
-        tracks = json.loads((DATA_DIR / "last_results.json").read_text(encoding="utf-8"))
+        am = json.loads((DATA_DIR / "active_mode.json").read_text(encoding="utf-8"))
+        context = am.get("context", "library")
+    except Exception:
+        context = "library"
+    fname = "library_queue.json" if context == "library" else "search_queue.json"
+    try:
+        data = json.loads((DATA_DIR / fname).read_text(encoding="utf-8"))
+        tracks = data.get("tracks", [])
+        cur_idx = int(data.get("index", -1))
     except Exception:
         tracks = []
-    try:
-        cur_idx = int(json.loads((DATA_DIR / "queue_index.json").read_text(encoding="utf-8")).get("index", -1))
-    except Exception:
         cur_idx = -1
+    # Fall back to legacy last_results.json (plain list) if no new-format file exists.
+    if not tracks:
+        try:
+            raw = json.loads((DATA_DIR / "last_results.json").read_text(encoding="utf-8"))
+            if isinstance(raw, list):
+                tracks = raw
+        except Exception:
+            pass
     return tracks, cur_idx
 
 
@@ -157,10 +254,22 @@ def _render_player_top(snap: dict, width: int, height: int, t: float) -> list[st
 
 
 def _render_lyrics_bottom(
-    lyrics_text: str, pos: float, dur: float, width: int, height: int, playing: bool, t: float = 0.0
+    lyrics_text: str,
+    pos: float,
+    dur: float,
+    width: int,
+    height: int,
+    playing: bool,
+    t: float = 0.0,
+    cc_mood: str = "",
+    cc_quip: str = "",
 ) -> list[str]:
     """Bottom-left panel: lyrics (top) + animated pixel person walking/jumping below."""
-    mood = "groove" if playing else "neutral"
+    has_quip = bool(cc_quip)
+    if cc_mood and cc_mood != "neutral":
+        mood = cc_mood
+    else:
+        mood = "groove" if playing else "neutral"
     sprite_h = 7  # pixel-person frames are always 7 lines
     stage_h = sprite_h + JUMP_ROWS  # rows reserved for sprite + jump headroom
 
@@ -181,15 +290,19 @@ def _render_lyrics_bottom(
     content = content[:lyrics_h]
 
     if show_sprite:
-        # ── jump: pseudo-random per 4-second window via golden-ratio hash ──
-        bucket = int(t / 4.0)
-        will_jump = (math.sin(bucket * 1.6180339) + 1.0) / 2.0 > 0.4
-        if will_jump:
-            t_local = (t % 4.0) / 4.0
-            y_lift = max(0.0, math.sin(t_local * math.pi))
-            y = int(y_lift * JUMP_ROWS)
-        else:
+        # ── jump: suppressed while CC quip is showing ──
+        if has_quip:
+            will_jump = False
             y = 0
+        else:
+            bucket = int(t / 4.0)
+            will_jump = (math.sin(bucket * 1.6180339) + 1.0) / 2.0 > 0.4
+            if will_jump:
+                t_local = (t % 4.0) / 4.0
+                y_lift = max(0.0, math.sin(t_local * math.pi))
+                y = int(y_lift * JUMP_ROWS)
+            else:
+                y = 0
 
         # ── horizontal walk: two incommensurable sine waves ──
         max_x = max(0, width - _SPRITE_W)
@@ -205,13 +318,20 @@ def _render_lyrics_bottom(
 
         sprite_lines = dj.pixel_person_frame(mood, frame_idx).split("\n")
 
-        # Place sprite in vertical stage (y=0 → on ground; y=JUMP_ROWS → airborne)
-        top_blank = JUMP_ROWS - y
-        bottom_blank = y
-        stage_rows = [""] * top_blank + sprite_lines + [""] * bottom_blank
+        # ── speech bubble occupies the jump-headroom rows ──
+        if has_quip:
+            bubble = _speech_bubble(cc_quip, x_offset, width)
+            stage_rows = bubble + sprite_lines
+        else:
+            top_blank = JUMP_ROWS - y
+            bottom_blank = y
+            stage_rows = [""] * top_blank + sprite_lines + [""] * bottom_blank
 
-        # Apply horizontal offset
-        positioned = [_pad(" " * x_offset + line, width) for line in stage_rows]
+        # Apply horizontal offset to sprite lines (bubble already full-width)
+        if has_quip:
+            positioned = stage_rows  # bubble rows are already _pad-ded
+        else:
+            positioned = [_pad(" " * x_offset + line, width) for line in stage_rows]
         rows = content + [_sep(width)] + positioned
     else:
         rows = content
@@ -317,7 +437,9 @@ def run(width: int = 0) -> int:
     signal.signal(signal.SIGTERM, _quit)
     signal.signal(signal.SIGWINCH, _resize)
 
-    snap: dict = {}
+    # Seed snap from state.json so the display is never blank on startup or
+    # after a server restart — the server's _np_state resets but state.json persists.
+    snap: dict = _snap_from_state_file()
     lyrics_text = ""
     lyrics_key = ""
     last_fetch = 0.0
@@ -386,24 +508,43 @@ def run(width: int = 0) -> int:
 
             now = time.time()
 
+            # Kick off a background fetch when it's time; never block the loop.
             if now - last_fetch >= FETCH_EVERY:
-                try:
-                    new = _fetch(lyrics_key)
-                    if new.get("lyrics_text"):
-                        lyrics_text = new["lyrics_text"]
-                        lyrics_key = new.get("lyrics_key", "")
-                    elif new.get("lyrics_key") and new["lyrics_key"] != lyrics_key:
-                        lyrics_text = ""
-                        if not new.get("lyrics_pending"):
-                            lyrics_key = new["lyrics_key"]
-                    snap = new
-                    last_fetch = now
-                except MCPClientError:
-                    pass
+                _fetch_async(lyrics_key)
+                last_fetch = now
+
+            # Drain the latest completed fetch result (may be None if none ready).
+            new = _fetch_result[0]
+            if new is not None:
+                _fetch_result[0] = None
+                # If the player reports no title (stopped / transitioning), keep the
+                # last known song info so the display never goes blank.
+                if not new.get("title") and snap.get("title"):
+                    new = {
+                        **new,
+                        "title": snap["title"],
+                        "artist": snap.get("artist", ""),
+                        "album": snap.get("album", ""),
+                        "duration": snap.get("duration", 0.0),
+                        "position": snap.get("position", 0.0),
+                        "sampled_at": snap.get("sampled_at", 0.0),
+                        # playing intentionally NOT preserved — use server's value
+                        # so paused/stopped state is reflected correctly
+                    }
+                if new.get("lyrics_text"):
+                    lyrics_text = new["lyrics_text"]
+                    lyrics_key = new.get("lyrics_key", "")
+                elif new.get("lyrics_key") and new["lyrics_key"] != lyrics_key:
+                    lyrics_text = ""
+                    if not new.get("lyrics_pending"):
+                        lyrics_key = new["lyrics_key"]
+                snap = new
+
+            if new is not None:
                 queue, cur_idx = _load_queue()
-                # Keep queue highlight in sync even when Apple Music plays
-                # a track not triggered via cwb (queue_index.json would be stale).
-                if snap.get("title") and queue:
+                # Only rescan when something is actively playing — if paused/stopped,
+                # trust the queue's stored index so cwb next/prev stays in sync.
+                if snap.get("playing") and snap.get("title") and queue:
                     playing_title = snap["title"]
                     need_scan = cur_idx < 0 or cur_idx >= len(queue) or queue[cur_idx].get("title", "") != playing_title
                     if need_scan:
@@ -434,16 +575,40 @@ def run(width: int = 0) -> int:
                 dur = float(snap.get("duration", 0.0))
                 playing = snap.get("playing", False)
 
+                cc = _load_cc_state()
+                cc_quip = cc["dj_quip"] if now - cc["dj_quip_at"] < _CC_QUIP_TTL else ""
+                cc_mood = cc["dj_mood"]
+
                 player_lines = _render_player_top(snap, left_w, top_h, now)
-                lyrics_lines = _render_lyrics_bottom(lyrics_text, pos, dur, left_w, bot_h, playing, now)
+                lyrics_lines = _render_lyrics_bottom(
+                    lyrics_text,
+                    pos,
+                    dur,
+                    left_w,
+                    bot_h,
+                    playing,
+                    now,
+                    cc_mood=cc_mood,
+                    cc_quip=cc_quip,
+                )
                 queue_lines = _render_queue_lines(queue, cur_idx, right_w, panels_h)
                 frame = _compose3(player_lines, lyrics_lines, queue_lines, left_w, panels_h)
 
                 if num_buf:
-                    hint_text = f">> {num_buf}_   Enter confirm  Esc cancel"
+                    if total_w >= 38:
+                        hint_text = f">> {num_buf}_   Enter confirm  Esc cancel"
+                    else:
+                        hint_text = f">> {num_buf}_  ↵ ok  Esc×"
                     hint_styled = f"{_GREEN}{hint_text}{_RESET}"
                 else:
-                    hint_text = "space pause  n next  p prev  l like  q quit  0-9 go to #"
+                    if total_w >= 56:
+                        hint_text = "space pause  n next  p prev  l like  q quit  0-9 go to #"
+                    elif total_w >= 40:
+                        hint_text = "spc  n next  p prev  l like  q quit  0-9 #"
+                    elif total_w >= 26:
+                        hint_text = "spc  n/p  l  q  0-9 #"
+                    else:
+                        hint_text = "spc n p l q"
                     hint_styled = f"{_DIM}{hint_text}{_RESET}"
                 hint_pad = max(0, (total_w - len(hint_text)) // 2)
                 hint_line = " " * hint_pad + hint_styled

@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
-# coding-with-beat one-liner installer for Claude Code.
+# coding-with-beat one-liner installer for Codex CLI.
 #
 # Usage:
-#   curl -LsSf https://raw.githubusercontent.com/jaychempan/coding-with-beat/main/bootstrap.sh | sh
+#   curl -LsSf https://raw.githubusercontent.com/jaychempan/coding-with-beat/main/bootstrap_codex.sh | sh
 #
 # What it does:
 #   1. Makes sure git is available.
 #   2. Sparse-clones only the files needed for installation into ~/.coding-with-beat/src
 #      (skips tests/, docs/, assets/, README files — install-only footprint).
-#   3. Runs install.sh, which handles the rest — including bootstrapping
-#      Python via uv if your machine doesn't have one.
+#   3. Runs install_codex.sh, which handles the rest — including proxy detection,
+#      Codex CLI install, and MCP server setup.
 #
 # Override the repo URL with CWB_REPO=... if you've forked it.
 set -euo pipefail
@@ -17,14 +17,14 @@ set -euo pipefail
 REPO_URL="${CWB_REPO:-https://github.com/jaychempan/coding-with-beat.git}"
 DEST="${CWB_SRC:-$HOME/.coding-with-beat/src}"
 
-# Only the files install.sh actually needs — nothing else is fetched.
+# Only the files install_codex.sh actually needs — nothing else is fetched.
 _SPARSE_PATHS=(
   coding_with_beat
-  commands
-  scripts/install_settings.py
+  codex_skills
+  scripts/install_codex_config.py
   pyproject.toml
-  install.sh
-  uninstall.sh
+  install_codex.sh
+  uninstall_codex.sh
 )
 
 if ! command -v git >/dev/null 2>&1; then
@@ -44,4 +44,4 @@ else
   git -C "$DEST" sparse-checkout set "${_SPARSE_PATHS[@]}"
 fi
 
-exec bash "$DEST/install.sh" "$@"
+exec bash "$DEST/install_codex.sh" "$@"

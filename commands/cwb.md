@@ -1,8 +1,8 @@
 ---
-description: Control coding-with-beat (play / pause / skip / now-playing / music source / like / mode). Use $ARGUMENTS as a free-form intent.
+description: Control coding-with-beat (play / pause / skip / now-playing / music source / like / mode / search / list). Use $ARGUMENTS as a free-form intent.
 disable-model-invocation: true
 allowed-tools: Bash
-argument-hint: "[source <apple_music|qq_music|local> | play <query> | like | mode <shuffle|sequential|repeat> | karaoke | pause | next | prev | status]"
+argument-hint: "<play|search|list|pause|next|prev|status|like|mode|source> [args]"
 ---
 
 If the coding-with-beat UserPromptExpansion hook is installed, this command is handled
@@ -22,6 +22,9 @@ Parse the intent and pick exactly ONE action. If empty or ambiguous, default to 
 |---|---|
 | play/start + `<query>` | `cwb play <query>` |
 | play/resume with no query | `cwb play` |
+| resume/继续/恢复 (after interruption) | `cwb resume` |
+| search/find/搜索/找 + `<query>` | `cwb search <query>` |
+| list/library/资料库/列表 | `cwb list` |
 | pause/stop | `cwb pause` |
 | next/skip | `cwb next` |
 | previous/back | `cwb prev` |
@@ -33,7 +36,7 @@ Parse the intent and pick exactly ONE action. If empty or ambiguous, default to 
 | status | `cwb status` |
 | lyrics/karaoke | `cwb karaoke` |
 
-For a play-by-query, the `<query>` is the rest of the text after the verb (artist name, song name, mood — pass it through verbatim, including Chinese). Quote it.
+For search or play-by-query, the `<query>` is the rest of the text after the verb (artist name, song name, mood — pass it through verbatim, including Chinese). Quote it.
 
 ## Run it
 
@@ -45,6 +48,8 @@ Examples:
 
 ```bash
 cwb play "lofi beats"
+cwb search "刘德华"
+cwb list
 cwb source apple_music
 cwb source qq_music
 cwb like

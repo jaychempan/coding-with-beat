@@ -72,12 +72,18 @@ Open a new shell and a new Claude Code session. When `(•_•)` appears in the 
 ### Codex CLI
 
 ```bash
+curl -LsSf https://raw.githubusercontent.com/jaychempan/coding-with-beat/main/bootstrap_codex.sh | sh
+```
+
+Or manually:
+
+```bash
 git clone https://github.com/jaychempan/coding-with-beat.git
 cd coding-with-beat
 ./install_codex.sh
 ```
 
-Installs Codex CLI if needed, configures `~/.codex/config.toml` with the MCP endpoint, writes hooks, and installs the `cwb` skill so Codex recognises music commands automatically. Proxy is auto-detected.
+Installs Codex CLI if needed, configures `~/.codex/config.toml` with the MCP endpoint, writes hooks, and installs the `cwb` skill so Codex recognises music commands automatically. Proxy is auto-detected. Re-running is safe — already-completed steps are skipped automatically.
 
 See **[README_CODEX.md](README_CODEX.md)** for the full integration guide — hooks, proxy, mood reactions, statusline alternatives, and debugging.
 
@@ -123,6 +129,7 @@ Natural-language commands work too: `skip this track`, `pause`, `what's playing`
 | `n` | Next |
 | `p` | Previous |
 | `l` | Like |
+| `0-9` | Type a track number + `Enter` to jump to it |
 | `q` | Quit |
 
 ---

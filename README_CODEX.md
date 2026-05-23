@@ -32,12 +32,18 @@ A complete guide to running coding-with-beat with **OpenAI Codex CLI** (`@openai
 ## Installation
 
 ```bash
+curl -LsSf https://raw.githubusercontent.com/jaychempan/coding-with-beat/main/bootstrap_codex.sh | sh
+```
+
+Or manually:
+
+```bash
 git clone https://github.com/jaychempan/coding-with-beat.git
 cd coding-with-beat
 ./install_codex.sh
 ```
 
-The one-click installer does everything in order:
+The installer does everything in order, skipping steps that are already complete:
 
 1. **Finds Python ≥3.10** — tries system Python, falls back to bootstrapping `uv` + Python 3.12
 2. **Creates a shared venv** at `~/.coding-with-beat/venv` and installs coding-with-beat (editable)
@@ -103,11 +109,15 @@ Example mood shifts:
 
 | Event | Mood | Vibe |
 |-------|------|------|
-| `git commit` / `Bash` with "commit" | `victory` | `commit` |
-| Test runner fails | `panic` | `debug` |
-| File write burst | `focus` | `build` |
-| Reading docs | `calm` | `research` |
-| Long silence | `neutral` | — |
+| `git commit` (Bash) | `victory` | `victory` |
+| `git push` (Bash) | `happy` | `victory` |
+| Test runner succeeds | `victory` | `victory` |
+| Test runner fails | `sad` | `fail` |
+| File edit / write | `focus` | `build` |
+| Editing test files | `focus` | `debug` |
+| Reading / searching files | `thinking` | `review` |
+| Session start | `happy` | `focus` |
+| Session stop | `sleep` | `idle` |
 
 When a significant mood change occurs (victory / panic / sad), Codex shows a **DJ Buddy notification** as a `systemMessage`:
 
@@ -191,9 +201,30 @@ cwb list                # lists library tracks via MCP
 cwb np                  # now playing via MCP
 cwb search "jazz"       # search via MCP
 cwb status              # full status via MCP
+cwb history             # recently played tracks
+cwb player              # pixel player panel
+cwb lyrics              # lyrics window
 ```
 
 Or just ask: `what's playing?` `show me the library` `search for jazz`.
+
+### `cwb watch` / `cwb karaoke` — run directly in terminal
+
+These open interactive TUI sessions; run them directly in your shell, not via Codex:
+
+```bash
+cwb watch       # live player TUI (q to quit)
+cwb karaoke     # full-screen karaoke (q to quit)
+```
+
+| Key | Action |
+|-----|--------|
+| `Space` | Play / pause |
+| `n` | Next |
+| `p` | Previous |
+| `l` | Like |
+| `0-9` | Type a track number + `Enter` to jump to it |
+| `q` | Quit |
 
 ### Project auto-play
 

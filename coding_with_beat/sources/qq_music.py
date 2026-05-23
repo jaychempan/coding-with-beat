@@ -293,7 +293,7 @@ class QQMusic(LocalFiles):
         s["source"] = self.name
         _write(s)
 
-    def play_query(self, query: str) -> Optional[NowPlaying]:
+    def play_query(self, query: str, library_only: bool = False) -> Optional[NowPlaying]:
         hits = self._api_search(query, limit=1)
         if not hits:
             return None
