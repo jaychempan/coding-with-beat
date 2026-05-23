@@ -36,12 +36,12 @@ mkdir -p "$(dirname "$DEST")"
 if [ -d "$DEST/.git" ]; then
   echo "↻ updating coding-with-beat at $DEST"
   git -C "$DEST" checkout -- '*.egg-info/' 2>/dev/null || true
-  git -C "$DEST" sparse-checkout set "${_SPARSE_PATHS[@]}"
+  git -C "$DEST" sparse-checkout set --no-cone "${_SPARSE_PATHS[@]}"
   git -C "$DEST" pull --ff-only
 else
   echo "⤓ cloning coding-with-beat (sparse) into $DEST"
   git clone --depth 1 --filter=blob:none --sparse "$REPO_URL" "$DEST"
-  git -C "$DEST" sparse-checkout set "${_SPARSE_PATHS[@]}"
+  git -C "$DEST" sparse-checkout set --no-cone "${_SPARSE_PATHS[@]}"
 fi
 
 exec bash "$DEST/install.sh" "$@"
