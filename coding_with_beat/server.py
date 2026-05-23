@@ -622,6 +622,79 @@ async def search(query: str, limit: int = 8) -> str:
 
 
 @mcp.tool()
+async def smart_search(description: str, limit: int = 8) -> str:
+    """Natural-language music search for AI callers (Claude Code / Codex CLI).
+
+    IMPORTANT — translate `description` into music keywords BEFORE calling:
+
+    Mood / emotion
+      "安静" / "calm"          → "ambient instrumental chill"
+      "想兴奋起来" / "hype"    → "energetic upbeat electronic"
+      "放松" / "relax"         → "relaxing calm downtempo"
+      "伤感" / "sad"           → "melancholy emotional piano"
+
+    Scene / time
+      "深夜写代码"             → "lofi hip hop late night study"
+      "早晨跑步"               → "running motivation pop upbeat"
+      "专注 / 摸鱼"            → "focus deep work instrumental"
+      "通勤路上"               → "commute indie pop"
+
+    Style reference
+      "像 Daft Punk 那种"      → "electronic synth funk dance"
+      "带点爵士"               → "jazz fusion smooth"
+      "复古感"                 → "vintage retro soul funk"
+      "纯音乐 / no vocals"     → append "instrumental"
+
+    Pass the expanded keyword string as `description`, not the raw user text.
+
+    Searches Apple Music library (marked [资料库]), Apple Music catalog
+    (marked [Apple Music]), and local files (marked [本地]). Results are
+    numbered — use play_number() to play by index.
+    """
+    import asyncio
+
+    am_hits, local_hits = await asyncio.gather(
+        asyncio.to_thread(get_source("apple_music").search, description, limit),
+        asyncio.to_thread(get_source("local").search, description, limit),
+    )
+
+    seen: set[str] = set()
+    merged: list[dict] = []
+
+    def _dedup_add(hits: list) -> None:
+        for h in hits:
+            key = f"{h.get('title', '').lower()}|{h.get('artist', '').lower()}"
+            if key not in seen:
+                seen.add(key)
+                merged.append(h)
+
+    _dedup_add(am_hits or [])
+    _dedup_add(local_hits or [])
+
+    if not merged:
+        return f"(no matches for '{description}')"
+
+    _write_queue_file("search", {"tracks": merged, "index": 0, "expected_title": ""})
+    _write_active_mode(context="search")
+
+    lines = []
+    for i, h in enumerate(merged):
+        src = h.get("source", "")
+        if src == "library":
+            tag = " [资料库]"
+        elif src == "apple_music":
+            tag = " [Apple Music]"
+        elif src == "local":
+            tag = " [本地]"
+        else:
+            tag = ""
+        lines.append(
+            f"{i + 1}. {h['title']} — {h.get('artist', '?')} · {h.get('album', '?')}{tag}"
+        )
+    return "\n".join(lines)
+
+
+@mcp.tool()
 def play_number(number: int) -> str:
     """Play a track by its 1-based index from the last search or list results."""
     am = _read_active_mode()
