@@ -120,12 +120,17 @@ def _trunc(s: str, width: int) -> str:
 
 def _load_queue() -> tuple[list[dict], int]:
     try:
-        tracks = json.loads((DATA_DIR / "last_results.json").read_text(encoding="utf-8"))
+        am = json.loads((DATA_DIR / "active_mode.json").read_text(encoding="utf-8"))
+        mode = am.get("mode", "library")
+    except Exception:
+        mode = "library"
+    fname = "library_queue.json" if mode == "library" else "search_queue.json"
+    try:
+        data = json.loads((DATA_DIR / fname).read_text(encoding="utf-8"))
+        tracks = data.get("tracks", [])
+        cur_idx = int(data.get("index", -1))
     except Exception:
         tracks = []
-    try:
-        cur_idx = int(json.loads((DATA_DIR / "queue_index.json").read_text(encoding="utf-8")).get("index", -1))
-    except Exception:
         cur_idx = -1
     return tracks, cur_idx
 
