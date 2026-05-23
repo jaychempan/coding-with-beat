@@ -20,6 +20,7 @@ import math
 import shutil
 import signal
 import sys
+import threading
 import time
 
 from . import dj
@@ -64,11 +65,28 @@ def _interp_pos(snap: dict) -> float:
     return max(0.0, min(pos, dur) if dur > 0 else pos)
 
 
+_control_lock = threading.Lock()
+
+
 def _control(tool: str) -> None:
     try:
         call_tool(tool)
     except MCPClientError:
         pass
+
+
+def _control_async(tool: str) -> None:
+    """Fire a control command in a background thread so the render loop stays live."""
+    if not _control_lock.acquire(blocking=False):
+        return  # previous command still running; skip
+    def _run():
+        try:
+            call_tool(tool)
+        except MCPClientError:
+            pass
+        finally:
+            _control_lock.release()
+    threading.Thread(target=_run, daemon=True).start()
 
 
 def _sep(width: int) -> str:
@@ -313,36 +331,50 @@ def run(width: int = 0) -> int:
 
             # Flush number buffer on timeout even without new key
             if num_buf and time.time() - num_ts >= _NUM_TIMEOUT:
-                try:
-                    call_tool("play_number", {"number": int(num_buf)})
-                    last_fetch = 0.0
-                except MCPClientError:
-                    pass
+                n = int(num_buf)
                 num_buf = ""
+                def _play_n(n=n):
+                    if not _control_lock.acquire(blocking=False):
+                        return
+                    try:
+                        call_tool("play_number", {"number": n})
+                    except MCPClientError:
+                        pass
+                    finally:
+                        _control_lock.release()
+                threading.Thread(target=_play_n, daemon=True).start()
+                last_fetch = time.time() - FETCH_EVERY + 1.5
 
             if key in ("q", "Q", "\x03"):
                 break
             if key == " ":
-                _control("toggle")
-                last_fetch = 0.0
+                _control_async("toggle")
+                last_fetch = time.time() - FETCH_EVERY + 0.8
             elif key in ("n", "N"):
-                _control("next_track")
-                last_fetch = 0.0
+                _control_async("next_track")
+                last_fetch = time.time() - FETCH_EVERY + 1.5
             elif key in ("p", "P"):
-                _control("prev_track")
-                last_fetch = 0.0
+                _control_async("prev_track")
+                last_fetch = time.time() - FETCH_EVERY + 1.5
             elif key in ("l", "L"):
-                _control("like_current")
+                _control_async("like_current")
             elif key and key.isdigit():
                 num_buf += key
                 num_ts = time.time()
             elif key in ("\r", "\n") and num_buf:
-                try:
-                    call_tool("play_number", {"number": int(num_buf)})
-                    last_fetch = 0.0
-                except MCPClientError:
-                    pass
+                n = int(num_buf)
                 num_buf = ""
+                def _play_n(n=n):
+                    if not _control_lock.acquire(blocking=False):
+                        return
+                    try:
+                        call_tool("play_number", {"number": n})
+                    except MCPClientError:
+                        pass
+                    finally:
+                        _control_lock.release()
+                threading.Thread(target=_play_n, daemon=True).start()
+                last_fetch = time.time() - FETCH_EVERY + 1.5
             elif key == "\x1b":  # ESC cancels number input
                 num_buf = ""
 
@@ -356,7 +388,8 @@ def run(width: int = 0) -> int:
                         lyrics_key = new.get("lyrics_key", "")
                     elif new.get("lyrics_key") and new["lyrics_key"] != lyrics_key:
                         lyrics_text = ""
-                        lyrics_key = new["lyrics_key"]
+                        if not new.get("lyrics_pending"):
+                            lyrics_key = new["lyrics_key"]
                     snap = new
                     last_fetch = now
                 except MCPClientError:
@@ -364,9 +397,14 @@ def run(width: int = 0) -> int:
                 queue, cur_idx = _load_queue()
                 # Keep queue highlight in sync even when Apple Music plays
                 # a track not triggered via cwb (queue_index.json would be stale).
-                if snap.get("title") and queue and cur_idx < len(queue):
+                if snap.get("title") and queue:
                     playing_title = snap["title"]
-                    if queue[cur_idx].get("title", "") != playing_title:
+                    need_scan = (
+                        cur_idx < 0
+                        or cur_idx >= len(queue)
+                        or queue[cur_idx].get("title", "") != playing_title
+                    )
+                    if need_scan:
                         for j, t in enumerate(queue):
                             if t.get("title", "") == playing_title:
                                 cur_idx = j

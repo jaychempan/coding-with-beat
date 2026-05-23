@@ -3,6 +3,7 @@
 ![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white)
 ![Platform](https://img.shields.io/badge/platform-macOS-000000?style=flat-square&logo=apple&logoColor=white)
 ![Claude Code](https://img.shields.io/badge/Claude_Code-compatible-c85f41?style=flat-square)
+![Codex CLI](https://img.shields.io/badge/Codex_CLI-compatible-10a37f?style=flat-square)
 ![MCP](https://img.shields.io/badge/MCP-28_tools-7c5cbf?style=flat-square)
 ![Apple Music](https://img.shields.io/badge/Apple_Music-supported-FC3C44?style=flat-square)
 ![Version](https://img.shields.io/badge/version-0.1.0-9bbc0f?style=flat-square)
@@ -15,7 +16,7 @@
 
 ![](assets/welcome_log.png)
 
-A pixel-art DJ companion that lives inside Claude Code. It plays music, shows lyrics, celebrates when you commit, and panics with you when tests fail.
+A retro pixel DJ companion for Claude Code / Codex CLI / Terminal. It plays music, shows lyrics, celebrates when you commit, and panics with you when tests fail.
 
 [中文文档](README_CN.md) ／ [日本語](README_JP.md)
 
@@ -28,7 +29,7 @@ A pixel-art DJ companion that lives inside Claude Code. It plays music, shows ly
     <td><img src="assets/screen_2.png"/></td>
   </tr>
   <tr>
-    <th align="center" colspan="2">Claude Statusline</th>
+    <th align="center" colspan="2">AI Statusline</th>
   </tr>
   <tr>
     <td colspan="2"><img src="assets/screen_3.png" width="100%"/></td>
@@ -39,7 +40,7 @@ A pixel-art DJ companion that lives inside Claude Code. It plays music, shows ly
 
 ## Features
 
-- **MCP server** — 28 tools so you can tell Claude "play some lofi", "skip this", "what's playing" and it just works.
+- **MCP server** — 28 tools so you can tell your AI "play some lofi", "skip this", "what's playing" and it just works.
 - **Music sources** — Apple Music (AppleScript, no GUI needed), local files (afplay), QQ Music (search + preview).
 - **Pixel UI** — Album art in half-block ANSI, GameBoy retro border, pseudo-spectrum equalizer.
 - **DJ Buddy** — A headphones-wearing pixel character that reacts to your coding state. Tests failing? It panics with you.
@@ -50,6 +51,8 @@ A pixel-art DJ companion that lives inside Claude Code. It plays music, shows ly
 ---
 
 ## Installation
+
+### Claude Code
 
 ```bash
 curl -LsSf https://raw.githubusercontent.com/jaychempan/coding-with-beat/main/bootstrap.sh | sh
@@ -63,19 +66,27 @@ cd coding-with-beat
 ./install.sh
 ```
 
-The installer configures Claude Code to use the HTTP MCP endpoint at `http://127.0.0.1:8765/mcp`, saves that URL to `~/.coding-with-beat/mcp-url`, and on macOS starts a user LaunchAgent for the local MCP server. For debugging, you can run it by hand:
-
-```bash
-cwb server --host 127.0.0.1 --port 8765 --path /mcp
-```
+The installer configures Claude Code to use the HTTP MCP endpoint at `http://127.0.0.1:8765/mcp`, saves that URL to `~/.coding-with-beat/mcp-url`, and on macOS starts a user LaunchAgent for the local MCP server.
 
 Open a new shell and a new Claude Code session. When `(•_•)` appears in the statusline, you're good.
+
+### Codex CLI
+
+```bash
+git clone https://github.com/jaychempan/coding-with-beat.git
+cd coding-with-beat
+./install_codex.sh
+```
+
+Installs Codex CLI if needed, configures `~/.codex/config.toml` with the MCP endpoint, writes hooks, and installs the `cwb` skill so Codex recognises music commands automatically. Proxy is auto-detected.
+
+See **[README_CODEX.md](README_CODEX.md)** for the full integration guide — hooks, proxy, mood reactions, statusline alternatives, and debugging.
 
 ---
 
 ## Usage
 
-### Just talk to Claude
+### Just talk to your AI assistant
 
 ```
 play some lofi
@@ -197,22 +208,24 @@ vim.o.statusline = "%f %m%r %= %{v:lua.cwb.text}"
 
 ---
 
-## SSH Remote Claude Code
+## SSH Remote (Claude Code / Codex CLI on a server)
 
-If Claude Code runs on a server while Apple Music runs on your local Mac, run the streamable HTTP MCP server on the Mac and reach it from the server through SSH reverse port forwarding:
+If your AI CLI runs on a remote server while Apple Music runs on your local Mac, run the streamable HTTP MCP server on the Mac and reach it from the server through SSH reverse port forwarding:
 
 ```bash
 # Local Mac: install and start the HTTP MCP LaunchAgent
-./install.sh
+./install.sh          # for Claude Code
+./install_codex.sh    # for Codex CLI
 
 # Local Mac: expose it to the server's 127.0.0.1:8765
 ssh -N -R 127.0.0.1:8765:127.0.0.1:8765 user@server
 
 # Server: install hooks/statusline and point them at the forwarded endpoint
-./install.sh --mcp-url http://127.0.0.1:8765/mcp
+./install.sh --mcp-url http://127.0.0.1:8765/mcp          # Claude Code
+./install_codex.sh --mcp-url http://127.0.0.1:8765/mcp    # Codex CLI
 ```
 
-The remote Claude Code session, `/cwb`, statusline, hooks, and `cwb` CLI all use the same HTTP MCP URL. As long as the SSH tunnel is up, commands like `cwb play`, `cwb np`, `cwb next`, `cwb player`, and `cwb karaoke` control the Mac-side music client.
+The remote session, `/cwb`, statusline, hooks, and `cwb` CLI all use the same HTTP MCP URL. As long as the SSH tunnel is up, commands like `cwb play`, `cwb np`, `cwb next`, `cwb player`, and `cwb karaoke` control the Mac-side music client.
 
 ---
 
@@ -265,8 +278,13 @@ cwb server              # MCP streamable HTTP server
 ## Uninstall
 
 ```bash
+# Claude Code
 ./uninstall.sh           # remove config, commands, PATH
 ./uninstall.sh --purge   # same + delete ~/.coding-with-beat/
+
+# Codex CLI
+./uninstall_codex.sh           # remove Codex config, skill, LaunchAgent
+./uninstall_codex.sh --purge   # same + delete ~/.coding-with-beat/
 ```
 
 ---
