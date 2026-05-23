@@ -135,14 +135,6 @@ def _load_queue() -> tuple[list[dict], int]:
     except Exception:
         tracks = []
         cur_idx = -1
-    # Fallback: if new queue files are empty, try the legacy last_results.json
-    # so the panel isn't blank after upgrading without re-running cwb list/search.
-    if not tracks:
-        try:
-            tracks = json.loads((DATA_DIR / "last_results.json").read_text(encoding="utf-8"))
-            cur_idx = -1
-        except Exception:
-            tracks = []
     return tracks, cur_idx
 
 
