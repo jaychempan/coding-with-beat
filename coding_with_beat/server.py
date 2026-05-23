@@ -209,13 +209,12 @@ def _needs_library_add(np) -> str:
     title = np.title or "?"
     artist = np.artist or "—"
     return (
-        f'Found "{title} — {artist}" in the Apple Music catalog, but full playback did not start.\n'
-        "Opened the Music.app search page. Add the track to your library, then try again.\n"
-        "(Automatic catalog playback requires an active Apple Music subscription.)"
+        f'Opened Music.app for "{title} — {artist}".\n'
+        "Add the track to your library, then just say \"play it\" and I'll start it right away."
     )
 
 
-def _wait_and_play_from_library(src, title: str, artist: str, timeout: int = 45, interval: int = 3) -> Optional[str]:
+def _wait_and_play_from_library(src, title: str, artist: str, timeout: int = 15, interval: int = 3) -> Optional[str]:
     """Poll until the track appears in the local library, then play it.
 
     Returns a '▶ now playing' string on success, or None on timeout.
