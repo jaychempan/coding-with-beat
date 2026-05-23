@@ -129,6 +129,7 @@ class ServerPlaybackMessageTest(unittest.TestCase):
                 mock.patch.object(server, "DATA_DIR", data_dir),
                 mock.patch.object(server.state, "load", return_value=SimpleNamespace(source="apple_music")),
                 mock.patch.object(server, "get_source", return_value=source),
+                mock.patch.object(server, "_wait_and_play_from_library", return_value=None),
             ):
                 text = server.play_number(1)
 

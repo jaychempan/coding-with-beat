@@ -215,6 +215,26 @@ def _needs_library_add(np) -> str:
     )
 
 
+def _wait_and_play_from_library(src, title: str, artist: str, timeout: int = 45, interval: int = 3) -> Optional[str]:
+    """Poll until the track appears in the local library, then play it.
+
+    Returns a '▶ now playing' string on success, or None on timeout.
+    """
+    import time
+
+    query = f"{title} {artist}".strip()
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        time.sleep(interval)
+        hits = src.search(query, 3)
+        library_hit = next((h for h in (hits or []) if h.get("source") == "library"), None)
+        if library_hit:
+            np2 = src.play_query(query)
+            if np2 and not _unsupported_reason(np2) and np2.title:
+                return f"▶ now playing: {np2.title} — {np2.artist or '—'}  source={np2.source}"
+    return None
+
+
 def _refresh_now_playing():
     st = state.load()
     old_key = track_key(st.track.source or st.source, st.track.artist, st.track.album, st.track.title)
@@ -724,6 +744,11 @@ def play_number(number: int) -> str:
     if _unsupported_reason(np) == "preview_playing":
         return _preview_message(np)
     if _unsupported_reason(np) == "needs_library_add":
+        title = np.title or hit.get("title", "")
+        artist = np.artist or hit.get("artist", "")
+        result = _wait_and_play_from_library(src, title, artist)
+        if result:
+            return result
         return _needs_library_add(np)
     if _unsupported_reason(np):
         return _unsupported(np.source or st.source, "play_number", _unsupported_reason(np))
@@ -748,6 +773,9 @@ def play_song(query: str) -> str:
     if _unsupported_reason(np) == "preview_playing":
         return _preview_message(np)
     if _unsupported_reason(np) == "needs_library_add":
+        result = _wait_and_play_from_library(src, np.title or "", np.artist or "")
+        if result:
+            return result
         return _needs_library_add(np)
     if _unsupported_reason(np):
         return _unsupported(np.source or st.source, "play_song", _unsupported_reason(np))
