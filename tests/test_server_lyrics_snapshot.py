@@ -133,7 +133,7 @@ class ServerPlaybackMessageTest(unittest.TestCase):
             ):
                 text = server.play_number(1)
 
-        self.assertIn('Found "孤勇者 — 陈奕迅" in the Apple Music catalog', text)
+        self.assertIn('Opened Music.app for "孤勇者 — 陈奕迅"', text)
         self.assertIn("Add the track to your library", text)
         self.assertNotIn("unsupported", text)
 
