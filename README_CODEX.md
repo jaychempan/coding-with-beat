@@ -103,11 +103,15 @@ Example mood shifts:
 
 | Event | Mood | Vibe |
 |-------|------|------|
-| `git commit` / `Bash` with "commit" | `victory` | `commit` |
-| Test runner fails | `panic` | `debug` |
-| File write burst | `focus` | `build` |
-| Reading docs | `calm` | `research` |
-| Long silence | `neutral` | — |
+| `git commit` (Bash) | `victory` | `victory` |
+| `git push` (Bash) | `happy` | `victory` |
+| Test runner succeeds | `victory` | `victory` |
+| Test runner fails | `sad` | `fail` |
+| File edit / write | `focus` | `build` |
+| Editing test files | `focus` | `debug` |
+| Reading / searching files | `thinking` | `review` |
+| Session start | `happy` | `focus` |
+| Session stop | `sleep` | `idle` |
 
 When a significant mood change occurs (victory / panic / sad), Codex shows a **DJ Buddy notification** as a `systemMessage`:
 
@@ -191,9 +195,30 @@ cwb list                # lists library tracks via MCP
 cwb np                  # now playing via MCP
 cwb search "jazz"       # search via MCP
 cwb status              # full status via MCP
+cwb history             # recently played tracks
+cwb player              # pixel player panel
+cwb lyrics              # lyrics window
 ```
 
 Or just ask: `what's playing?` `show me the library` `search for jazz`.
+
+### `cwb watch` / `cwb karaoke` — run directly in terminal
+
+These open interactive TUI sessions; run them directly in your shell, not via Codex:
+
+```bash
+cwb watch       # live player TUI (q to quit)
+cwb karaoke     # full-screen karaoke (q to quit)
+```
+
+| Key | Action |
+|-----|--------|
+| `Space` | Play / pause |
+| `n` | Next |
+| `p` | Previous |
+| `l` | Like |
+| `0-9` | Type a track number + `Enter` to jump to it |
+| `q` | Quit |
 
 ### Project auto-play
 
