@@ -30,3 +30,5 @@ Display results in three groups with labels, renumber globally (1, 2, 3… acros
 (results from angle 3)
 
 End with: 喜欢哪首？说编号我来播。
+
+Do NOT auto-play.
