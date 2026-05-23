@@ -295,17 +295,15 @@ def _write_queue_index(idx: int) -> None:
         pass
 
 
-def _play_queue_at(idx: int) -> str:
-    """Play last_results[idx] the same way play_number does. Returns status string."""
-    results_file = DATA_DIR / "last_results.json"
-    try:
-        hits = json.loads(results_file.read_text(encoding="utf-8"))
-    except Exception:
-        hits = []
+def _play_queue_at(idx: int, queue_name: str | None = None) -> str:
+    """Play queue_name[idx]. queue_name defaults to the active mode."""
+    if queue_name is None:
+        queue_name = _read_active_mode().get("mode", "library")
+    qdata = _load_queue_file(queue_name)
+    hits = qdata.get("tracks", [])
     if not hits:
         return ""
     idx = idx % len(hits)
-    _write_queue_index(idx)
     hit = hits[idx]
     query = f"{hit['title']} {hit.get('artist', '')}".strip()
     st = state.load()
@@ -313,6 +311,10 @@ def _play_queue_at(idx: int) -> str:
     np = src.play_query(query)
     _refresh_after_control()
     title = (np.title if np else None) or hit.get("title", "?")
+    qdata["index"] = idx
+    qdata["expected_title"] = title
+    _write_queue_file(queue_name, qdata)
+    _write_active_mode(mode=queue_name)
     return f"[{idx + 1}/{len(hits)}] {title}"
 
 
@@ -438,13 +440,10 @@ def search(query: str, limit: int = 8) -> str:
 @mcp.tool()
 def play_number(number: int) -> str:
     """Play a track by its 1-based index from the last search or list results."""
-    results_file = DATA_DIR / "last_results.json"
-    if not results_file.exists():
-        return "(no match — no last results, run 'search' or 'list' first)"
-    try:
-        hits = json.loads(results_file.read_text(encoding="utf-8"))
-    except Exception:
-        return "(no match — could not read last results)"
+    am = _read_active_mode()
+    context = am.get("context", "library")
+    qdata = _load_queue_file(context)
+    hits = qdata.get("tracks", [])
     if not hits or number < 1 or number > len(hits):
         count = len(hits) if hits else 0
         return f"(no match — #{number} out of range, last results had {count} items)"
@@ -463,7 +462,11 @@ def play_number(number: int) -> str:
         return _unsupported(np.source or st.source, "play_number", _unsupported_reason(np))
     if not np.title:
         return _unsupported(st.source, "play_number", "The source returned no playable track.")
-    _write_queue_index(number - 1)
+    qdata["index"] = number - 1
+    qdata["expected_title"] = np.title
+    _write_queue_file(context, qdata)
+    _write_active_mode(mode=context)
+    _one_off_file().unlink(missing_ok=True)
     _refresh_now_playing()
     return f"▶ now playing: {np.title} — {np.artist or '—'}  source={np.source}"
 
