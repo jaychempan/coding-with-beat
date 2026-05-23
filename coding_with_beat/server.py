@@ -394,7 +394,7 @@ def _resume_from_state(st, src, np) -> str:
     if np.title and np.title == st.track.title:
         src.play()
         _refresh_now_playing()
-        return f"▶ play"
+        return "▶ play"
     if not st.track.title:
         src.play()
         _refresh_now_playing()
@@ -454,7 +454,6 @@ def toggle() -> str:
         _refresh_now_playing()
         return "❚❚ paused"
     return _resume_from_state(st, src, np)
-
 
 
 def _play_queue_at(idx: int, queue_name: str | None = None) -> str:
@@ -580,6 +579,7 @@ def set_play_mode(mode: str) -> str:
 async def list_library(limit: int = 100) -> str:
     """List all tracks in the library of the current source."""
     import asyncio
+
     st = state.load()
     src = get_source(st.source)
     fn = getattr(src, "list_library", None)
@@ -601,6 +601,7 @@ async def search(query: str, limit: int = 8) -> str:
     numbered list. Does NOT affect current playback. Only call play_number
     or play_song if the user explicitly asks to play a specific result."""
     import asyncio
+
     st = state.load()
     hits = await asyncio.to_thread(get_source(st.source).search, query, limit)
     if not hits:
@@ -682,11 +683,13 @@ def play_song(query: str) -> str:
     if has_queue:
         try:
             _one_off_file().write_text(
-                json.dumps({
-                    "one_off_title": np.title,
-                    "resume_mode": mode,
-                    "resume_index": qdata.get("index", 0) + 1,
-                }),
+                json.dumps(
+                    {
+                        "one_off_title": np.title,
+                        "resume_mode": mode,
+                        "resume_index": qdata.get("index", 0) + 1,
+                    }
+                ),
                 encoding="utf-8",
             )
         except Exception:

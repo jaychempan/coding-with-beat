@@ -79,7 +79,7 @@ def _speech_bubble(text: str, sprite_x: int, width: int) -> list[str]:
     """Return 3 display lines: top border, text, downward pointer — bubble above sprite."""
     max_t = max(4, min(width - sprite_x - 4, 28))
     if len(text) > max_t:
-        text = text[:max_t - 1] + "…"
+        text = text[: max_t - 1] + "…"
     inner = len(text) + 2  # one space padding each side
     # Center bubble over the sprite
     bx = max(0, min(sprite_x + _SPRITE_W // 2 - (inner + 2) // 2, width - inner - 2))
@@ -137,6 +137,7 @@ def _fetch_async(known_key: str) -> None:
     """Fire a snapshot fetch in a background thread; store result in _fetch_result."""
     if not _fetch_lock.acquire(blocking=False):
         return  # previous fetch still in flight; skip — render loop uses old snap
+
     def _run():
         try:
             _fetch_result[0] = _fetch(known_key)
@@ -144,6 +145,7 @@ def _fetch_async(known_key: str) -> None:
             pass
         finally:
             _fetch_lock.release()
+
     threading.Thread(target=_run, daemon=True).start()
 
 
@@ -252,8 +254,15 @@ def _render_player_top(snap: dict, width: int, height: int, t: float) -> list[st
 
 
 def _render_lyrics_bottom(
-    lyrics_text: str, pos: float, dur: float, width: int, height: int, playing: bool,
-    t: float = 0.0, cc_mood: str = "", cc_quip: str = "",
+    lyrics_text: str,
+    pos: float,
+    dur: float,
+    width: int,
+    height: int,
+    playing: bool,
+    t: float = 0.0,
+    cc_mood: str = "",
+    cc_quip: str = "",
 ) -> list[str]:
     """Bottom-left panel: lyrics (top) + animated pixel person walking/jumping below."""
     has_quip = bool(cc_quip)
@@ -572,8 +581,15 @@ def run(width: int = 0) -> int:
 
                 player_lines = _render_player_top(snap, left_w, top_h, now)
                 lyrics_lines = _render_lyrics_bottom(
-                    lyrics_text, pos, dur, left_w, bot_h, playing, now,
-                    cc_mood=cc_mood, cc_quip=cc_quip,
+                    lyrics_text,
+                    pos,
+                    dur,
+                    left_w,
+                    bot_h,
+                    playing,
+                    now,
+                    cc_mood=cc_mood,
+                    cc_quip=cc_quip,
                 )
                 queue_lines = _render_queue_lines(queue, cur_idx, right_w, panels_h)
                 frame = _compose3(player_lines, lyrics_lines, queue_lines, left_w, panels_h)

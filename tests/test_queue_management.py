@@ -92,6 +92,7 @@ class TestListLibraryWritesQueue(unittest.TestCase):
 
         class FakeSrc:
             name = "apple_music"
+
             def list_library(self, limit=100):
                 return fake_tracks
 
@@ -112,6 +113,7 @@ class TestListLibraryWritesQueue(unittest.TestCase):
 
         class FakeSrc:
             name = "apple_music"
+
             def list_library(self, limit=100):
                 return [{"title": "L", "artist": "", "album": ""}]
 
@@ -195,6 +197,7 @@ class TestPlayNumber(unittest.TestCase):
 
     def _fake_np(self, title="Song A", artist="Art"):
         from coding_with_beat.sources.base import NowPlaying
+
         np = NowPlaying()
         np.title = title
         np.artist = artist
@@ -219,16 +222,26 @@ class TestPlayNumber(unittest.TestCase):
             def play_query(self, query):
                 played_queries.append(query)
                 from coding_with_beat.sources.base import NowPlaying
+
                 np = NowPlaying()
-                np.title = "Search Song"; np.artist = "S"; np.album = ""
-                np.duration = 200.0; np.position = 0.0; np.playing = True
+                np.title = "Search Song"
+                np.artist = "S"
+                np.album = ""
+                np.duration = 200.0
+                np.position = 0.0
+                np.playing = True
                 np.source = "apple_music"
                 return np
 
         from coding_with_beat.sources.base import NowPlaying as _NP
+
         _rnp_np = _NP()
-        _rnp_np.title = "Search Song"; _rnp_np.artist = "S"; _rnp_np.album = ""
-        _rnp_np.duration = 200.0; _rnp_np.position = 0.0; _rnp_np.playing = True
+        _rnp_np.title = "Search Song"
+        _rnp_np.artist = "S"
+        _rnp_np.album = ""
+        _rnp_np.duration = 200.0
+        _rnp_np.position = 0.0
+        _rnp_np.playing = True
         _rnp_np.source = "apple_music"
 
         with (
@@ -249,16 +262,23 @@ class TestPlayNumber(unittest.TestCase):
         class FakeSrc:
             def play_query(self, query):
                 from coding_with_beat.sources.base import NowPlaying
+
                 np = NowPlaying()
-                np.title = "S"; np.artist = "A"; np.album = ""
-                np.duration = 200.0; np.position = 0.0; np.playing = True
+                np.title = "S"
+                np.artist = "A"
+                np.album = ""
+                np.duration = 200.0
+                np.position = 0.0
+                np.playing = True
                 np.source = "apple_music"
                 return np
 
         with (
             mock.patch.object(srv, "get_source", return_value=FakeSrc()),
             mock.patch.object(srv.state, "load", return_value=srv.state.JukeboxState()),
-            mock.patch.object(srv, "_refresh_now_playing", return_value=(srv.state.JukeboxState(), FakeSrc().play_query(""))),
+            mock.patch.object(
+                srv, "_refresh_now_playing", return_value=(srv.state.JukeboxState(), FakeSrc().play_query(""))
+            ),
         ):
             srv.play_number(1)
 
@@ -272,16 +292,23 @@ class TestPlayNumber(unittest.TestCase):
         class FakeSrc:
             def play_query(self, query):
                 from coding_with_beat.sources.base import NowPlaying
+
                 np = NowPlaying()
-                np.title = "MySong"; np.artist = "Art"; np.album = ""
-                np.duration = 200.0; np.position = 0.0; np.playing = True
+                np.title = "MySong"
+                np.artist = "Art"
+                np.album = ""
+                np.duration = 200.0
+                np.position = 0.0
+                np.playing = True
                 np.source = "apple_music"
                 return np
 
         with (
             mock.patch.object(srv, "get_source", return_value=FakeSrc()),
             mock.patch.object(srv.state, "load", return_value=srv.state.JukeboxState()),
-            mock.patch.object(srv, "_refresh_now_playing", return_value=(srv.state.JukeboxState(), FakeSrc().play_query(""))),
+            mock.patch.object(
+                srv, "_refresh_now_playing", return_value=(srv.state.JukeboxState(), FakeSrc().play_query(""))
+            ),
         ):
             srv.play_number(1)
 
@@ -303,7 +330,8 @@ class TestNextPrev(unittest.TestCase):
     def _fake_play_queue_at(self, calls):
         def _fake(idx, queue_name=None):
             calls.append((idx, queue_name))
-            return f"[{idx+1}] played"
+            return f"[{idx + 1}] played"
+
         return _fake
 
     def test_next_track_advances_search_queue(self):
@@ -340,7 +368,7 @@ class TestNextPrev(unittest.TestCase):
 
         calls = []
         with mock.patch.object(srv, "_play_queue_at", side_effect=self._fake_play_queue_at(calls)):
-            result = srv.prev_track()
+            srv.prev_track()
 
         self.assertEqual(calls[0], (1, "library"))
 
@@ -368,10 +396,15 @@ class TestPlaySongAndResume(unittest.TestCase):
 
     def _make_np(self, title, playing=True):
         from coding_with_beat.sources.base import NowPlaying
+
         np = NowPlaying()
-        np.title = title; np.artist = "A"; np.album = "B"
-        np.duration = 200.0; np.position = 0.0
-        np.playing = playing; np.source = "apple_music"
+        np.title = title
+        np.artist = "A"
+        np.album = "B"
+        np.duration = 200.0
+        np.position = 0.0
+        np.playing = playing
+        np.source = "apple_music"
         return np
 
     def test_play_song_saves_resume_mode_to_one_off_file(self):
@@ -383,15 +416,23 @@ class TestPlaySongAndResume(unittest.TestCase):
         class FakeSrc:
             def play_query(self, q):
                 from coding_with_beat.sources.base import NowPlaying
+
                 np = NowPlaying()
-                np.title = "One Off"; np.artist = ""; np.album = ""; np.duration = 180.0
-                np.position = 0.0; np.playing = True; np.source = "apple_music"
+                np.title = "One Off"
+                np.artist = ""
+                np.album = ""
+                np.duration = 180.0
+                np.position = 0.0
+                np.playing = True
+                np.source = "apple_music"
                 return np
 
         with (
             mock.patch.object(srv, "get_source", return_value=FakeSrc()),
             mock.patch.object(srv.state, "load", return_value=srv.state.JukeboxState()),
-            mock.patch.object(srv, "_refresh_now_playing", return_value=(srv.state.JukeboxState(), FakeSrc().play_query(""))),
+            mock.patch.object(
+                srv, "_refresh_now_playing", return_value=(srv.state.JukeboxState(), FakeSrc().play_query(""))
+            ),
         ):
             srv.play_song("One Off")
 
@@ -401,15 +442,22 @@ class TestPlaySongAndResume(unittest.TestCase):
 
     def test_maybe_resume_queue_uses_resume_mode(self):
         """_maybe_resume_queue resumes the correct queue when title changes."""
-        srch = {"tracks": [{"title": "S0", "artist": ""}, {"title": "S1", "artist": ""}],
-                "index": 0, "expected_title": "S0"}
+        srch = {
+            "tracks": [{"title": "S0", "artist": ""}, {"title": "S1", "artist": ""}],
+            "index": 0,
+            "expected_title": "S0",
+        }
         srv._write_queue_file("search", srch)
 
-        srv._one_off_file().write_text(json.dumps({
-            "one_off_title": "One Off",
-            "resume_mode": "search",
-            "resume_index": 1,
-        }))
+        srv._one_off_file().write_text(
+            json.dumps(
+                {
+                    "one_off_title": "One Off",
+                    "resume_mode": "search",
+                    "resume_index": 1,
+                }
+            )
+        )
 
         played = []
         with mock.patch.object(srv, "_play_queue_at", side_effect=lambda idx, qn=None: played.append((idx, qn))):
@@ -419,11 +467,15 @@ class TestPlaySongAndResume(unittest.TestCase):
         self.assertFalse(srv._one_off_file().exists())
 
     def test_maybe_resume_queue_does_nothing_when_still_on_one_off(self):
-        srv._one_off_file().write_text(json.dumps({
-            "one_off_title": "One Off",
-            "resume_mode": "library",
-            "resume_index": 2,
-        }))
+        srv._one_off_file().write_text(
+            json.dumps(
+                {
+                    "one_off_title": "One Off",
+                    "resume_mode": "library",
+                    "resume_index": 2,
+                }
+            )
+        )
         played = []
         with mock.patch.object(srv, "_play_queue_at", side_effect=lambda idx, qn=None: played.append((idx, qn))):
             srv._maybe_resume_queue(self._make_np("One Off"))  # same title
@@ -446,10 +498,15 @@ class TestAutoAdvance(unittest.TestCase):
 
     def _make_np(self, title, position=0.0, duration=200.0, playing=True):
         from coding_with_beat.sources.base import NowPlaying
+
         np = NowPlaying()
-        np.title = title; np.artist = "A"; np.album = "B"
-        np.duration = duration; np.position = position
-        np.playing = playing; np.source = "apple_music"
+        np.title = title
+        np.artist = "A"
+        np.album = "B"
+        np.duration = duration
+        np.position = position
+        np.playing = playing
+        np.source = "apple_music"
         return np
 
     def test_auto_advance_triggers_on_natural_end(self):

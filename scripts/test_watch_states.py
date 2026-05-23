@@ -7,28 +7,26 @@ Usage:
 
 from __future__ import annotations
 
-import json
 import re
 import sys
 import time
 
 sys.path.insert(0, __file__.rsplit("/scripts/", 1)[0])
 
-from coding_with_beat import dj
-from coding_with_beat.watch import _render_lyrics_bottom, _speech_bubble, _SPRITE_W
+from coding_with_beat.watch import _render_lyrics_bottom
 
 ANSI = re.compile(r"\x1b\[[0-9;]*m")
 
 STATES = [
     # (label, cc_mood, cc_quip, playing)
-    ("Claude idle",         "neutral",  "ready when you are",       False),
-    ("Claude editing",      "focus",    "zone engaged.",             False),
-    ("Claude reading",      "thinking", "consulting the rubber duck",False),
-    ("Tests PASS",          "victory",  "tests green, vibes greener",False),
-    ("Tests FAIL / error",  "panic",    "stack trace incoming!!",    False),
-    ("Music playing",       "groove",   "",                          True),
-    ("Sad / debug",         "sad",      "we'll get it next try",     False),
-    ("Happy",               "happy",    "look at that clean diff!",  False),
+    ("Claude idle", "neutral", "ready when you are", False),
+    ("Claude editing", "focus", "zone engaged.", False),
+    ("Claude reading", "thinking", "consulting the rubber duck", False),
+    ("Tests PASS", "victory", "tests green, vibes greener", False),
+    ("Tests FAIL / error", "panic", "stack trace incoming!!", False),
+    ("Music playing", "groove", "", True),
+    ("Sad / debug", "sad", "we'll get it next try", False),
+    ("Happy", "happy", "look at that clean diff!", False),
 ]
 
 PANEL_W = 52
@@ -56,7 +54,6 @@ def render_state(label: str, cc_mood: str, cc_quip: str, playing: bool) -> list[
 
 def print_frame(label: str, rows: list[str], idx: int, total: int) -> None:
     DIM = "\x1b[38;2;100;110;100m"
-    BOLD = "\x1b[1;38;2;220;230;220m"
     R = "\x1b[0m"
     GREEN = "\x1b[38;2;155;188;15m"
 
