@@ -2,7 +2,7 @@
 description: Control coding-with-beat (play / pause / skip / now-playing / music source / like / mode / search / list). Use $ARGUMENTS as a free-form intent.
 disable-model-invocation: true
 allowed-tools: Bash
-argument-hint: "[source <apple_music|qq_music|local> | play <query> | search <query> | list | like | mode <shuffle|sequential|repeat> | karaoke | pause | next | prev | status]"
+argument-hint: "<play|search|list|pause|next|prev|status|like|mode|source> [args]"
 ---
 
 If the coding-with-beat UserPromptExpansion hook is installed, this command is handled

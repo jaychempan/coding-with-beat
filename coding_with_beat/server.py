@@ -133,7 +133,7 @@ def _auto_advance_if_needed(np) -> None:
     _np_state["duration"] = current_duration
     _np_state["sampled_at"] = now
 
-    if not current_title or current_title == prev_title:
+    if current_title == prev_title or not prev_title:
         return
     if _one_off_file().exists():
         return  # _maybe_resume_queue handles one-off resumption

@@ -32,7 +32,7 @@ from ._tui import (
     restore_tty,
     setup_raw_tty,
 )
-from .config import DATA_DIR
+from .config import DATA_DIR, STATE_FILE
 from .mcp_client import MCPClientError, call_tool
 from .ui.frame import _strip_ansi
 from .ui.lyrics import _display_width, render_lyrics_window
@@ -50,6 +50,46 @@ _BOLD = "\x1b[1;38;2;220;230;220m"
 _GREEN = "\x1b[38;2;155;188;15m"
 _CUR = "\x1b[1;38;2;255;230;100m"
 _RESET = "\x1b[0m"
+
+_CC_QUIP_TTL = 7.0  # seconds a CC quip stays visible in watch
+_cc_state_cache: list = [None, 0.0]  # [dict | None, timestamp]
+_CC_STATE_CACHE_TTL = 0.8
+
+
+def _load_cc_state() -> dict:
+    """Read dj_mood/dj_quip/dj_quip_at from state.json (cached)."""
+    now = time.time()
+    if _cc_state_cache[0] is not None and now - _cc_state_cache[1] < _CC_STATE_CACHE_TTL:
+        return _cc_state_cache[0]
+    try:
+        raw = json.loads(STATE_FILE.read_text(encoding="utf-8"))
+        result = {
+            "dj_mood": raw.get("dj_mood") or "neutral",
+            "dj_quip": raw.get("dj_quip") or "",
+            "dj_quip_at": float(raw.get("dj_quip_at") or 0.0),
+        }
+    except Exception:
+        result = {"dj_mood": "neutral", "dj_quip": "", "dj_quip_at": 0.0}
+    _cc_state_cache[0] = result
+    _cc_state_cache[1] = now
+    return result
+
+
+def _speech_bubble(text: str, sprite_x: int, width: int) -> list[str]:
+    """Return 3 display lines: top border, text, downward pointer — bubble above sprite."""
+    max_t = max(4, min(width - sprite_x - 4, 28))
+    if len(text) > max_t:
+        text = text[:max_t - 1] + "…"
+    inner = len(text) + 2  # one space padding each side
+    # Center bubble over the sprite
+    bx = max(0, min(sprite_x + _SPRITE_W // 2 - (inner + 2) // 2, width - inner - 2))
+    ptr_x = sprite_x + _SPRITE_W // 2  # ▼ points at sprite center
+
+    top = " " * bx + _DIM + "╭" + "─" * inner + "╮" + _RESET
+    mid = " " * bx + _DIM + "│" + _RESET + " " + _BOLD + text + _RESET + " " + _DIM + "│" + _RESET
+    bot = " " * ptr_x + _DIM + "▼" + _RESET
+
+    return [_pad(top, width), _pad(mid, width), _pad(bot, width)]
 
 
 def _snap_from_state_file() -> dict:
@@ -212,10 +252,15 @@ def _render_player_top(snap: dict, width: int, height: int, t: float) -> list[st
 
 
 def _render_lyrics_bottom(
-    lyrics_text: str, pos: float, dur: float, width: int, height: int, playing: bool, t: float = 0.0
+    lyrics_text: str, pos: float, dur: float, width: int, height: int, playing: bool,
+    t: float = 0.0, cc_mood: str = "", cc_quip: str = "",
 ) -> list[str]:
     """Bottom-left panel: lyrics (top) + animated pixel person walking/jumping below."""
-    mood = "groove" if playing else "neutral"
+    has_quip = bool(cc_quip)
+    if cc_mood and cc_mood != "neutral":
+        mood = cc_mood
+    else:
+        mood = "groove" if playing else "neutral"
     sprite_h = 7  # pixel-person frames are always 7 lines
     stage_h = sprite_h + JUMP_ROWS  # rows reserved for sprite + jump headroom
 
@@ -236,15 +281,19 @@ def _render_lyrics_bottom(
     content = content[:lyrics_h]
 
     if show_sprite:
-        # ── jump: pseudo-random per 4-second window via golden-ratio hash ──
-        bucket = int(t / 4.0)
-        will_jump = (math.sin(bucket * 1.6180339) + 1.0) / 2.0 > 0.4
-        if will_jump:
-            t_local = (t % 4.0) / 4.0
-            y_lift = max(0.0, math.sin(t_local * math.pi))
-            y = int(y_lift * JUMP_ROWS)
-        else:
+        # ── jump: suppressed while CC quip is showing ──
+        if has_quip:
+            will_jump = False
             y = 0
+        else:
+            bucket = int(t / 4.0)
+            will_jump = (math.sin(bucket * 1.6180339) + 1.0) / 2.0 > 0.4
+            if will_jump:
+                t_local = (t % 4.0) / 4.0
+                y_lift = max(0.0, math.sin(t_local * math.pi))
+                y = int(y_lift * JUMP_ROWS)
+            else:
+                y = 0
 
         # ── horizontal walk: two incommensurable sine waves ──
         max_x = max(0, width - _SPRITE_W)
@@ -260,13 +309,20 @@ def _render_lyrics_bottom(
 
         sprite_lines = dj.pixel_person_frame(mood, frame_idx).split("\n")
 
-        # Place sprite in vertical stage (y=0 → on ground; y=JUMP_ROWS → airborne)
-        top_blank = JUMP_ROWS - y
-        bottom_blank = y
-        stage_rows = [""] * top_blank + sprite_lines + [""] * bottom_blank
+        # ── speech bubble occupies the jump-headroom rows ──
+        if has_quip:
+            bubble = _speech_bubble(cc_quip, x_offset, width)
+            stage_rows = bubble + sprite_lines
+        else:
+            top_blank = JUMP_ROWS - y
+            bottom_blank = y
+            stage_rows = [""] * top_blank + sprite_lines + [""] * bottom_blank
 
-        # Apply horizontal offset
-        positioned = [_pad(" " * x_offset + line, width) for line in stage_rows]
+        # Apply horizontal offset to sprite lines (bubble already full-width)
+        if has_quip:
+            positioned = stage_rows  # bubble rows are already _pad-ded
+        else:
+            positioned = [_pad(" " * x_offset + line, width) for line in stage_rows]
         rows = content + [_sep(width)] + positioned
     else:
         rows = content
@@ -510,16 +566,33 @@ def run(width: int = 0) -> int:
                 dur = float(snap.get("duration", 0.0))
                 playing = snap.get("playing", False)
 
+                cc = _load_cc_state()
+                cc_quip = cc["dj_quip"] if now - cc["dj_quip_at"] < _CC_QUIP_TTL else ""
+                cc_mood = cc["dj_mood"]
+
                 player_lines = _render_player_top(snap, left_w, top_h, now)
-                lyrics_lines = _render_lyrics_bottom(lyrics_text, pos, dur, left_w, bot_h, playing, now)
+                lyrics_lines = _render_lyrics_bottom(
+                    lyrics_text, pos, dur, left_w, bot_h, playing, now,
+                    cc_mood=cc_mood, cc_quip=cc_quip,
+                )
                 queue_lines = _render_queue_lines(queue, cur_idx, right_w, panels_h)
                 frame = _compose3(player_lines, lyrics_lines, queue_lines, left_w, panels_h)
 
                 if num_buf:
-                    hint_text = f">> {num_buf}_   Enter confirm  Esc cancel"
+                    if total_w >= 38:
+                        hint_text = f">> {num_buf}_   Enter confirm  Esc cancel"
+                    else:
+                        hint_text = f">> {num_buf}_  ↵ ok  Esc×"
                     hint_styled = f"{_GREEN}{hint_text}{_RESET}"
                 else:
-                    hint_text = "space pause  n next  p prev  l like  q quit  0-9 go to #"
+                    if total_w >= 56:
+                        hint_text = "space pause  n next  p prev  l like  q quit  0-9 go to #"
+                    elif total_w >= 40:
+                        hint_text = "spc  n next  p prev  l like  q quit  0-9 #"
+                    elif total_w >= 26:
+                        hint_text = "spc  n/p  l  q  0-9 #"
+                    else:
+                        hint_text = "spc n p l q"
                     hint_styled = f"{_DIM}{hint_text}{_RESET}"
                 hint_pad = max(0, (total_w - len(hint_text)) // 2)
                 hint_line = " " * hint_pad + hint_styled
