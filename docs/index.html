@@ -267,6 +267,32 @@
     .copy-btn:hover { opacity: .85; }
     .copy-btn.copied { background: var(--amber); }
 
+    .install-tabs {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+
+    .inst-tab {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      color: var(--dim);
+      font-family: inherit;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: .07em;
+      padding: 6px 16px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background .15s, color .15s, border-color .15s;
+    }
+    .inst-tab:hover { color: var(--text); }
+    .inst-tab.active {
+      background: var(--bg3);
+      border-color: rgba(155,188,15,.45);
+      color: var(--green);
+    }
+
     .alt-install {
       margin-top: 12px;
       font-size: 11px;
@@ -280,6 +306,110 @@
       transition: color .2s, border-color .2s;
     }
     .alt-install a:hover { color: var(--green); border-color: var(--green); }
+
+    /* ─── USAGE CHAT ─── */
+    .usage-wrap {
+      max-width: 860px;
+      margin: 0 auto 72px;
+      padding: 0 28px;
+    }
+
+    .chat-window {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      overflow: hidden;
+      box-shadow: 0 16px 48px rgba(0,0,0,.45);
+    }
+
+    .chat-bar {
+      background: var(--bg3);
+      padding: 9px 14px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .chat-bar-label {
+      color: var(--dim);
+      font-size: 10px;
+      letter-spacing: .06em;
+      margin-left: auto;
+    }
+
+    .chat-body {
+      padding: 20px 20px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .chat-row {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      opacity: 0;
+      animation: fadein-up .4s ease forwards;
+    }
+    .chat-row:nth-child(1) { animation-delay: .05s; }
+    .chat-row:nth-child(2) { animation-delay: .25s; }
+    .chat-row:nth-child(3) { animation-delay: .45s; }
+    .chat-row:nth-child(4) { animation-delay: .65s; }
+
+    @keyframes fadein-up {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .chat-user {
+      align-self: flex-end;
+      display: flex;
+      align-items: flex-end;
+      gap: 8px;
+    }
+
+    .chat-bubble-user {
+      background: var(--bg3);
+      border: 1px solid rgba(155,188,15,.18);
+      border-radius: 8px 8px 2px 8px;
+      padding: 7px 12px;
+      font-size: 12px;
+      color: var(--bright);
+      max-width: 480px;
+    }
+
+    .chat-resp {
+      align-self: flex-start;
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .chat-avatar {
+      font-size: 11px;
+      color: var(--green);
+      flex-shrink: 0;
+      margin-top: 2px;
+      width: 18px;
+      text-align: center;
+    }
+
+    .chat-bubble-resp {
+      background: rgba(155,188,15,.07);
+      border: 1px solid rgba(155,188,15,.2);
+      border-radius: 2px 8px 8px 8px;
+      padding: 7px 12px;
+      font-size: 12px;
+      color: var(--text);
+      max-width: 480px;
+    }
+
+    .chat-bubble-resp .hi { color: var(--green); }
+    .chat-bubble-resp .am { color: var(--amber); }
+    .chat-bubble-resp .cr { color: var(--coral); }
+    .chat-bubble-resp .yw { color: var(--yellow); }
+    .chat-bubble-resp .dm { color: var(--dim); }
 
     /* ─── FEATURES ─── */
     .features-wrap {
@@ -540,12 +670,16 @@
 
 <!-- INSTALL -->
 <div class="install-wrap">
+  <div class="install-tabs">
+    <button class="inst-tab active" id="tab-cc" onclick="setInstallTab('cc')">Claude Code</button>
+    <button class="inst-tab" id="tab-codex" onclick="setInstallTab('codex')">Codex CLI</button>
+  </div>
   <div class="term-card">
     <div class="term-bar">
       <div class="dot dot-r"></div>
       <div class="dot dot-y"></div>
       <div class="dot dot-g"></div>
-      <span class="term-label">install.sh</span>
+      <span class="term-label"><span id="term-platform">Claude Code</span><span id="term-filename" style="color:var(--dim);margin-left:6px;opacity:.6;">bootstrap.sh</span></span>
     </div>
     <div class="term-body">
       <div class="cmd-row">
@@ -559,6 +693,66 @@
   <p class="alt-install">
     <span data-i18n="or-prefix">Or:</span> <a href="https://github.com/jaychempan/coding-with-beat" target="_blank" rel="noopener" data-i18n="manual">manual install →</a>
   </p>
+</div>
+
+<!-- USAGE CHAT -->
+<div class="usage-wrap">
+  <p class="section-head" data-i18n="usage-head">ask anything</p>
+  <div class="chat-window">
+    <div class="chat-bar">
+      <div class="dot dot-r"></div>
+      <div class="dot dot-y"></div>
+      <div class="dot dot-g"></div>
+      <span class="chat-bar-label">Claude Code / Codex CLI</span>
+    </div>
+    <div class="chat-body">
+
+      <!-- 1 -->
+      <div class="chat-row">
+        <div class="chat-user">
+          <div class="chat-bubble-user" data-i18n="q1">put on something chill</div>
+        </div>
+        <div class="chat-resp">
+          <span class="chat-avatar">♪</span>
+          <div class="chat-bubble-resp"><span class="hi">▶</span> Playing <span class="am">Quiet Library — FM STAR</span> <span class="dm">· Apple Music</span></div>
+        </div>
+      </div>
+
+      <!-- 2 -->
+      <div class="chat-row">
+        <div class="chat-user">
+          <div class="chat-bubble-user" data-i18n="q2">what's on right now?</div>
+        </div>
+        <div class="chat-resp">
+          <span class="chat-avatar">♪</span>
+          <div class="chat-bubble-resp"><span class="hi">♪</span> 雨爱 — 杨丞琳 &nbsp;<span class="dm">▓▓▓▓▓░░░░&nbsp; 2:14 / 3:42</span></div>
+        </div>
+      </div>
+
+      <!-- 3 -->
+      <div class="chat-row">
+        <div class="chat-user">
+          <div class="chat-bubble-user" data-i18n="q3">skip this track</div>
+        </div>
+        <div class="chat-resp">
+          <span class="chat-avatar">♪</span>
+          <div class="chat-bubble-resp"><span class="hi">⏭</span> Next: <span class="am">Snowfall — Øneheart · rvsefall</span></div>
+        </div>
+      </div>
+
+      <!-- 4 -->
+      <div class="chat-row">
+        <div class="chat-user">
+          <div class="chat-bubble-user" data-i18n="q4">all tests passed! 🎉</div>
+        </div>
+        <div class="chat-resp">
+          <span class="chat-avatar">♪</span>
+          <div class="chat-bubble-resp"><span class="yw">🕺</span> Victory mode! <span class="hi">▶</span> <span class="am">Eye of the Tiger — Survivor</span></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
 </div>
 
 <!-- FEATURES -->
@@ -716,6 +910,15 @@
       copy:          'COPY COMMAND',
       'or-prefix':   'Or:',
       manual:        'manual install →',
+      'usage-head':  'ask anything',
+      q1: 'put on something chill',
+      a1: '▶ Playing Quiet Library — FM STAR · Apple Music',
+      q2: "what's on right now?",
+      a2: '♪ 雨爱 — 杨丞琳   ▓▓▓▓▓░░░░  2:14 / 3:42',
+      q3: 'skip this track',
+      a3: '⏭ Next: Snowfall — Øneheart · rvsefall',
+      q4: 'all tests passed! 🎉',
+      a4: '🕺 Victory mode! ▶ Eye of the Tiger — Survivor',
       'feat-head':   'features',
       f1t: 'MCP Server',
       f1d: '21 tools — just say "play some lofi" or "skip this" inside Claude Code.',
@@ -754,6 +957,15 @@
       copy:          '复制命令',
       'or-prefix':   '或：',
       manual:        '手动安装 →',
+      'usage-head':  '你可以这样问',
+      q1: '来点轻松的音乐',
+      a1: '▶ 正在播放 Quiet Library — FM STAR · Apple Music',
+      q2: '现在在放什么？',
+      a2: '♪ 雨爱 — 杨丞琳   ▓▓▓▓▓░░░░  2:14 / 3:42',
+      q3: '跳过这首',
+      a3: '⏭ 下一首：Snowfall — Øneheart · rvsefall',
+      q4: '测试全过了！🎉',
+      a4: '🕺 胜利模式！▶ Eye of the Tiger — Survivor',
       'feat-head':   '功能介绍',
       f1t: 'MCP 服务器',
       f1d: '21 个工具——直接说「放点 lofi」或「跳过这首」即可。',
@@ -808,10 +1020,31 @@
     }
   }
 
+  /* ── Install tab ── */
+  const INSTALL_CMDS = {
+    cc:    'curl -LsSf https://raw.githubusercontent.com/jaychempan/coding-with-beat/main/bootstrap.sh | sh',
+    codex: 'curl -LsSf https://raw.githubusercontent.com/jaychempan/coding-with-beat/main/bootstrap_codex.sh | sh',
+  };
+  const INSTALL_PLATFORMS = { cc: 'Claude Code', codex: 'Codex CLI' };
+  const INSTALL_FILENAMES = { cc: 'bootstrap.sh', codex: 'bootstrap_codex.sh' };
+
+  let currentTab = 'cc';
+
+  function setInstallTab(tab) {
+    currentTab = tab;
+    document.getElementById('tab-cc').classList.toggle('active', tab === 'cc');
+    document.getElementById('tab-codex').classList.toggle('active', tab === 'codex');
+    document.getElementById('install-cmd').textContent  = INSTALL_CMDS[tab];
+    document.getElementById('term-platform').textContent = INSTALL_PLATFORMS[tab];
+    document.getElementById('term-filename').textContent  = INSTALL_FILENAMES[tab];
+    const btn = document.getElementById('copy-btn');
+    btn.classList.remove('copied');
+    btn.textContent = I18N[currentLang]['copy'];
+  }
+
   /* ── Copy ── */
   function copyInstall() {
-    const cmd = 'curl -LsSf https://raw.githubusercontent.com/jaychempan/coding-with-beat/main/bootstrap.sh | sh';
-    navigator.clipboard.writeText(cmd).then(() => {
+    navigator.clipboard.writeText(INSTALL_CMDS[currentTab]).then(() => {
       const btn = document.getElementById('copy-btn');
       btn.classList.add('copied');
       btn.textContent = currentLang === 'zh' ? '已复制 ✓' : 'COPIED ✓';
