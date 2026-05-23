@@ -18,7 +18,7 @@
 
 Claude Code / Codex CLI / ターミナル向けのレトロなピクセル DJ コンパニオン。音楽を流し、歌詞を表示し、コミット成功を祝い、テスト失敗には一緒にパニックになります。
 
-[English README](README.md) ／ [中文文档](README_CN.md) ／ [Codex CLI ガイド](README_CODEX.md)
+[English README](README.md) ／ [中文文档](README_CN.md)
 
 ---
 
@@ -61,8 +61,6 @@ cd coding-with-beat
 ```
 
 Codex CLI が未インストールの場合は npm で自動インストールし、`~/.codex/config.toml`・hooks・`cwb` スキルを設定します。プロキシは自動検出されます。
-
-新しいシェルで Codex セッションを開き、ステータスラインに `(•_•)` が表示されたらインストール完了です。
 
 フック、プロキシ、気分通知、ステータスライン代替の完全ガイドは **[README_CODEX.md](README_CODEX.md)** を参照してください。
 

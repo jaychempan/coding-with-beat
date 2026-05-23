@@ -18,7 +18,7 @@
 
 一个支持 Claude Code / Codex CLI / 终端 的复古像素 DJ 小伙伴。它帮你放音乐、看歌词、在 commit 成功时庆祝，在测试挂掉时跟你一起崩溃。
 
-[English](README.md) ／ [日本語](README_JP.md) ／ [Codex CLI 完整指南](README_CODEX.md)
+[English](README.md) ／ [日本語](README_JP.md)
 
 ---
 
@@ -63,8 +63,6 @@ cd coding-with-beat
 ```
 
 没有 Codex CLI 会自动通过 npm 安装，并配置好 `~/.codex/config.toml`、hooks 和 `cwb` skill，让 Codex 直接识别音乐指令。代理自动检测。
-
-开一个新 shell 并启动 Codex 会话，状态栏里出现 `(•_•)` 就好了。
 
 Codex 集成完整说明（hooks、代理、情绪通知、状态栏替代方案）见 **[README_CODEX.md](README_CODEX.md)**。
 

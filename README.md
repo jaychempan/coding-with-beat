@@ -18,7 +18,7 @@
 
 A retro pixel DJ companion for Claude Code / Codex CLI / Terminal. It plays music, shows lyrics, celebrates when you commit, and panics with you when tests fail.
 
-[中文文档](README_CN.md) ／ [日本語](README_JP.md) ／ [Codex CLI Guide](README_CODEX.md)
+[中文文档](README_CN.md) ／ [日本語](README_JP.md)
 
 <table>
   <tr>
@@ -79,8 +79,6 @@ cd coding-with-beat
 ```
 
 Installs Codex CLI if needed, configures `~/.codex/config.toml` with the MCP endpoint, writes hooks, and installs the `cwb` skill so Codex recognises music commands automatically. Proxy is auto-detected.
-
-Open a new shell and start a Codex session. When `(•_•)` appears in the statusline, you're good.
 
 See **[README_CODEX.md](README_CODEX.md)** for the full integration guide — hooks, proxy, mood reactions, statusline alternatives, and debugging.
 
