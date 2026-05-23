@@ -445,10 +445,10 @@ def list_library(limit: int = 100) -> str:
     if not callable(fn):
         return f"(list not supported for source={st.source})"
     hits = fn(limit=limit)
+    _write_queue_file("library", {"tracks": hits or [], "index": 0, "expected_title": ""})
+    _write_active_mode(context="library")
     if not hits:
         return "(library is empty)"
-    _write_queue_file("library", {"tracks": hits, "index": 0, "expected_title": ""})
-    _write_active_mode(context="library")
     return "\n".join(
         f"{i + 1}. {h['title']} — {h.get('artist', '?')} · {h.get('album', '?')}" for i, h in enumerate(hits)
     )
