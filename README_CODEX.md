@@ -32,12 +32,18 @@ A complete guide to running coding-with-beat with **OpenAI Codex CLI** (`@openai
 ## Installation
 
 ```bash
+curl -LsSf https://raw.githubusercontent.com/jaychempan/coding-with-beat/main/bootstrap_codex.sh | sh
+```
+
+Or manually:
+
+```bash
 git clone https://github.com/jaychempan/coding-with-beat.git
 cd coding-with-beat
 ./install_codex.sh
 ```
 
-The one-click installer does everything in order:
+The installer does everything in order, skipping steps that are already complete:
 
 1. **Finds Python ≥3.10** — tries system Python, falls back to bootstrapping `uv` + Python 3.12
 2. **Creates a shared venv** at `~/.coding-with-beat/venv` and installs coding-with-beat (editable)

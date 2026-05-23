@@ -56,12 +56,18 @@ cd coding-with-beat
 ### Codex CLI
 
 ```bash
+curl -LsSf https://raw.githubusercontent.com/jaychempan/coding-with-beat/main/bootstrap_codex.sh | sh
+```
+
+手动安装：
+
+```bash
 git clone https://github.com/jaychempan/coding-with-beat.git
 cd coding-with-beat
 ./install_codex.sh
 ```
 
-没有 Codex CLI 会自动通过 npm 安装，并配置好 `~/.codex/config.toml`、hooks 和 `cwb` skill，让 Codex 直接识别音乐指令。代理自动检测。
+没有 Codex CLI 会自动通过 npm 安装，并配置好 `~/.codex/config.toml`、hooks 和 `cwb` skill，让 Codex 直接识别音乐指令。代理自动检测。重复运行安全，已完成的步骤会自动跳过。
 
 Codex 集成完整说明（hooks、代理、情绪通知、状态栏替代方案）见 **[README_CODEX.md](README_CODEX.md)**。
 
