@@ -52,6 +52,29 @@ _CUR = "\x1b[1;38;2;255;230;100m"
 _RESET = "\x1b[0m"
 
 
+def _snap_from_state_file() -> dict:
+    """Build a minimal snap from state.json so watch has something to show before
+    the first server response arrives (covers server restarts and cold starts)."""
+    try:
+        data = json.loads((DATA_DIR / "state.json").read_text(encoding="utf-8"))
+        track = data.get("track", {})
+        if not track.get("title"):
+            return {}
+        return {
+            "title": track.get("title", ""),
+            "artist": track.get("artist", ""),
+            "album": track.get("album", ""),
+            "duration": float(track.get("duration") or 0.0),
+            "position": float(track.get("position") or 0.0),
+            "playing": bool(data.get("playing", False)),
+            "source": track.get("source") or data.get("source", ""),
+            "artwork_path": track.get("artwork_path") or "",
+            "sampled_at": float(track.get("position_sampled_at") or 0.0),
+        }
+    except Exception:
+        return {}
+
+
 def _fetch(known_key: str = "") -> dict:
     raw = call_tool("now_playing_snapshot", {"known_lyrics_key": known_key})
     return json.loads(raw)
@@ -66,6 +89,22 @@ def _interp_pos(snap: dict) -> float:
 
 
 _control_lock = threading.Lock()
+_fetch_lock = threading.Lock()
+_fetch_result: list[dict | None] = [None]  # [0] holds latest completed fetch
+
+
+def _fetch_async(known_key: str) -> None:
+    """Fire a snapshot fetch in a background thread; store result in _fetch_result."""
+    if not _fetch_lock.acquire(blocking=False):
+        return  # previous fetch still in flight; skip — render loop uses old snap
+    def _run():
+        try:
+            _fetch_result[0] = _fetch(known_key)
+        except MCPClientError:
+            pass
+        finally:
+            _fetch_lock.release()
+    threading.Thread(target=_run, daemon=True).start()
 
 
 def _control(tool: str) -> None:
@@ -135,6 +174,14 @@ def _load_queue() -> tuple[list[dict], int]:
     except Exception:
         tracks = []
         cur_idx = -1
+    # Fall back to legacy last_results.json (plain list) if no new-format file exists.
+    if not tracks:
+        try:
+            raw = json.loads((DATA_DIR / "last_results.json").read_text(encoding="utf-8"))
+            if isinstance(raw, list):
+                tracks = raw
+        except Exception:
+            pass
     return tracks, cur_idx
 
 
@@ -325,7 +372,9 @@ def run(width: int = 0) -> int:
     signal.signal(signal.SIGTERM, _quit)
     signal.signal(signal.SIGWINCH, _resize)
 
-    snap: dict = {}
+    # Seed snap from state.json so the display is never blank on startup or
+    # after a server restart — the server's _np_state resets but state.json persists.
+    snap: dict = _snap_from_state_file()
     lyrics_text = ""
     lyrics_key = ""
     last_fetch = 0.0
@@ -394,24 +443,43 @@ def run(width: int = 0) -> int:
 
             now = time.time()
 
+            # Kick off a background fetch when it's time; never block the loop.
             if now - last_fetch >= FETCH_EVERY:
-                try:
-                    new = _fetch(lyrics_key)
-                    if new.get("lyrics_text"):
-                        lyrics_text = new["lyrics_text"]
-                        lyrics_key = new.get("lyrics_key", "")
-                    elif new.get("lyrics_key") and new["lyrics_key"] != lyrics_key:
-                        lyrics_text = ""
-                        if not new.get("lyrics_pending"):
-                            lyrics_key = new["lyrics_key"]
-                    snap = new
-                    last_fetch = now
-                except MCPClientError:
-                    pass
+                _fetch_async(lyrics_key)
+                last_fetch = now
+
+            # Drain the latest completed fetch result (may be None if none ready).
+            new = _fetch_result[0]
+            if new is not None:
+                _fetch_result[0] = None
+                # If the player reports no title (stopped / transitioning), keep the
+                # last known song info so the display never goes blank.
+                if not new.get("title") and snap.get("title"):
+                    new = {
+                        **new,
+                        "title": snap["title"],
+                        "artist": snap.get("artist", ""),
+                        "album": snap.get("album", ""),
+                        "duration": snap.get("duration", 0.0),
+                        "position": snap.get("position", 0.0),
+                        "sampled_at": snap.get("sampled_at", 0.0),
+                        # playing intentionally NOT preserved — use server's value
+                        # so paused/stopped state is reflected correctly
+                    }
+                if new.get("lyrics_text"):
+                    lyrics_text = new["lyrics_text"]
+                    lyrics_key = new.get("lyrics_key", "")
+                elif new.get("lyrics_key") and new["lyrics_key"] != lyrics_key:
+                    lyrics_text = ""
+                    if not new.get("lyrics_pending"):
+                        lyrics_key = new["lyrics_key"]
+                snap = new
+
+            if new is not None:
                 queue, cur_idx = _load_queue()
-                # Keep queue highlight in sync even when Apple Music plays
-                # a track not triggered via cwb (queue_index.json would be stale).
-                if snap.get("title") and queue:
+                # Only rescan when something is actively playing — if paused/stopped,
+                # trust the queue's stored index so cwb next/prev stays in sync.
+                if snap.get("playing") and snap.get("title") and queue:
                     playing_title = snap["title"]
                     need_scan = cur_idx < 0 or cur_idx >= len(queue) or queue[cur_idx].get("title", "") != playing_title
                     if need_scan:

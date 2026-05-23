@@ -218,6 +218,11 @@ def cmd_play() -> int:
     return _mcp_print("play")
 
 
+def cmd_resume() -> int:
+    """resume — re-search and play the last known track from its saved position."""
+    return _mcp_print("resume")
+
+
 def cmd_play_number() -> int:
     """play_number <n> — play track #n from the last search or list results."""
     if len(sys.argv) < 3:
@@ -646,6 +651,7 @@ COMMANDS = {
     "list": cmd_list,
     "search": cmd_search,
     "play": cmd_play,
+    "resume": cmd_resume,
     "play_number": cmd_play_number,
     "pause": cmd_pause,
     "next": cmd_next,
@@ -660,6 +666,8 @@ COMMANDS = {
     "bar": cmd_bar,
     "help": cmd_help,
     # ── Chinese aliases ────────────────────────────────────────────────────
+    "继续": cmd_resume,
+    "恢复": cmd_resume,
     "暂停": cmd_pause,
     "下一首": cmd_next,
     "上一首": cmd_prev,

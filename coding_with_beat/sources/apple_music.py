@@ -599,7 +599,7 @@ end tell
     )
 
 
-def _search_catalog_api(query: str, limit: int = 8) -> List[dict]:
+def _search_catalog_api(query: str, limit: int = 8, timeout: float = 3.0) -> List[dict]:
     """Search the Apple Music catalog via iTunes Search API.
     Returns dicts with title/artist/album/source='apple_music'."""
     try:
@@ -607,12 +607,14 @@ def _search_catalog_api(query: str, limit: int = 8) -> List[dict]:
     except ImportError:
         return []
     detected = _detect_storefront()
-    storefronts = list(_ALL_CATALOG_STOREFRONTS)
-    if detected:
-        storefronts = [detected] + [s for s in storefronts if s != detected]
+    # Only try detected storefront first, then one fallback — keeps search fast
+    # and avoids blocking the MCP server for up to 30 s with 5 × 6 s timeouts.
+    storefronts = [detected] if detected else []
+    if not storefronts or storefronts[0] != "us":
+        storefronts.append("us")
     try:
-        with httpx.Client(timeout=6.0) as c:
-            for sf in storefronts[:5]:
+        with httpx.Client(timeout=timeout) as c:
+            for sf in storefronts[:2]:
                 try:
                     r = c.get(
                         "https://itunes.apple.com/search",
@@ -916,7 +918,7 @@ end tell
         cache.write_text(raw, encoding="utf-8")
         return raw
 
-    def play_query(self, query: str) -> Optional[NowPlaying]:
+    def play_query(self, query: str, library_only: bool = False) -> Optional[NowPlaying]:
         """Three-tier search:
         1. Full-string substring match in local library (fast).
         2. If query has multiple whitespace-separated tokens, AND-match each
@@ -924,8 +926,8 @@ end tell
            named 青花瓷 by 周杰伦 even though no single field contains the
            whole string).
         3. Fall back to the public iTunes Search API and ask Music to open
-           the top hit's catalog URL. Requires an active Apple Music
-           subscription for actual playback.
+           the top hit's catalog URL. Skipped when library_only=True to avoid
+           interrupting current playback with a catalog popup.
         """
         if _play_local_match(query):
             np = self._wait_for_match(query=query, attempts=12, delay=0.5)
@@ -937,6 +939,9 @@ end tell
             np = self._wait_for_match(query=query, attempts=12, delay=0.5)
             if np:
                 return np
+
+        if library_only:
+            return None  # no local match; caller decides — do NOT touch the player
 
         # Fall back to iTunes catalog: search, add to library, and play.
         catalog_query = _catalog_search_query(query)

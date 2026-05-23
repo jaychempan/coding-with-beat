@@ -22,6 +22,10 @@ from .base import NowPlaying
 LOCAL_STATE = DATA_DIR / "local.json"
 DEFAULT_LIBRARY = Path(os.environ.get("CCJ_LOCAL_LIBRARY", Path.home() / "Music"))
 
+# In-memory position checkpoints keyed by path string.
+# Avoids disk writes during polling and races with pause()/play() state writes.
+_last_known_pos: dict[str, float] = {}
+
 
 def _read() -> dict:
     if LOCAL_STATE.exists():
@@ -120,13 +124,29 @@ class LocalFiles:
             )
 
         if pid and _pid_alive(pid):
-            return _info(s, playing=True)
+            np = _info(s, playing=True)
+            # Checkpoint in memory only — no disk write to avoid racing with pause()/play().
+            _last_known_pos[str(path)] = np.position
+            return np
 
         if paused_at is not None:
             return _info(s, playing=False)
 
-        # Process died naturally (song ended) → auto-advance
+        # Process died — distinguish natural end from mid-song interruption.
         if pid:
+            last_pos = _last_known_pos.get(str(path), 0.0)
+            dur = float(s.get("duration") or 0.0)
+            if dur > 0 and last_pos > 0 and last_pos < dur * 0.95:
+                # Interrupted before the song ended; treat as paused at last position.
+                s["pid"] = None
+                s["paused_at"] = (
+                    float(s.get("started_at") or time.time())
+                    + float(s.get("paused_total") or 0.0)
+                    + last_pos
+                )
+                _write(s)
+                return _info(s, playing=False)
+            # Natural end (or unknown duration) → auto-advance.
             self.next()
             s = self._state()
             pid = s.get("pid")
@@ -179,7 +199,28 @@ class LocalFiles:
         s = self._state()
         if s.get("pid") and _pid_alive(s["pid"]):
             return
-        if s.get("path"):
+        if not s.get("path"):
+            return
+        paused_at = s.get("paused_at")
+        if paused_at is not None:
+            # Resume from the saved position by adjusting started_at backward.
+            # afplay always plays from file position 0, so audio restarts, but
+            # the computed position (now - started_at - paused_total) is correct.
+            started = s.get("started_at", paused_at)
+            paused_total = float(s.get("paused_total") or 0.0)
+            resume_pos = max(0.0, paused_at - started - paused_total)
+            proc = subprocess.Popen(
+                ["afplay", str(s["path"])],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                start_new_session=True,
+            )
+            s["pid"] = proc.pid
+            s["started_at"] = time.time() - resume_pos
+            s["paused_at"] = None
+            s["paused_total"] = 0.0
+            _write(s)
+        else:
             self._start(Path(s["path"]))
 
     def pause(self) -> None:
@@ -283,7 +324,7 @@ class LocalFiles:
                     break
         return results
 
-    def play_query(self, query: str) -> Optional[NowPlaying]:
+    def play_query(self, query: str, library_only: bool = False) -> Optional[NowPlaying]:
         hits = self.search(query, limit=1)
         if not hits:
             return None
