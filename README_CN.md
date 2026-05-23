@@ -15,6 +15,8 @@
 
 ![](assets/welcome_log.png)
 
+**编程伴奏，搬进 AI 终端。** 智能感知你的编码状态，自动切换音乐情绪，打造属于程序员的专属智能 DJ 与选歌平台 — 为 Claude Code & Codex CLI 而生。
+
 一个支持 Claude Code / Codex CLI / 终端 的复古像素 DJ 小伙伴。它帮你放音乐、看歌词、在 commit 成功时庆祝，在测试挂掉时跟你一起崩溃。
 
 [English](README.md) ／ [日本語](README_JP.md)

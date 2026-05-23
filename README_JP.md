@@ -15,6 +15,8 @@
 
 ![](assets/welcome_log.png)
 
+**コーディングのサウンドトラックを、ターミナルの中へ。** 気分に合わせた選曲、コーディング状態を感知するスマート再生 — Claude Code & Codex CLI のための専属インテリジェント DJ プラットフォーム。
+
 Claude Code / Codex CLI / ターミナル向けのレトロなピクセル DJ コンパニオン。音楽を流し、歌詞を表示し、コミット成功を祝い、テスト失敗には一緒にパニックになります。
 
 [English README](README.md) ／ [中文文档](README_CN.md)
