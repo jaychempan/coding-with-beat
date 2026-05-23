@@ -229,12 +229,13 @@ def _maybe_resume_queue(np) -> None:
         _one_off_file().unlink(missing_ok=True)
         return
     one_off_title = data.get("one_off_title", "")
+    resume_mode = data.get("resume_mode", "library")
     resume_index = int(data.get("resume_index", 0))
     if not np.title or np.title == one_off_title:
-        return  # still on the one-off song (or nothing playing yet)
-    # Title changed → one-off ended; resume the queue
+        return
     _one_off_file().unlink(missing_ok=True)
-    _play_queue_at(resume_index)
+    _write_active_mode(mode=resume_mode)
+    _play_queue_at(resume_index, resume_mode)
 
 
 @mcp.tool()
@@ -465,8 +466,9 @@ def play_number(number: int) -> str:
 def play_song(query: str) -> str:
     """Search for and start playing the first match for 'query'."""
     am = _read_active_mode()
-    _active_mode = am.get("mode", "library")
-    has_queue = bool(_load_queue_file(_active_mode).get("tracks"))
+    mode = am.get("mode", "library")
+    qdata = _load_queue_file(mode)
+    has_queue = bool(qdata.get("tracks"))
     st = state.load()
     src = get_source(st.source)
     np = src.play_query(query)
@@ -481,10 +483,13 @@ def play_song(query: str) -> str:
     if not np.title:
         return _unsupported(st.source, "play_song", "The source returned no playable track.")
     if has_queue:
-        # Remember where to resume after this one-off song finishes
         try:
             _one_off_file().write_text(
-                json.dumps({"one_off_title": np.title, "resume_index": _load_queue_file(_active_mode).get("index", 0) + 1}),
+                json.dumps({
+                    "one_off_title": np.title,
+                    "resume_mode": mode,
+                    "resume_index": qdata.get("index", 0) + 1,
+                }),
                 encoding="utf-8",
             )
         except Exception:

@@ -354,3 +354,79 @@ class TestNextPrev(unittest.TestCase):
             srv.next_track()
 
         self.assertFalse(srv._one_off_file().exists())
+
+
+class TestPlaySongAndResume(unittest.TestCase):
+    def setUp(self):
+        self.tmp = _make_tmp()
+        self.p_data = mock.patch.object(srv, "DATA_DIR", self.tmp)
+        self.p_data.start()
+
+    def tearDown(self):
+        self.p_data.stop()
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def _make_np(self, title, playing=True):
+        from coding_with_beat.sources.base import NowPlaying
+        np = NowPlaying()
+        np.title = title; np.artist = "A"; np.album = "B"
+        np.duration = 200.0; np.position = 0.0
+        np.playing = playing; np.source = "apple_music"
+        return np
+
+    def test_play_song_saves_resume_mode_to_one_off_file(self):
+        """play_song with active search queue saves resume_mode=search."""
+        srch = {"tracks": [{"title": "S0", "artist": ""}], "index": 0, "expected_title": "S0"}
+        srv._write_queue_file("search", srch)
+        srv._write_active_mode(mode="search")
+
+        class FakeSrc:
+            def play_query(self, q):
+                from coding_with_beat.sources.base import NowPlaying
+                np = NowPlaying()
+                np.title = "One Off"; np.artist = ""; np.album = ""; np.duration = 180.0
+                np.position = 0.0; np.playing = True; np.source = "apple_music"
+                return np
+
+        with (
+            mock.patch.object(srv, "get_source", return_value=FakeSrc()),
+            mock.patch.object(srv.state, "load", return_value=srv.state.JukeboxState()),
+            mock.patch.object(srv, "_refresh_now_playing", return_value=(srv.state.JukeboxState(), FakeSrc().play_query(""))),
+        ):
+            srv.play_song("One Off")
+
+        data = json.loads(srv._one_off_file().read_text())
+        self.assertEqual(data["resume_mode"], "search")
+        self.assertEqual(data["one_off_title"], "One Off")
+
+    def test_maybe_resume_queue_uses_resume_mode(self):
+        """_maybe_resume_queue resumes the correct queue when title changes."""
+        srch = {"tracks": [{"title": "S0", "artist": ""}, {"title": "S1", "artist": ""}],
+                "index": 0, "expected_title": "S0"}
+        srv._write_queue_file("search", srch)
+
+        srv._one_off_file().write_text(json.dumps({
+            "one_off_title": "One Off",
+            "resume_mode": "search",
+            "resume_index": 1,
+        }))
+
+        played = []
+        with mock.patch.object(srv, "_play_queue_at", side_effect=lambda idx, qn=None: played.append((idx, qn))):
+            srv._maybe_resume_queue(self._make_np("S1"))  # title changed from one-off
+
+        self.assertEqual(played[0], (1, "search"))
+        self.assertFalse(srv._one_off_file().exists())
+
+    def test_maybe_resume_queue_does_nothing_when_still_on_one_off(self):
+        srv._one_off_file().write_text(json.dumps({
+            "one_off_title": "One Off",
+            "resume_mode": "library",
+            "resume_index": 2,
+        }))
+        played = []
+        with mock.patch.object(srv, "_play_queue_at", side_effect=lambda idx, qn=None: played.append((idx, qn))):
+            srv._maybe_resume_queue(self._make_np("One Off"))  # same title
+
+        self.assertEqual(played, [])
+        self.assertTrue(srv._one_off_file().exists())
