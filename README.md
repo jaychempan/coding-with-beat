@@ -25,7 +25,7 @@ A retro pixel DJ companion for Claude Code / Codex CLI / Terminal. It plays musi
 
 [中文文档](README_CN.md) ／ [日本語](README_JP.md)
 
-<video src="https://github.com/jaychempan/coding-with-beat/releases/download/v0.3.6/demo.mp4" controls autoplay loop muted width="100%"></video>
+<video src="https://github.com/user-attachments/assets/c51dcac1-115e-4d30-b87f-b1e7043d1347" controls autoplay loop muted width="100%"></video>
 
 ---
 
