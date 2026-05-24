@@ -45,17 +45,12 @@ class TestCanTrigger(unittest.TestCase):
         self.assertTrue(companion.can_trigger(_st(companion_tool_count=20), "idle_checkin"))
 
     def test_session_end_needs_300s_session(self):
-        self.assertFalse(
-            companion.can_trigger(_st(companion_session_start=time.time() - 100), "session_end")
-        )
-        self.assertTrue(
-            companion.can_trigger(_st(companion_session_start=time.time() - 301), "session_end")
-        )
+        self.assertFalse(companion.can_trigger(_st(companion_session_start=time.time() - 100), "session_end"))
+        self.assertTrue(companion.can_trigger(_st(companion_session_start=time.time() - 301), "session_end"))
 
 
 class TestGetMessageAndQueries(unittest.TestCase):
     def test_get_message_returns_nonempty_string_for_all_triggers(self):
-        st = _st()
         for t in ("session_start", "debug_struggle", "victory", "idle_checkin", "session_end"):
             msg = companion.get_message(t)
             self.assertIsInstance(msg, str)
@@ -71,7 +66,6 @@ class TestGetMessageAndQueries(unittest.TestCase):
                 self.assertGreater(len(q), 0)
 
     def test_session_start_morning_evening_differ(self):
-        st = _st()
         with mock.patch("coding_with_beat.companion._dt") as m:
             m.now.return_value.hour = 9
             q_morning = companion.get_queries("session_start")
@@ -83,6 +77,7 @@ class TestGetMessageAndQueries(unittest.TestCase):
 class TestJukeboxStateCompanionFields(unittest.TestCase):
     def test_defaults_are_zero(self):
         from coding_with_beat.state import JukeboxState
+
         st = JukeboxState()
         self.assertEqual(st.companion_last_at, 0.0)
         self.assertEqual(st.companion_session_start, 0.0)
@@ -94,10 +89,17 @@ class TestJukeboxStateCompanionFields(unittest.TestCase):
         import tempfile
         from pathlib import Path
         from unittest import mock
+
         from coding_with_beat import state as st_mod
 
-        old_state = {"playing": False, "source": "apple_music", "volume": 60,
-                     "track": {}, "vibe": "focus", "dj_mood": "neutral"}
+        old_state = {
+            "playing": False,
+            "source": "apple_music",
+            "volume": 60,
+            "track": {},
+            "vibe": "focus",
+            "dj_mood": "neutral",
+        }
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             json.dump(old_state, f)
             path = Path(f.name)
