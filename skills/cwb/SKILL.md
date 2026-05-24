@@ -34,6 +34,8 @@ Call these tools directly — do not shell out to `cwb` unless MCP is unavailabl
 | `like_current` | Like / favourite current track |
 | `search(query)` | Search library + Apple Music catalog |
 | `list_library(limit)` | List all library tracks |
+| `list_loved(limit)` | List all loved/hearted tracks `[♥ 喜欢]` |
+| `search_loved(query)` | Search only within loved tracks |
 | `set_source(name)` | Switch source: `apple_music` \| `local` \| `qq_music` |
 | `set_play_mode(mode)` | `shuffle` \| `sequential` \| `repeat` \| `repeat_one` |
 | `status` | Full player state |
@@ -73,6 +75,16 @@ Do NOT generate keywords. For any request that isn't a specific song/artist/comm
 | 🌙 Sleep | 助眠 / 睡前 / 失眠 / sleep / white noise | `sleep music white noise ambient drone` | `lullaby soft piano rain sleep calm` | `meditation deep sleep binaural delta waves` |
 
 Display results grouped by angle with emoji labels (returned by the tool), number globally across groups (1, 2, 3…), end with: 喜欢哪首？说编号我来播。 Do NOT auto-play.
+
+## Loved / 喜欢列表
+
+When user says: 从喜欢里 / 收藏里找 / 我喜欢的 / loved only / play from liked / 心动歌单
+→ call `search_loved(query)` instead of `smart_search()`
+
+When user says: 列出收藏 / 我的喜欢 / show liked / list loved / 喜欢列表
+→ call `list_loved()`
+
+Normal `smart_search()` already includes loved tracks (ranked first, tagged `[♥ 喜欢]`).
 
 ## Library-only search
 
