@@ -1,6 +1,6 @@
 <div align="center">
-  <img src="assets/logo_icon.png" width="128" alt="Coding With Beat"/>
-  <h1>Coding With Beat</h1>
+  <img src="assets/logo_icon.png" width="128" alt="Coding with Beat"/>
+  <h1>Coding with Beat</h1>
 </div>
 
 ![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white)
@@ -11,6 +11,7 @@
 ![Apple Music](https://img.shields.io/badge/Apple_Music-supported-FC3C44?style=flat-square)
 ![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)
 [![Website](https://img.shields.io/badge/website-codebeat.top-9bbc0f?style=flat-square)](https://codebeat.top)
+[![Technical Report](https://img.shields.io/badge/Technical_Report-coming_soon-8b5cf6?style=flat-square)](#)
 
 > **When was the last time you sang and danced while vibecoding?**（上次 vibecoding 时又唱又跳是什么时候？）
 >
@@ -22,7 +23,7 @@
 
 A retro pixel DJ companion for Claude Code / Codex CLI / Terminal. It plays music, shows lyrics, celebrates when you commit, and panics with you when tests fail.
 
-[中文文档](README_CN.md) ／ [日本語](README_JP.md) ／ [Technical Report](#)
+[中文文档](README_CN.md) ／ [日本語](README_JP.md)
 
 <table>
   <tr>

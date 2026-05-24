@@ -1,4 +1,4 @@
-# Coding With Beat — Codex CLI Integration
+# Coding with Beat — Codex CLI Integration
 
 ![Codex CLI](https://img.shields.io/badge/Codex_CLI-compatible-10a37f?style=flat-square)
 ![MCP](https://img.shields.io/badge/MCP-28_tools-7c5cbf?style=flat-square)
