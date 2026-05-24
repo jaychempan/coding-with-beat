@@ -4,3 +4,7 @@ __pycache__/
 *.pyc
 /graphify-out
 /.claude
+docs/cwb_report.zip
+/docs/cwb_report
+/docs/latex_template
+/experiments
