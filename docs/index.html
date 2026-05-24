@@ -71,6 +71,18 @@
     .nav-right { display: flex; align-items: center; gap: 14px; }
     .gh-link { color: var(--dim); font-size: 12px; transition: color .2s; }
     .gh-link:hover { color: var(--text); }
+    .nav-survey {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px; font-weight: 600; letter-spacing: .04em;
+      color: var(--purple-lt);
+      background: var(--purple-bg);
+      border: 1px solid var(--purple-border);
+      border-radius: 4px;
+      padding: 5px 12px;
+      transition: background .2s, border-color .2s;
+      white-space: nowrap;
+    }
+    .nav-survey:hover { background: rgba(139,92,246,.22); border-color: rgba(139,92,246,.45); }
     .lang-toggle {
       display: flex; background: var(--bg3);
       border: 1px solid var(--purple-border); border-radius: 4px; padding: 2px; gap: 2px;
@@ -362,6 +374,54 @@
     .lc-arrow { color: var(--dim); font-size: 12px; flex-shrink: 0; transition: color .2s; }
     .link-card:hover .lc-arrow { color: var(--purple-lt); }
 
+    /* ── SURVEY ── */
+    .survey-wrap { max-width: 860px; margin: 0 auto 72px; padding: 0 28px; }
+    .survey-card {
+      background: var(--bg2);
+      border: 1px solid var(--purple-border);
+      border-radius: 12px; padding: 28px 28px 28px 24px;
+      display: flex; gap: 24px; align-items: flex-start;
+      background-image: radial-gradient(ellipse at 100% 0%, rgba(139,92,246,.08) 0%, transparent 60%);
+      transition: border-color .2s;
+    }
+    .survey-card:hover { border-color: rgba(139,92,246,.45); }
+    .survey-left { flex-shrink: 0; }
+    .survey-buddy {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px; line-height: 1.45; white-space: pre;
+      opacity: .85;
+    }
+    .survey-right { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+    .survey-title {
+      font-family: 'Inter', sans-serif;
+      font-size: 18px; font-weight: 700; color: var(--bright);
+    }
+    .survey-desc {
+      font-family: 'Inter', sans-serif;
+      font-size: 13px; color: var(--dim); line-height: 1.6;
+    }
+    .survey-tags { display: flex; gap: 6px; flex-wrap: wrap; }
+    .stag {
+      font-family: 'JetBrains Mono', monospace; font-size: 10px;
+      padding: 3px 9px; border-radius: 999px;
+      background: var(--purple-bg); border: 1px solid var(--purple-border);
+      color: var(--purple-lt); white-space: nowrap;
+    }
+    .survey-cta-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 4px; }
+    .survey-btn {
+      display: inline-block;
+      background: var(--purple); color: #fff;
+      font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; letter-spacing: .06em;
+      padding: 9px 20px; border-radius: 6px; text-decoration: none;
+      transition: opacity .2s, transform .15s;
+    }
+    .survey-btn:hover { opacity: .88; transform: translateY(-1px); }
+    .survey-meta { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--dim); }
+    @media (max-width: 520px) {
+      .survey-card { flex-direction: column; }
+      .survey-left { display: none; }
+    }
+
     /* ── FOOTER BAR ── */
     .footer-bar {
       border-top: 1px solid var(--purple-border);
@@ -431,6 +491,7 @@
   </div>
   <div class="nav-right">
     <a class="gh-link" href="https://github.com/jaychempan/coding-with-beat" target="_blank" rel="noopener">GitHub ↗</a>
+    <a class="nav-survey" href="#survey" data-i18n="nav-survey">User Survey ✦</a>
     <div class="lang-toggle">
       <button class="lang-btn active" onclick="setLang('en')">EN</button>
       <button class="lang-btn" onclick="setLang('zh')">中文</button>
@@ -703,6 +764,38 @@
   </div>
 </div>
 
+<hr class="divider">
+
+<!-- SURVEY -->
+<div class="survey-wrap" id="survey">
+  <p class="section-head" data-i18n="survey-head">user research</p>
+  <div class="survey-card">
+    <div class="survey-left">
+      <pre class="survey-buddy"><span class="c-amber">╔════╗</span>
+<span class="c-dim">╱</span><span class="c-coral">[</span><span class="c-dim">│</span><span class="c-yellow">♫♪</span><span class="c-dim">│</span><span class="c-coral">]</span><span class="c-dim">╲</span>
+<span class="c-dim"> │</span><span class="c-cream">^‿^</span><span class="c-dim">│</span>
+<span class="c-amber"> ╚════╝</span>
+<span class="c-ltgrn"> ▐</span><span class="c-green">████</span><span class="c-ltgrn">▌</span>
+<span class="c-ltgrn"> ▐</span><span class="c-green">█  █</span><span class="c-ltgrn">▌</span>
+<span class="c-dim"> ╱</span><span class="c-green">█  █</span><span class="c-dim">╲</span></pre>
+    </div>
+    <div class="survey-right">
+      <div class="survey-title" data-i18n="survey-title">Help Us Improve CWB</div>
+      <div class="survey-desc" data-i18n="survey-desc">Share your experience with DJ Buddy — how music matches your coding mood, whether the companion check-ins feel helpful, and what you'd love to see next.</div>
+      <div class="survey-tags">
+        <span class="stag" data-i18n="stag1">🎵 Music Quality</span>
+        <span class="stag" data-i18n="stag2">🧠 Flow & Focus</span>
+        <span class="stag" data-i18n="stag3">💬 Companion Mode</span>
+        <span class="stag" data-i18n="stag4">⭐ Overall Rating</span>
+      </div>
+      <div class="survey-cta-row">
+        <a class="survey-btn" href="survey/" target="_blank" rel="noopener" data-i18n="survey-btn">Take the Survey →</a>
+        <span class="survey-meta" data-i18n="survey-meta">~8 min · Anonymous · 37 questions</span>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- FOOTER BAR -->
 <div class="footer-bar">
   <div class="footer-tagline">
@@ -778,6 +871,14 @@
       'links-head': 'related projects',
       'link-ccf': 'Academic deadline tracker for CCF conferences.',
       'link-cit': 'Monitor citation counts for your papers in real time.',
+      'survey-head':  'user research',
+      'survey-title': 'Help Us Improve CWB',
+      'survey-desc':  'Share your experience with DJ Buddy — how music matches your coding mood, whether the companion check-ins feel helpful, and what you\'d love to see next.',
+      'stag1': '🎵 Music Quality', 'stag2': '🧠 Flow & Focus',
+      'stag3': '💬 Companion Mode', 'stag4': '⭐ Overall Rating',
+      'survey-btn':  'Take the Survey →',
+      'survey-meta': '~8 min · Anonymous · 37 questions',
+      'nav-survey':  'User Survey ✦',
       'footer-t1':     'Your workflow. Your vibe.',
       'footer-t2':     'Your beat.',
       'footer-local':  'Local Library',
@@ -825,6 +926,14 @@
       'links-head': '友情链接',
       'link-ccf': 'CCF 会议截稿日期追踪器',
       'link-cit': '实时监控论文引用数量',
+      'survey-head':  '用户调研',
+      'survey-title': '帮我们改进 CWB',
+      'survey-desc':  '分享你与 DJ Buddy 的相处体验——音乐是否契合你的编码情绪、陪伴签到是否自然、以及你最想看到的改进。',
+      'stag1': '🎵 音乐质量', 'stag2': '🧠 心流与专注',
+      'stag3': '💬 陪伴模式', 'stag4': '⭐ 整体评价',
+      'survey-btn':  '填写问卷 →',
+      'survey-meta': '约 8 分钟 · 匿名 · 37 题',
+      'nav-survey':  '用户问卷 ✦',
       'footer-t1':     '你的工作流，你的氛围，',
       'footer-t2':     '你的节拍',
       'footer-local':  '本地音乐库',

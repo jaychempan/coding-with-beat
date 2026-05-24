@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CWB User Survey · Coding with Beat</title>
+  <link rel="icon" href="../assets/logo_icon.png" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:       #080810;
+      --bg2:      #12121e;
+      --bg3:      #1a1a2a;
+      --border:   #2a2a40;
+      --purple:   #4b0082;
+      --purple2:  #6a0dad;
+      --purple3:  #9b59b6;
+      --purple4:  #c39bd3;
+      --accent:   #b388ff;
+      --text:     #e8e8f0;
+      --muted:    #8888a8;
+      --green:    #4caf7d;
+      --radius:   12px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    /* ── Progress bar ── */
+    #progress-bar-wrap {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      height: 3px; background: var(--bg2);
+    }
+    #progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--purple2), var(--accent));
+      transition: width .35s ease;
+      width: 0%;
+    }
+
+    /* ── Header ── */
+    header {
+      text-align: center;
+      padding: 64px 24px 40px;
+      background: radial-gradient(ellipse at 50% 0%, rgba(75,0,130,.35) 0%, transparent 70%);
+    }
+    .logo-row {
+      display: flex; align-items: center; justify-content: center; gap: 12px;
+      margin-bottom: 20px;
+    }
+    .buddy {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px; line-height: 1.3;
+      color: var(--accent);
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 12px;
+      white-space: pre;
+    }
+    header h1 {
+      font-size: clamp(22px, 4vw, 32px);
+      font-weight: 800;
+      letter-spacing: -.5px;
+    }
+    header h1 span { color: var(--accent); }
+    header p.sub {
+      color: var(--muted); margin-top: 10px;
+      max-width: 520px; margin-inline: auto;
+      font-size: 14px;
+    }
+    .badge {
+      display: inline-block;
+      background: rgba(179,136,255,.12);
+      border: 1px solid rgba(179,136,255,.3);
+      color: var(--accent);
+      font-size: 12px; font-weight: 600;
+      padding: 3px 10px; border-radius: 999px;
+      margin-top: 14px;
+    }
+
+    /* ── Step nav ── */
+    #step-nav {
+      display: flex; justify-content: center; gap: 6px;
+      padding: 20px 24px;
+      flex-wrap: wrap;
+    }
+    .step-dot {
+      width: 32px; height: 32px; border-radius: 50%;
+      border: 2px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700; color: var(--muted);
+      cursor: pointer; transition: all .2s;
+    }
+    .step-dot.active { border-color: var(--accent); color: var(--accent); background: rgba(179,136,255,.1); }
+    .step-dot.done   { border-color: var(--green); color: var(--green); background: rgba(76,175,125,.1); }
+
+    /* ── Container ── */
+    .container { max-width: 680px; margin: 0 auto; padding: 0 20px 80px; }
+
+    /* ── Section card ── */
+    .section-card {
+      display: none;
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 32px;
+      margin-bottom: 24px;
+    }
+    .section-card.active { display: block; animation: fadeIn .25s ease; }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+
+    .section-label {
+      font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
+      color: var(--accent); text-transform: uppercase; margin-bottom: 8px;
+    }
+    .section-title {
+      font-size: 20px; font-weight: 700; margin-bottom: 6px;
+    }
+    .section-desc {
+      color: var(--muted); font-size: 13px; margin-bottom: 28px;
+      padding-bottom: 20px; border-bottom: 1px solid var(--border);
+    }
+
+    /* ── Question ── */
+    .question { margin-bottom: 28px; }
+    .question label.q-label {
+      display: block; font-weight: 600; margin-bottom: 12px; font-size: 14px;
+    }
+    .question label.q-label .q-num {
+      color: var(--accent); font-family: 'JetBrains Mono', monospace;
+      font-size: 12px; margin-right: 6px;
+    }
+
+    /* Likert */
+    .likert {
+      display: flex; gap: 6px; flex-wrap: wrap;
+    }
+    .likert input { display: none; }
+    .likert label {
+      flex: 1; min-width: 44px;
+      text-align: center; padding: 10px 4px;
+      border: 1.5px solid var(--border);
+      border-radius: 8px; cursor: pointer;
+      font-size: 13px; font-weight: 600;
+      color: var(--muted); transition: all .15s;
+    }
+    .likert input:checked + label {
+      border-color: var(--accent); color: var(--accent);
+      background: rgba(179,136,255,.12);
+    }
+    .likert label:hover { border-color: var(--purple3); color: var(--text); }
+    .likert-labels {
+      display: flex; justify-content: space-between;
+      font-size: 11px; color: var(--muted); margin-top: 5px; padding: 0 2px;
+    }
+
+    /* Radio / Select */
+    .radio-group, .check-group { display: flex; flex-direction: column; gap: 8px; }
+    .radio-group label, .check-group label {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 14px;
+      border: 1.5px solid var(--border); border-radius: 8px;
+      cursor: pointer; transition: all .15s; font-size: 14px;
+    }
+    .radio-group label:hover, .check-group label:hover {
+      border-color: var(--purple3);
+    }
+    .radio-group input:checked ~ span,
+    .check-group input:checked ~ span { color: var(--accent); }
+    .radio-group label:has(input:checked),
+    .check-group label:has(input:checked) {
+      border-color: var(--accent); background: rgba(179,136,255,.08);
+    }
+    .radio-group input, .check-group input { accent-color: var(--accent); width: 16px; height: 16px; flex-shrink: 0; }
+
+    /* Checkbox grid (scene skills) */
+    .check-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px;
+    }
+    .check-grid label {
+      padding: 8px 12px; border: 1.5px solid var(--border); border-radius: 8px;
+      cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 8px;
+      transition: all .15s;
+    }
+    .check-grid label:has(input:checked) {
+      border-color: var(--accent); background: rgba(179,136,255,.08);
+    }
+    .check-grid input { accent-color: var(--accent); }
+
+    /* NPS */
+    .nps { display: flex; gap: 4px; flex-wrap: wrap; }
+    .nps input { display: none; }
+    .nps label {
+      width: 44px; height: 44px; border-radius: 8px;
+      border: 1.5px solid var(--border);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; font-size: 13px; font-weight: 700; color: var(--muted);
+      transition: all .15s;
+    }
+    .nps input:checked + label { border-color: var(--accent); color: var(--accent); background: rgba(179,136,255,.12); }
+    .nps label:hover { border-color: var(--purple3); color: var(--text); }
+    .nps-labels { display:flex; justify-content:space-between; font-size:11px; color:var(--muted); margin-top:5px; }
+
+    /* Textarea */
+    textarea {
+      width: 100%; min-height: 90px;
+      background: var(--bg3); border: 1.5px solid var(--border);
+      border-radius: 8px; color: var(--text); font-family: 'Inter', sans-serif;
+      font-size: 14px; padding: 12px 14px; resize: vertical; outline: none;
+      transition: border-color .15s;
+    }
+    textarea:focus { border-color: var(--accent); }
+    textarea::placeholder { color: var(--muted); }
+
+    /* Select dropdown */
+    select {
+      width: 100%; background: var(--bg3); border: 1.5px solid var(--border);
+      border-radius: 8px; color: var(--text); font-size: 14px;
+      padding: 10px 14px; outline: none; cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%238888a8' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 14px center;
+    }
+    select:focus { border-color: var(--accent); }
+    select option { background: var(--bg2); }
+
+    /* ── Navigation buttons ── */
+    .nav-row {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-top: 32px; padding-top: 24px;
+      border-top: 1px solid var(--border);
+    }
+    .btn {
+      padding: 11px 24px; border-radius: 8px;
+      font-size: 14px; font-weight: 600; cursor: pointer;
+      border: none; transition: all .2s; font-family: inherit;
+    }
+    .btn-ghost {
+      background: transparent; color: var(--muted);
+      border: 1.5px solid var(--border);
+    }
+    .btn-ghost:hover { color: var(--text); border-color: var(--purple3); }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--purple), var(--purple2));
+      color: #fff;
+    }
+    .btn-primary:hover { opacity: .9; transform: translateY(-1px); }
+    .btn-submit {
+      background: linear-gradient(135deg, #2e7d32, #43a047);
+      color: #fff;
+    }
+    .btn-submit:hover { opacity: .9; transform: translateY(-1px); }
+
+    .step-info { font-size: 13px; color: var(--muted); }
+
+    /* ── Thank-you screen ── */
+    #thank-you {
+      display: none; text-align: center;
+      padding: 80px 24px;
+    }
+    #thank-you .ty-buddy {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 18px; color: var(--green);
+      margin-bottom: 24px; display: block;
+    }
+    #thank-you h2 { font-size: 28px; font-weight: 800; margin-bottom: 12px; }
+    #thank-you h2 span { color: var(--accent); }
+    #thank-you p { color: var(--muted); max-width: 420px; margin: 0 auto 24px; }
+    .ty-link {
+      display: inline-block; margin-top: 8px;
+      color: var(--accent); text-decoration: none; font-weight: 600;
+      border-bottom: 1px solid rgba(179,136,255,.4);
+    }
+
+    /* ── Misc ── */
+    .optional { color: var(--muted); font-size: 11px; font-weight: 400; margin-left: 4px; }
+    .hint { font-size: 12px; color: var(--muted); margin-top: 6px; }
+
+    @media (max-width: 520px) {
+      .section-card { padding: 20px 16px; }
+      .likert label { font-size: 12px; padding: 8px 2px; }
+      .nps label { width: 36px; height: 36px; font-size: 12px; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="progress-bar-wrap"><div id="progress-bar"></div></div>
+
+<header>
+  <div class="logo-row">
+    <div class="buddy">(•ᴗ•) ♪
+DJ Buddy</div>
+  </div>
+  <h1><span>Coding with Beat</span> — User Survey</h1>
+  <p class="sub">Help us understand how music and emotional feedback shape your coding experience. Takes ~8 minutes.</p>
+  <div class="badge">Anonymous · ~8 min · 7 sections</div>
+</header>
+
+<div id="step-nav">
+  <div class="step-dot active" onclick="goTo(0)">1</div>
+  <div class="step-dot" onclick="goTo(1)">2</div>
+  <div class="step-dot" onclick="goTo(2)">3</div>
+  <div class="step-dot" onclick="goTo(3)">4</div>
+  <div class="step-dot" onclick="goTo(4)">5</div>
+  <div class="step-dot" onclick="goTo(5)">6</div>
+  <div class="step-dot" onclick="goTo(6)">7</div>
+</div>
+
+<div class="container">
+
+  <!-- ══════════════════════════════════════════
+       SECTION 0 · Background
+  ══════════════════════════════════════════ -->
+  <form id="cwb-survey" action="https://formspree.io/f/xkoevgnz" method="POST">
+
+  <div class="section-card active" id="sec-0">
+    <div class="section-label">Part 0 / 7</div>
+    <div class="section-title">Background</div>
+    <div class="section-desc">A few quick questions to help us understand your context.</div>
+
+    <div class="question">
+      <label class="q-label"><span class="q-num">Q1</span> How often do you use AI coding assistants (Claude Code, Codex CLI, etc.)?</label>
+      <div class="radio-group">
+        <label><input type="radio" name="usage_freq" value="lt2h"> <span>Less than 2 hours / week</span></label>
+        <label><input type="radio" name="usage_freq" value="2-5h"> <span>2–5 hours / week</span></label>
+        <label><input type="radio" name="usage_freq" value="5-10h"> <span>5–10 hours / week</span></label>
+        <label><input type="radio" name="usage_freq" value="gt10h"> <span>More than 10 hours / week</span></label>
+      </div>
+    </div>
+
+    <div class="question">
+      <label class="q-label"><span class="q-num">Q2</span> Before CWB, how often did you listen to music while coding?</label>
+      <div class="radio-group">
+        <label><input type="radio" name="music_before" value="rarely"> <span>Rarely / Never</span></label>
+        <label><input type="radio" name="music_before" value="sometimes"> <span>Sometimes</span></label>
+        <label><input type="radio" name="music_before" value="often"> <span>Often</span></label>
+        <label><input type="radio" name="music_before" value="always"> <span>Almost every session</span></label>
+      </div>
+    </div>
+
+    <div class="question">
+      <label class="q-label"><span class="q-num">Q3</span> How long have you been using CWB?</label>
+      <div class="radio-group">
+        <label><input type="radio" name="cwb_duration" value="lt1w"> <span>Less than 1 week</span></label>
+        <label><input type="radio" name="cwb_duration" value="1-2w"> <span>1–2 weeks</span></label>
+        <label><input type="radio" name="cwb_duration" value="2-4w"> <span>2–4 weeks</span></label>
+        <label><input type="radio" name="cwb_duration" value="gt1m"> <span>More than 1 month</span></label>
+      </div>
+    </div>
+
+    <div class="nav-row">
+      <span class="step-info">Section 1 of 7</span>
+      <button type="button" class="btn btn-primary" onclick="next()">Next →</button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       SECTION 1 · Flow & Focus
+  ══════════════════════════════════════════ -->
+  <div class="section-card" id="sec-1">
+    <div class="section-label">Part 1 / 7</div>
+    <div class="section-title">Flow &amp; Focus</div>
+    <div class="section-desc">Rate each statement: 1 = Strongly disagree &nbsp;→&nbsp; 5 = Strongly agree</div>
+
+    <div class="question">
+      <label class="q-label"><span class="q-num">Q4</span> After using CWB, I feel less need to interrupt my coding to adjust music.</label>
+      <div class="likert">
+        <input type="radio" name="flow_1" id="f1_1" value="1"><label for="f1_1">1</label>
+        <input type="radio" name="flow_1" id="f1_2" value="2"><label for="f1_2">2</label>
+        <input type="radio" name="flow_1" id="f1_3" value="3"><label for="f1_3">3</label>
+        <input type="radio" name="flow_1" id="f1_4" value="4"><label for="f1_4">4</label>
+        <input type="radio" name="flow_1" id="f1_5" value="5"><label for="f1_5">5</label>
+      </div>
+      <div class="likert-labels"><span>Strongly disagree</span><span>Strongly agree</span></div>
+    </div>
+
+    <div class="question">
+      <label class="q-label"><span class="q-num">Q5</span> Music responses make my coding rhythm feel more continuous.</label>
+      <div class="likert">
+        <input type="radio" name="flow_2" id="f2_1" value="1"><label for="f2_1">1</label>
+        <input type="radio" name="flow_2" id="f2_2" value="2"><label for="f2_2">2</label>
+        <input type="radio" name="flow_2" id="f2_3" value="3"><label for="f2_3">3</label>
+        <input type="radio" name="flow_2" id="f2_4" value="4"><label for="f2_4">4</label>
+        <input type="radio" name="flow_2" id="f2_5" value="5"><label for="f2_5">5</label>
+      </div>
+      <div class="likert-labels"><span>Strongly disagree</span><span>Strongly agree</span></div>
+    </div>
+
+    <div class="question">
+      <label class="q-label"><span class="q-num">Q6</span> Compared to before, I get interrupted less often by the need to switch to a music app.</label>
+      <div class="likert">
+        <input type="radio" name="flow_3" id="f3_1" value="1"><label for="f3_1">1</label>
+        <input type="radio" name="flow_3" id="f3_2" value="2"><label for="f3_2">2</label>
+        <input type="radio" name="flow_3" id="f3_3" value="3"><label for="f3_3">3</label>
+        <input type="radio" name="flow_3" id="f3_4" value="4"><label for="f3_4">4</label>
+        <input type="radio" name="flow_3" id="f3_5" value="5"><label for="f3_5">5</label>
+      </div>
+      <div class="likert-labels"><span>Strongly disagree</span><span>Strongly agree</span></div>
+    </div>
+
+    <div class="question">
+      <label class="q-label"><span class="q-num">Q7</span> During long AI coding sessions, CWB helps me maintain my working state.</label>
+      <div class="likert">
+        <input type="radio" name="flow_4" id="f4_1" value="1"><label for="f4_1">1</label>
+        <input type="radio" name="flow_4" id="f4_2" value="2"><label for="f4_2">2</label>
+        <input type="radio" name="flow_4" id="f4_3" value="3"><label for="f4_3">3</label>
+        <input type="radio" name="flow_4" id="f4_4" value="4"><label for="f4_4">4</label>
+        <input type="radio" name="flow_4" id="f4_5" value="5"><label for="f4_5">5</label>
+      </div>
+      <div class="likert-labels"><span>Strongly disagree</span><span>Strongly agree</span></div>
+    </div>
+
+    <div class="question">
+      <label class="q-label"><span class="q-num">Q8</span> Overall, CWB improves my sense of immersion while coding.</label>
+      <div class="likert">
+        <input type="radio" name="flow_5" id="f5_1" value="1"><label for="f5_1">1</label>
+        <input type="radio" name="flow_5" id="f5_2" value="2"><label for="f5_2">2</label>
+        <input type="radio" name="flow_5" id="f5_3" value="3"><label for="f5_3">3</label>
+        <input type="radio" name="flow_5" id="f5_4" value="4"><label for="f5_4">4</label>
+        <input type="radio" name="flow_5" id="f5_5" value="5"><label for="f5_5">5</label>
+      </div>
+      <div class="likert-labels"><span>Strongly disagree</span><span>Strongly agree</span></div>
+    </div>
+
+    <div class="nav-row">
+      <button type="button" class="btn btn-ghost" onclick="prev()">← Back</button>
+      <span class="step-info">Section 2 of 7</span>
+      <button type="button" class="btn btn-primary" onclick="next()">Next →</button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       SECTION 2 · Emotional Resonance
+  ══════════════════════════════════════════ -->
+  <div class="section-card" id="sec-2">
+    <div class="section-label">Part 2 / 7</div>
+    <div class="section-title">Emotional Resonance &amp; Vibe Matching</div>
+    <div class="section-desc">This is the core design goal of CWB — please answer thoughtfully. &nbsp;1 = Strongly disagree &nbsp;→&nbsp; 5 = Strongly agree</div>
+
+    <div class="question">
+      <label class="q-label"><span class="q-num">Q9</span> The music style CWB recommends usually matches my coding state (focused, debugging, celebrating, etc.).</label>
+      <div class="likert">
+        <input type="radio" name="emo_1" id="e1_1" value="1"><label for="e1_1">1</label>
+        <input type="radio" name="emo_1" id="e1_2" value="2"><label for="e1_2">2</label>
+        <input type="radio" name="emo_1" id="e1_3" value="3"><label for="e1_3">3</label>
+        <input type="radio" name="emo_1" id="e1_4" value="4"><label for="e1_4">4</label>
+        <input type="radio" name="emo_1" id="e1_5" value="5"><label for="e1_5">5</label>
+      </div>
+      <div class="likert-labels"><span>Strongly disagree</span><span>Strongly agree</span></div>
+    </div>
+
+    <div class="question">
+      <label class="q-label"><span class="q-num">Q10</span> When tests fail, the music response makes me feel "understood" or accompanied.</label>
+      <div class="likert">
+        <input type="radio" name="emo_2" id="e2_1" value="1"><label for="e2_1">1</label>
+        <input type="radio" name="emo_2" id="e2_2" value="2"><label for="e2_2">2</label>
+        <input type="radio" name="emo_2" id="e2_3" value="3"><label for="e2_3">3</label>
+        <input type="radio" name="emo_2" id="e2_4" value="4"><label for="e2_4">4</label>
+        <input type="radio" name="emo_2" id="e2_5" value="5"><label for="e2_5">5</label>
+      </div>
+      <div class="likert-labels"><span>Strongly disagree</span><span>Strongly agree</span></div>
+    </div>
+
+    <div class="question">
+      <label class="q-label"><span class="q-num">Q11</span> When tests pass or a commit succeeds, the music feedback amplifies my sense of achievement.</label>
+      <div class="likert">
+        <input type="radio" name="emo_3" id="e3_1" value="1"><label for="e3_1">1</label>
+        <input type="radio" name="emo_3" id="e3_2" value="2"><label for="e3_2">2</label>
+        <input type="radio" name="emo_3" id="e3_3" value="3"><label for="e3_3">3</label>
+        <input type="radio" name="emo_3" id="e3_4" value="4"><label for="e3_4">4</label>
+        <input type="radio" name="emo_3" id="e3_5" value="5"><label for="e3_5">5</label>
+      </div>
+      <div class="likert-labels"><span>Strongly disagree</span><span>Strongly agree</span></div>
+    </div>
+
+    <div class="question">
+      <label class="q-label"><span class="q-num">Q12</span> DJ Buddy's facial expressions and mood changes accurately reflect my coding emotions.</label>
+      <div class="likert">
+        <input type="radio" name="emo_4" id="e4_1" value="1"><label for="e4_1">1</label>
+        <input type="radio" name="emo_4" id="e4_2" value="2"><label for="e4_2">2</label>
+        <input type="radio" name="emo_4" id="e4_3" value="3"><label for="e4_3">3</label>
+        <input type="radio" name="emo_4" id="e4_4" value="4"><label for="e4_4">4</label>
+        <input type="radio" name="emo_4" id="e4_5" value="5"><label for="e4_5">5</label>
+      </div>
+      <div class="likert-labels"><span>Strongly disagree</span><span>Strongly agree</span></div>
+    </div>
+
+    <div class="question">
+      <label class="q-label"><span class="q-num">Q13</span> Music helps me stay emotionally stable during frustrating debug sessions.</label>
+      <div class="likert">
+        <input type="radio" name="emo_5" id="e5_1" value="1"><label for="e5_1">1</label>
+        <input type="radio" name="emo_5" id="e5_2" value="2"><label for="e5_2">2</label>
+        <input type="radio" name="emo_5" id="e5_3" value="3"><label for="e5_3">3</label>
+        <input type="radio" name="emo_5" id="e5_4" value="4"><label for="e5_4">4</label>
+        <input type="radio" name="emo_5" id="e5_5" value="5"><label for="e5_5">5</label>
+      </div>
+      <div class="likert-labels"><span>Strongly disagree</span><span>Strongly agree</span></div>
+    </div>
+
+    <div class="question">
+      <label class="q-label"><span class="q-num">Q14</span> When did you feel CWB's emotional response most strongly? <span class="optional">(select all that apply)</span></label>
+      <div class="check-group">
+        <label><input type="checkbox" name="emo_moments" value="session_start"> <span>Session start</span></label>
+        <label><input type="checkbox" name="emo_moments" value="debug_struggle"> <span>Repeated errors / debug struggle</span></label>
+        <label><input type="checkbox" name="emo_moments" value="victory"> <span>Tests all-green / successful commit</span></label>
+        <label><input type="checkbox" name="emo_moments" value="late_night"> <span>Late-night long coding sessions</span></label>
+        <label><input type="checkbox" name="emo_moments" value="deep_focus"> <span>Deep focus / writing code quietly</span></label>
+        <label><input type="checkbox" name="emo_moments" value="none"> <span>Didn't notice any particular moment</span></label>
+      </div>
+    </div>
+
+    <div class="nav-row">
+      <button type="button" class="btn btn-ghost" onclick="prev()">← Back</button>
+      <span class="step-info">Section 3 of 7</span>
+      <button type="button" class="btn btn-primary" onclick="next()">Next →</button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       SECTION 3 · Companion Mode
+  ══════════════════════════════════════════ -->
+  <div class="section-card" id="sec-3">
+    <div class="section-label">Part 3 / 7</div>
+    <div class="section-title">Companion Mode — Proactive Check-ins</div>
+    <div class="section-desc">DJ Buddy proactively reaches out at key emotional moments. Rate your experience. &nbsp;1 = Strongly disagree &nbsp;→&nbsp; 5 = Strongly agree</div>
+
+    <div class="question">
+      <label class="q-label"><span class="q-num">Q15</span> DJ Buddy's proactive greetings / check-ins feel warm and welcome, not intrusive.</label>
+      <div class="likert">
+        <input type="radio" name="comp_1" id="c1_1" value="1"><label for="c1_1">1</label>
+        <input type="radio" name="comp_1" id="c1_2" value="2"><label for="c1_2">2</label>
+        <input type="radio" name="comp_1" id="c1_3" value="3"><label for="c1_3">3</label>
+        <input type="radio" name="comp_1" id="c1_4" value="4"><label for="c1_4">4</label>
+        <input type="radio" name="comp_1" id="c1_5" value="5"><label for="c1_5">5</label>
+      </div>
+      <div class="likert-labels"><span>Strongly disagree</span><span>Strongly agree</span></div>
+    </div>
+
+    <div class="question">
+      <label class="q-label"><span class="q-num">Q16</span> The timing of companion messages (session start, repeated failures, commit success, close) feels natural.</label>
+      <div class="likert">
+        <input type="radio" name="comp_2" id="c2_1" value="1"><label for="c2_1">1</label>
+        <input type="radio" name="comp_2" id="c2_2" value="2"><label for="c2_2">2</label>
+        <input type="radio" name="comp_2" id="c2_3" value="3"><label for="c2_3">3</label>
+        <input type="radio" name="comp_2" id="c2_4" value="4"><label for="c2_4">4</label>
+        <input type="radio" name="comp_2" id="c2_5" value="5"><label for="c2_5">5</label>
+      </div>
+      <div class="likert-labels"><span>Strongly disagree</span><span>Strongly agree</span></div>
+    </div>
+
+    <div class="question">
+      <label class="q-label"><span class="q-num">Q17</span> Companion mode makes CWB feel more like a "coding buddy" than just a tool.</label>
+      <div class="likert">
+        <input type="radio" name="comp_3" id="c3_1" value="1"><label for="c3_1">1</label>
+        <input type="radio" name="comp_3" id="c3_2" value="2"><label for="c3_2">2</label>
+        <input type="radio" name="comp_3" id="c3_3" value="3"><label for="c3_3">3</label>
+        <input type="radio" name="comp_3" id="c3_4" value="4"><label for="c3_4">4</label>
+        <input type="radio" name="comp_3" id="c3_5" value="5"><label for="c3_5">5</label>
+      </div>
+      <div class="likert-labels"><span>Strongly disagree</span><span>Strongly agree</span></div>
+    </div>
+
+    <div class="question">
+      <label class="q-label"><span class="q-num">Q18</span> The 15-minute cooldown means companion messages appear at a comfortable frequency.</label>
+      <div class="likert">
+        <input type="radio" name="comp_4" id="c4_1" value="1"><label for="c4_1">1</label>
+        <input type="radio" name="comp_4" id="c4_2" value="2"><label for="c4_2">2</label>
+        <input type="radio" name="comp_4" id="c4_3" value="3"><label for="c4_3">3</label>
+        <input type="radio" name="comp_4" id="c4_4" value="4"><label for="c4_4">4</label>
+        <input type="radio" name="comp_4" id="c4_5" value="5"><label for="c4_5">5</label>
+      </div>
+      <div class="likert-labels"><span>Strongly disagree</span><span>Strongly agree</span></div>
+    </div>
+
+    <div class="question">
+      <label class="q-label"><span class="q-num">Q19</span> Which companion trigger moments feel most valuable? <span class="optional">(pick up to 2)</span></label>
+      <div class="check-group">
+        <label><input type="checkbox" name="comp_moments" value="session_start"> <span>Session start greeting</span></label>
+        <label><input type="checkbox" name="comp_moments" value="debug_struggle"> <span>After repeated failures — care check</span></label>
+        <label><input type="checkbox" name="comp_moments" value="victory"> <span>Victory celebration after commit / green tests</span></label>
+        <label><input type="checkbox" name="comp_moments" value="idle_checkin"> <span>Silent period idle check-in</span></label>
+        <label><input type="checkbox" name="comp_moments" value="session_end"> <span>Session close farewell</span></label>
+        <label><input type="checkbox" name="comp_moments" value="none"> <span>I prefer it stays quiet</span></label>
+      </div>
+    </div>
+
+    <div class="question">
+      <label class="q-label"><span class="q-num">Q20</span> Preferred companion message tone?</label>
+      <div class="radio-group">
+        <label><input type="radio" name="comp_tone" value="concise"> <span>More concise and restrained</span></label>
+        <label><input type="radio" name="comp_tone" value="current"> <span>Current balance feels right</span></label>
+        <label><input type="radio" name="comp_tone" value="warmer"> <span>Warmer and more expressive</span></label>
+      </div>
+    </div>
+
+    <div class="nav-row">
+      <button type="button" class="btn btn-ghost" onclick="prev()">← Back</button>
+      <span class="step-info">Section 4 of 7</span>
+      <button type="button" class="btn btn-primary" onclick="next()">Next →</button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       SECTION 4 · Music Discovery
+  ══════════════════════════════════════════ -->
+  <div class="section-card" id="sec-4">
+    <div class="section-label">Part 4 / 7</div>
+    <div class="section-title">Music Discovery &amp; Quality</div>
+    <div class="section-desc">1 = Strongly disagree &nbsp;→&nbsp; 5 = Strongly agree</div>
+
+    <div class="question">
+      <label class="q-label"><span class="q-num">Q21</span> The quality of <code style="color:var(--accent);font-size:13px">smart_search</code> results meets my expectations.</label>
+      <div class="likert">
+        <input type="radio" name="music_1" id="m1_1" value="1"><label for="m1_1">1</label>
+        <input type="radio" name="music_1" id="m1_2" value="2"><label for="m1_2">2</label>
+        <input type="radio" name="music_1" id="m1_3" value="3"><label for="m1_3">3</label>
+        <input type="radio" name="music_1" id="m1_4" value="4"><label for="m1_4">4</label>
+        <input type="radio" name="music_1" id="m1_5" value="5"><label for="m1_5">5</label>
+      </div>
+      <div class="likert-labels"><span>Strongly disagree</span><span>Strongly agree</span></div>
+    </div>
+
+    <div class="question">
+      <label class="q-label"><span class="q-num">Q22</span> The scene categories (Lofi, Focus, Synthwave, etc.) point to the right kind of music.</label>
+      <div class="likert">
+        <input type="radio" name="music_2" id="m2_1" value="1"><label for="m2_1">1</label>
+        <input type="radio" name="music_2" id="m2_2" value="2"><label for="m2_2">2</label>
+        <input type="radio" name="music_2" id="m2_3" value="3"><label for="m2_3">3</label>
+        <input type="radio" name="music_2" id="m2_4" value="4"><label for="m2_4">4</label>
+        <input type="radio" name="music_2" id="m2_5" value="5"><label for="m2_5">5</label>
+      </div>
+      <div class="likert-labels"><span>Strongly disagree</span><span>Strongly agree</span></div>
+    </div>
+
+    <div class="question">
+      <label class="q-label"><span class="q-num">Q23</span> Through CWB I discovered music I wouldn't have found on my own.</label>
+      <div class="likert">
+        <input type="radio" name="music_3" id="m3_1" value="1"><label for="m3_1">1</label>
+        <input type="radio" name="music_3" id="m3_2" value="2"><label for="m3_2">2</label>
+        <input type="radio" name="music_3" id="m3_3" value="3"><label for="m3_3">3</label>
+        <input type="radio" name="music_3" id="m3_4" value="4"><label for="m3_4">4</label>
+        <input type="radio" name="music_3" id="m3_5" value="5"><label for="m3_5">5</label>
+      </div>
+      <div class="likert-labels"><span>Strongly disagree</span><span>Strongly agree</span></div>
+    </div>
+
+    <div class="question">
+      <label class="q-label"><span class="q-num">Q24</span> Having ~15 results per search gives me enough choice variety.</label>
+      <div class="likert">
+        <input type="radio" name="music_4" id="m4_1" value="1"><label for="m4_1">1</label>
+        <input type="radio" name="music_4" id="m4_2" value="2"><label for="m4_2">2</label>
+        <input type="radio" name="music_4" id="m4_3" value="3"><label for="m4_3">3</label>
+        <input type="radio" name="music_4" id="m4_4" value="4"><label for="m4_4">4</label>
+        <input type="radio" name="music_4" id="m4_5" value="5"><label for="m4_5">5</label>
+      </div>
+      <div class="likert-labels"><span>Strongly disagree</span><span>Strongly agree</span></div>
+    </div>
+
+    <div class="question">
+      <label class="q-label"><span class="q-num">Q25</span> Which scene skills do you use most often? <span class="optional">(select all that apply)</span></label>
+      <div class="check-grid">
+        <label><input type="checkbox" name="scenes" value="lofi"> 🎧 Lofi</label>
+        <label><input type="checkbox" name="scenes" value="focus"> 🧠 Focus</label>
+        <label><input type="checkbox" name="scenes" value="hype"> 🔥 Hype</label>
+        <label><input type="checkbox" name="scenes" value="jazz"> ☕ Jazz</label>
+        <label><input type="checkbox" name="scenes" value="synthwave"> 🌆 Synthwave</label>
+        <label><input type="checkbox" name="scenes" value="relax"> 🌅 Relax</label>
+        <label><input type="checkbox" name="scenes" value="classical"> 🎹 Classical</label>
+        <label><input type="checkbox" name="scenes" value="sad"> 💙 Sad</label>
+        <label><input type="checkbox" name="scenes" value="chinese"> 🏮 Chinese</label>
+        <label><input type="checkbox" name="scenes" value="sleep"> 🌙 Sleep</label>
+      </div>
+    </div>
+
+    <div class="nav-row">
+      <button type="button" class="btn btn-ghost" onclick="prev()">← Back</button>
+      <span class="step-info">Section 5 of 7</span>
+      <button type="button" class="btn btn-primary" onclick="next()">Next →</button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       SECTION 5 · Usability
+  ══════════════════════════════════════════ -->
+  <div class="section-card" id="sec-5">
+    <div class="section-label">Part 5 / 7</div>
+    <div class="section-title">Interaction &amp; Usability</div>
+    <div class="section-desc">1 = Strongly disagree &nbsp;→&nbsp; 5 = Strongly agree</div>
+
+    <div class="question">
+      <label class="q-label"><span class="q-num">Q26</span> The <code style="color:var(--accent);font-size:13px">/cwb</code> command syntax feels natural — I don't have to memorize it.</label>
+      <div class="likert">
+        <input type="radio" name="ux_1" id="u1_1" value="1"><label for="u1_1">1</label>
+        <input type="radio" name="ux_1" id="u1_2" value="2"><label for="u1_2">2</label>
+        <input type="radio" name="ux_1" id="u1_3" value="3"><label for="u1_3">3</label>
+        <input type="radio" name="ux_1" id="u1_4" value="4"><label for="u1_4">4</label>
+        <input type="radio" name="ux_1" id="u1_5" value="5"><label for="u1_5">5</label>
+      </div>
+      <div class="likert-labels"><span>Strongly disagree</span><span>Strongly agree</span></div>
+    </div>
+
+    <div class="question">
+      <label class="q-label"><span class="q-num">Q27</span> Describing music with natural language (e.g. "something for late-night debugging") gives ideal results.</label>
+      <div class="likert">
+        <input type="radio" name="ux_2" id="u2_1" value="1"><label for="u2_1">1</label>
+        <input type="radio" name="ux_2" id="u2_2" value="2"><label for="u2_2">2</label>
+        <input type="radio" name="ux_2" id="u2_3" value="3"><label for="u2_3">3</label>
+        <input type="radio" name="ux_2" id="u2_4" value="4"><label for="u2_4">4</label>
+        <input type="radio" name="ux_2" id="u2_5" value="5"><label for="u2_5">5</label>
+      </div>
+      <div class="likert-labels"><span>Strongly disagree</span><span>Strongly agree</span></div>
+    </div>
+
+    <div class="question">
+      <label class="q-label"><span class="q-num">Q28</span> The statusline lets me see playback state at a glance without breaking focus.</label>
+      <div class="likert">
+        <input type="radio" name="ux_3" id="u3_1" value="1"><label for="u3_1">1</label>
+        <input type="radio" name="ux_3" id="u3_2" value="2"><label for="u3_2">2</label>
+        <input type="radio" name="ux_3" id="u3_3" value="3"><label for="u3_3">3</label>
+        <input type="radio" name="ux_3" id="u3_4" value="4"><label for="u3_4">4</label>
+        <input type="radio" name="ux_3" id="u3_5" value="5"><label for="u3_5">5</label>
+      </div>
+      <div class="likert-labels"><span>Strongly disagree</span><span>Strongly agree</span></div>
+    </div>
+
+    <div class="question">
+      <label class="q-label"><span class="q-num">Q29</span> The installation was simple and didn't add unnecessary setup friction.</label>
+      <div class="likert">
+        <input type="radio" name="ux_4" id="u4_1" value="1"><label for="u4_1">1</label>
+        <input type="radio" name="ux_4" id="u4_2" value="2"><label for="u4_2">2</label>
+        <input type="radio" name="ux_4" id="u4_3" value="3"><label for="u4_3">3</label>
+        <input type="radio" name="ux_4" id="u4_4" value="4"><label for="u4_4">4</label>
+        <input type="radio" name="ux_4" id="u4_5" value="5"><label for="u4_5">5</label>
+      </div>
+      <div class="likert-labels"><span>Strongly disagree</span><span>Strongly agree</span></div>
+    </div>
+
+    <div class="question">
+      <label class="q-label"><span class="q-num">Q30</span> The system runs stably — I rarely encounter errors or unexpected interruptions.</label>
+      <div class="likert">
+        <input type="radio" name="ux_5" id="u5_1" value="1"><label for="u5_1">1</label>
+        <input type="radio" name="ux_5" id="u5_2" value="2"><label for="u5_2">2</label>
+        <input type="radio" name="ux_5" id="u5_3" value="3"><label for="u5_3">3</label>
+        <input type="radio" name="ux_5" id="u5_4" value="4"><label for="u5_4">4</label>
+        <input type="radio" name="ux_5" id="u5_5" value="5"><label for="u5_5">5</label>
+      </div>
+      <div class="likert-labels"><span>Strongly disagree</span><span>Strongly agree</span></div>
+    </div>
+
+    <div class="nav-row">
+      <button type="button" class="btn btn-ghost" onclick="prev()">← Back</button>
+      <span class="step-info">Section 6 of 7</span>
+      <button type="button" class="btn btn-primary" onclick="next()">Next →</button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       SECTION 6 · Overall + Open Feedback
+  ══════════════════════════════════════════ -->
+  <div class="section-card" id="sec-6">
+    <div class="section-label">Part 6–7 / 7</div>
+    <div class="section-title">Overall Rating &amp; Open Feedback</div>
+    <div class="section-desc">Last section — your open feedback is the most valuable part. 🙏</div>
+
+    <div class="question">
+      <label class="q-label"><span class="q-num">Q31</span> Overall satisfaction with CWB</label>
+      <div class="likert">
+        <input type="radio" name="overall_sat" id="o1_1" value="1"><label for="o1_1">⭐</label>
+        <input type="radio" name="overall_sat" id="o1_2" value="2"><label for="o1_2">⭐⭐</label>
+        <input type="radio" name="overall_sat" id="o1_3" value="3"><label for="o1_3">⭐⭐⭐</label>
+        <input type="radio" name="overall_sat" id="o1_4" value="4"><label for="o1_4">⭐⭐⭐⭐</label>
+        <input type="radio" name="overall_sat" id="o1_5" value="5"><label for="o1_5">⭐⭐⭐⭐⭐</label>
+      </div>
+    </div>
+
+    <div class="question">
+      <label class="q-label"><span class="q-num">Q32</span> How likely are you to recommend CWB to other AI coding assistant users?</label>
+      <div class="nps">
+        <input type="radio" name="nps" id="nps0" value="0"><label for="nps0">0</label>
+        <input type="radio" name="nps" id="nps1" value="1"><label for="nps1">1</label>
+        <input type="radio" name="nps" id="nps2" value="2"><label for="nps2">2</label>
+        <input type="radio" name="nps" id="nps3" value="3"><label for="nps3">3</label>
+        <input type="radio" name="nps" id="nps4" value="4"><label for="nps4">4</label>
+        <input type="radio" name="nps" id="nps5" value="5"><label for="nps5">5</label>
+        <input type="radio" name="nps" id="nps6" value="6"><label for="nps6">6</label>
+        <input type="radio" name="nps" id="nps7" value="7"><label for="nps7">7</label>
+        <input type="radio" name="nps" id="nps8" value="8"><label for="nps8">8</label>
+        <input type="radio" name="nps" id="nps9" value="9"><label for="nps9">9</label>
+        <input type="radio" name="nps" id="nps10" value="10"><label for="nps10">10</label>
+      </div>
+      <div class="nps-labels"><span>Not at all</span><span>Definitely yes</span></div>
+    </div>
+
+    <div class="question">
+      <label class="q-label"><span class="q-num">Q33</span> Compared to before using CWB, your overall coding experience has:</label>
+      <div class="radio-group">
+        <label><input type="radio" name="overall_change" value="much_better"> <span>Improved significantly</span></label>
+        <label><input type="radio" name="overall_change" value="slightly_better"> <span>Improved slightly</span></label>
+        <label><input type="radio" name="overall_change" value="no_change"> <span>No noticeable change</span></label>
+        <label><input type="radio" name="overall_change" value="slightly_worse"> <span>Slightly worse</span></label>
+        <label><input type="radio" name="overall_change" value="much_worse"> <span>Noticeably worse</span></label>
+      </div>
+    </div>
+
+    <div class="question">
+      <label class="q-label">
+        <span class="q-num">Q34</span>
+        In one sentence, describe the biggest change CWB made to your coding experience.
+      </label>
+      <textarea name="open_biggest_change" placeholder="e.g. I no longer feel alone during late-night debugging sessions…"></textarea>
+    </div>
+
+    <div class="question">
+      <label class="q-label">
+        <span class="q-num">Q35</span>
+        What is the one biggest problem or improvement you'd most like to see?
+      </label>
+      <textarea name="open_improvement" placeholder="e.g. I wish the vibe detection was more accurate during code review…"></textarea>
+    </div>
+
+    <div class="question">
+      <label class="q-label">
+        <span class="q-num">Q36</span>
+        Was there a specific moment that surprised or delighted you?
+        <span class="optional">(optional)</span>
+      </label>
+      <textarea name="open_moment" placeholder="e.g. DJ Buddy switched to a sad piano track right when my 3-hour refactor failed — felt weirdly comforting…"></textarea>
+    </div>
+
+    <div class="question">
+      <label class="q-label"><span class="q-num">Q37</span> Your email <span class="optional">(optional — only if you'd like a follow-up)</span></label>
+      <input type="email" name="_replyto" placeholder="you@example.com"
+        style="width:100%;background:var(--bg3);border:1.5px solid var(--border);border-radius:8px;color:var(--text);font-size:14px;padding:10px 14px;outline:none;font-family:inherit;">
+      <p class="hint">We won't share your email. Leave blank to stay anonymous.</p>
+    </div>
+
+    <!-- Formspree hidden fields -->
+    <input type="hidden" name="_subject" value="CWB User Survey Response">
+    <input type="hidden" name="_next" value="thanks">
+
+    <div class="nav-row">
+      <button type="button" class="btn btn-ghost" onclick="prev()">← Back</button>
+      <span class="step-info">Section 7 of 7</span>
+      <button type="submit" class="btn btn-submit">Submit Survey ✓</button>
+    </div>
+  </div>
+
+  </form><!-- end form -->
+
+  <!-- ══════════════════════════════════════════
+       THANK YOU
+  ══════════════════════════════════════════ -->
+  <div id="thank-you">
+    <span class="ty-buddy">(•ᴗ•) ♪  ♫  ♪</span>
+    <h2>Thanks for your <span>feedback</span>!</h2>
+    <p>Your responses have been recorded and will help shape the future of Coding with Beat. Stay in flow. 🎧</p>
+    <a class="ty-link" href="https://github.com/jaychempan/coding-with-beat">→ Star CWB on GitHub</a>
+  </div>
+
+</div><!-- .container -->
+
+<script>
+  let current = 0;
+  const total = 7;
+
+  function updateUI() {
+    document.querySelectorAll('.section-card').forEach((s, i) => {
+      s.classList.toggle('active', i === current);
+    });
+    document.querySelectorAll('.step-dot').forEach((d, i) => {
+      d.classList.remove('active', 'done');
+      if (i === current) d.classList.add('active');
+      else if (i < current) d.classList.add('done');
+    });
+    const pct = ((current + 1) / total) * 100;
+    document.getElementById('progress-bar').style.width = pct + '%';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function next() {
+    if (current < total - 1) { current++; updateUI(); }
+  }
+  function prev() {
+    if (current > 0) { current--; updateUI(); }
+  }
+  function goTo(i) {
+    if (i <= current) { current = i; updateUI(); }
+  }
+
+  // Handle Formspree redirect for thank-you
+  const form = document.getElementById('cwb-survey');
+  form.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const data = new FormData(form);
+    try {
+      const res = await fetch(form.action, {
+        method: 'POST', body: data,
+        headers: { 'Accept': 'application/json' }
+      });
+      if (res.ok) {
+        form.style.display = 'none';
+        document.getElementById('step-nav').style.display = 'none';
+        document.getElementById('thank-you').style.display = 'block';
+        document.getElementById('progress-bar').style.width = '100%';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        alert('Submission failed. Please try again.');
+      }
+    } catch {
+      alert('Network error. Please check your connection.');
+    }
+  });
+</script>
+
+</body>
+</html>
