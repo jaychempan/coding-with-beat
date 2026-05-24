@@ -40,7 +40,25 @@ elif [ -e "$CMD_LINK" ]; then
   echo "! $CMD_LINK is not a symlink — leaving it alone."
 fi
 
-# 4. strip the marked PATH block from ~/.zshrc and ~/.bashrc
+# 4. remove cwb skills symlinks from ~/.claude/skills/
+SKILLS_DST_DIR="$HOME/.claude/skills"
+for skill_name in cwb cwb-chinese cwb-classical cwb-focus cwb-hype cwb-jazz cwb-lofi cwb-party cwb-relax cwb-sad cwb-sleep cwb-synthwave; do
+  skill_dst="$SKILLS_DST_DIR/$skill_name"
+  if [ -L "$skill_dst" ]; then
+    rm "$skill_dst"
+    echo "✓ removed skill symlink $skill_dst"
+  fi
+done
+
+# 5. strip the cwb block from ~/.claude/CLAUDE.md
+GLOBAL_CLAUDE_MD="$HOME/.claude/CLAUDE.md"
+if [ -f "$GLOBAL_CLAUDE_MD" ] && grep -q ">>> coding-with-beat >>>" "$GLOBAL_CLAUDE_MD"; then
+  awk '/# >>> coding-with-beat >>>/{found=1} !found{print} /# <<< coding-with-beat <<</{found=0}' \
+    "$GLOBAL_CLAUDE_MD" > "$GLOBAL_CLAUDE_MD.tmp" && mv "$GLOBAL_CLAUDE_MD.tmp" "$GLOBAL_CLAUDE_MD"
+  echo "✓ removed coding-with-beat block from $GLOBAL_CLAUDE_MD"
+fi
+
+# 7. strip the marked PATH block from ~/.zshrc and ~/.bashrc
 strip_path_block() {
   local rc="$1"
   [ -f "$rc" ] || return 0
@@ -54,7 +72,7 @@ strip_path_block() {
 strip_path_block "$HOME/.zshrc"
 strip_path_block "$HOME/.bashrc"
 
-# 5. stop and remove the macOS HTTP MCP LaunchAgent
+# 8. stop and remove the macOS HTTP MCP LaunchAgent
 if [ "$(uname -s)" = "Darwin" ]; then
   launchctl bootout "gui/$(id -u)" "$MCP_PLIST" >/dev/null 2>&1 || true
   if [ -f "$MCP_PLIST" ]; then
@@ -75,13 +93,13 @@ if [ "$(uname -s)" = "Darwin" ]; then
   fi
 fi
 
-# 6. remove persisted MCP URL used by CLI commands
+# 9. remove persisted MCP URL used by CLI commands
 if [ -f "$MCP_URL_FILE" ]; then
   rm "$MCP_URL_FILE"
   echo "✓ removed $MCP_URL_FILE"
 fi
 
-# 7. optional purge
+# 10. optional purge
 if [ "${1:-}" = "--purge" ]; then
   rm -rf "$HOME/.coding-with-beat"
   echo "✓ purged ~/.coding-with-beat/ (data + venv)"

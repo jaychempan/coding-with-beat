@@ -10,7 +10,8 @@
 #      is on your PATH (writes a marked block into ~/.zshrc / ~/.bashrc).
 #   4. Symlinks the /cwb slash command into ~/.claude/commands/.
 #   5. Symlinks all cwb skills into ~/.claude/skills/.
-#   6. Registers HTTP MCP server, statusline, vibe hooks, and the /cwb
+#   6. Injects music intent routing rules into ~/.claude/CLAUDE.md.
+#   7. Registers HTTP MCP server, statusline, vibe hooks, and the /cwb
 #      UserPromptExpansion hook with Claude Code via ~/.claude/settings.json.
 set -euo pipefail
 
@@ -239,7 +240,64 @@ else
   warn "skills/ directory not found in repo — skipping skill installation."
 fi
 
-# 7. patch ~/.claude/settings.json
+# 7. inject music intent routing rules into ~/.claude/CLAUDE.md (idempotent)
+GLOBAL_CLAUDE_MD="$HOME/.claude/CLAUDE.md"
+CWB_CLAUDE_BEGIN="# >>> coding-with-beat >>>"
+CWB_CLAUDE_END="# <<< coding-with-beat <<<"
+inject_claude_md() {
+  # Remove any prior cwb block first (idempotent)
+  if [ -f "$GLOBAL_CLAUDE_MD" ] && grep -q "$CWB_CLAUDE_BEGIN" "$GLOBAL_CLAUDE_MD"; then
+    # Use awk to delete lines between markers (inclusive)
+    awk "/$CWB_CLAUDE_BEGIN/{found=1} !found{print} /$CWB_CLAUDE_END/{found=0}" \
+      "$GLOBAL_CLAUDE_MD" > "$GLOBAL_CLAUDE_MD.tmp" && mv "$GLOBAL_CLAUDE_MD.tmp" "$GLOBAL_CLAUDE_MD"
+  fi
+  cat >> "$GLOBAL_CLAUDE_MD" <<'CLAUDEMD'
+
+# >>> coding-with-beat >>>
+# Music intent routing — added by coding-with-beat install.sh (remove block or run uninstall.sh to revert)
+
+## Music requests — when to use smart_search vs play_song
+
+Use `play_song(query)` only for **specific** song title / artist / album (e.g. "周杰伦 晴天", "Taylor Swift").
+Use `smart_search(queries=[...])` for **everything else**: mood, vibe, scene, fuzzy artist requests, genre + modifier, era, activity.
+
+Call `smart_search` **once** with 2–3 angle queries. Do NOT call it multiple times — each call overwrites the queue.
+After showing results (numbered globally), ask the user to pick by number and call `play_number(N)`. Do NOT auto-play.
+
+## Scene dispatch
+
+| Scene | Trigger words | queries |
+|---|---|---|
+| 🎧 Lofi | lofi, 深夜, 写代码, chillhop | `["lofi hip hop late night coding chill", "lofi jazz rain study instrumental", "chillhop beats lo-fi bedroom producer"]` |
+| 🧠 Focus | 专注, 心流, ambient, 无人声, flow state | `["deep focus ambient instrumental no vocals", "flow state drone minimal electronic", "study music concentration piano quiet"]` |
+| 🔥 Hype | 充能, 运动, workout, hype, 跑步 | `["morning energy upbeat pop indie fresh", "workout motivation electronic dance", "hype rap trap energetic beats pump"]` |
+| ☕ Jazz | 爵士, jazz, 咖啡馆, bossa nova | `["smooth jazz cafe background mellow", "jazz trio acoustic bossa nova guitar", "late night jazz piano bar cool relaxed"]` |
+| 🌆 Synthwave | 赛博, synthwave, 电子, 夜驾 | `["synthwave retrowave night drive neon", "cyberpunk electronic dark ambient synth", "80s retro synth outrun vapor"]` |
+| 🌅 Relax | 放松, 解压, 下班, unwind | `["relaxing downtempo chill evening unwind", "acoustic folk gentle calm soft", "nature ambient breeze afternoon easy listening"]` |
+| 🎹 Classical | 古典, 钢琴, 弦乐, classical | `["classical piano solo nocturne gentle", "string quartet orchestral cinematic calm", "bach mozart ambient classical study"]` |
+| 💙 Sad | 伤感, 失落, 难过, heartbreak | `["melancholy emotional piano sad indie", "heartbreak slow ballad rnb rainy", "sorrowful strings cinematic emotional"]` |
+| 🎉 Party | 派对, party, edm, 蹦迪 | `["party dance pop upbeat celebratory", "edm festival club electronic banger", "latin pop reggaeton dance floor"]` |
+| 🏮 Chinese | 国风, 华语, 民谣, 古风 | `["中国风 古风 古琴 传统乐器", "华语流行 国语歌 indie 民谣", "chinese traditional folk guzheng erhu instrumental"]` |
+| 🌙 Sleep | 助眠, 失眠, sleep, 白噪音 | `["sleep music white noise ambient drone", "lullaby soft piano rain sleep calm", "meditation deep sleep binaural delta waves"]` |
+
+## Fuzzy / artist-only requests → smart_search
+
+When the user names an artist without a specific song (e.g. "来首周杰伦的", "林明浩最近流行的"):
+`smart_search(queries=["{artist} 热门", "{artist} 新歌 2024", "{artist} 代表作"])`
+
+When the user asks for something similar to an artist (e.g. "像Taylor Swift的"):
+generate 3 queries based on that artist's known style.
+
+## play_number recovery
+
+If `play_number(N)` errors with "only"/"had"/"out of range": re-run the same `smart_search(queries=[...])` automatically, then call `play_number(N)` again. Do NOT ask the user to retry.
+# <<< coding-with-beat <<<
+CLAUDEMD
+  ok "music routing rules written to $GLOBAL_CLAUDE_MD"
+}
+inject_claude_md
+
+# 8. patch ~/.claude/settings.json
 SETTINGS_DIR="$HOME/.claude"
 SETTINGS_FILE="$SETTINGS_DIR/settings.json"
 mkdir -p "$SETTINGS_DIR"
@@ -432,7 +490,7 @@ PY
 
 start_updater_service
 
-# 8. Make sure data dir exists
+# 9. Make sure data dir exists
 "$VENV_PY" -c "from coding_with_beat.config import ensure_dirs; ensure_dirs()"
 ok "data dir ready: ~/.coding-with-beat/"
 
