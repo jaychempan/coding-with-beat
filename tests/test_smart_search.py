@@ -108,3 +108,27 @@ def test_smart_search_writes_search_queue(mock_gs, mock_state, mock_wqf, mock_wa
     args = mock_wqf.call_args[0]
     assert args[0] == "search"
     assert len(args[1]["tracks"]) == 1
+
+
+from coding_with_beat.server import _label_for_query
+
+
+def test_label_lofi():
+    assert _label_for_query("lofi hip hop late night coding") == "🎧 Lofi"
+
+
+def test_label_jazz():
+    assert _label_for_query("lofi jazz rain study") == "🎷 Jazz"
+
+
+def test_label_synthwave():
+    assert _label_for_query("synthwave retrowave night drive neon") == "🌆 Synthwave"
+
+
+def test_label_fallback():
+    # No keyword match → first three words title-cased
+    assert _label_for_query("choral gospel choir ambient") == "Choral Gospel Choir"
+
+
+def test_label_fallback_short():
+    assert _label_for_query("ambient") == "Ambient"

@@ -640,6 +640,31 @@ async def search(query: str, limit: int = 8) -> str:
     return "\n".join(lines)
 
 
+_QUERY_LABEL_MAP: list[tuple[tuple[str, ...], str]] = [
+    (("jazz", "bossa nova", "smooth jazz"), "🎷 Jazz"),
+    (("lofi", "lo-fi", "chillhop"), "🎧 Lofi"),
+    (("synthwave", "retrowave", "outrun"), "🌆 Synthwave"),
+    (("drone", "meditation"), "🌫️ Ambient"),
+    (("classical", "piano", "nocturne", "string"), "🎹 Classical"),
+    (("hype", "workout", "energetic", "edm"), "🔥 Hype"),
+    (("sleep", "lullaby", "white noise"), "🌙 Sleep"),
+    (("sad", "melancholy", "heartbreak"), "💙 Sad"),
+    (("party", "celebrat"), "🎉 Party"),
+    (("chinese", "中国", "古风", "国风"), "🏮 Chinese"),
+    (("focus", "study", "concentration"), "🧠 Focus"),
+    (("relax", "unwind", "calm"), "🌅 Relax"),
+]
+
+
+def _label_for_query(query: str) -> str:
+    q_lower = query.lower()
+    for keywords, label in _QUERY_LABEL_MAP:
+        if any(kw in q_lower for kw in keywords):
+            return label
+    words = query.split()[:3]
+    return " ".join(w.capitalize() for w in words)
+
+
 @mcp.tool()
 async def smart_search(description: str, limit: int = 8) -> str:
     """Natural-language music search for AI callers (Claude Code / Codex CLI).
