@@ -308,7 +308,42 @@ CLAUDEMD
 }
 inject_claude_md
 
-# 8. patch ~/.claude/settings.json
+# 8. inject cwb-companion routing rules into ~/.claude/CLAUDE.md (idempotent)
+COMPANION_BEGIN="# >>> cwb-companion >>>"
+COMPANION_END="# <<< cwb-companion <<<"
+inject_companion_claude_md() {
+  if [ -f "$GLOBAL_CLAUDE_MD" ] && grep -q "$COMPANION_BEGIN" "$GLOBAL_CLAUDE_MD"; then
+    awk "/$COMPANION_BEGIN/{found=1} !found{print} /$COMPANION_END/{found=0}" \
+      "$GLOBAL_CLAUDE_MD" > "$GLOBAL_CLAUDE_MD.tmp" && mv "$GLOBAL_CLAUDE_MD.tmp" "$GLOBAL_CLAUDE_MD"
+  fi
+  cat >> "$GLOBAL_CLAUDE_MD" <<'COMPANIONMD'
+
+# >>> cwb-companion >>>
+# DJ Buddy companion mode — added by coding-with-beat install.sh
+
+## Companion mode
+
+When the `cwb-companion` skill is loaded, call `companion_check(trigger)`
+proactively at these moments (the tool handles cooldown internally):
+
+| Moment | trigger |
+|--------|---------|
+| First reply of a new session | `session_start` |
+| 3+ consecutive test failures observed | `debug_struggle` |
+| git commit success / tests all green | `victory` |
+| 20+ tools used, no music in 25+ min | `idle_checkin` |
+| User signals end of session | `session_end` |
+
+If `companion_check` returns `(not needed right now)`, stay silent.
+If it returns a card, output it in full (one short lead-in phrase is fine).
+Wait for the user to pick a number, then call `play_number(N)`.
+# <<< cwb-companion <<<
+COMPANIONMD
+  ok "cwb-companion rules written to $GLOBAL_CLAUDE_MD"
+}
+inject_companion_claude_md
+
+# 9. patch ~/.claude/settings.json
 SETTINGS_DIR="$HOME/.claude"
 SETTINGS_FILE="$SETTINGS_DIR/settings.json"
 mkdir -p "$SETTINGS_DIR"
