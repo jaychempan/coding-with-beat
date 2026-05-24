@@ -99,6 +99,10 @@ See **[README_CODEX.md](README_CODEX.md)** for the full integration guide — ho
 
 > [!TIP]
 > **Not sure what to say?** Just ask — `DJ 能做什么` / `DJ help` — and DJ Buddy will show you a full list of phrases you can use.
+>
+> **Live player:** Open a second terminal and run `cwb watch` to see the currently playing track, lyrics, and progress bar in real time.
+>
+> **Apple Music:** The first time you play a catalog track, a popup will appear — click **Add to Library**, then repeat the play command.
 
 ### Just talk to your AI assistant
 
