@@ -132,3 +132,120 @@ def test_label_fallback():
 
 def test_label_fallback_short():
     assert _label_for_query("ambient") == "Ambient"
+
+
+@mock.patch("coding_with_beat.server._write_active_mode")
+@mock.patch("coding_with_beat.server._write_queue_file")
+@mock.patch("coding_with_beat.server.get_source")
+def test_multi_angle_global_numbering(mock_gs, mock_wqf, mock_wam):
+    """Three queries × 2 tracks each → output numbers 1–6 sequentially."""
+    def fake_get_source(name):
+        src = mock.MagicMock()
+        if name == "apple_music":
+            src.search.side_effect = lambda q, lim: [
+                _hit(f"{q[:4]}-am-1", "Artist", "apple_music"),
+                _hit(f"{q[:4]}-am-2", "Artist", "apple_music"),
+            ]
+        else:
+            src.search.return_value = []
+        return src
+
+    mock_gs.side_effect = fake_get_source
+
+    from coding_with_beat.server import _multi_angle_search
+    result = _run(_multi_angle_search(["lofi hip hop", "jazz cozy rain", "synthwave night"]))
+
+    # All 6 tracks should appear globally numbered
+    for n in range(1, 7):
+        assert f"{n}." in result
+
+
+@mock.patch("coding_with_beat.server._write_active_mode")
+@mock.patch("coding_with_beat.server._write_queue_file")
+@mock.patch("coding_with_beat.server.get_source")
+def test_multi_angle_single_queue_write(mock_gs, mock_wqf, mock_wam):
+    """Queue is written exactly once regardless of query count."""
+    def fake_get_source(name):
+        src = mock.MagicMock()
+        src.search.return_value = [_hit("Track", "Artist", "apple_music")]
+        return src
+
+    mock_gs.side_effect = fake_get_source
+
+    from coding_with_beat.server import _multi_angle_search
+    _run(_multi_angle_search(["lofi", "jazz", "synthwave"]))
+
+    mock_wqf.assert_called_once()
+    args = mock_wqf.call_args[0]
+    assert args[0] == "search"
+
+
+@mock.patch("coding_with_beat.server._write_active_mode")
+@mock.patch("coding_with_beat.server._write_queue_file")
+@mock.patch("coding_with_beat.server.get_source")
+def test_multi_angle_global_dedup(mock_gs, mock_wqf, mock_wam):
+    """Same track returned by two queries appears only once."""
+    dup = _hit("Same Song", "Same Artist", "apple_music")
+
+    def fake_get_source(name):
+        src = mock.MagicMock()
+        if name == "apple_music":
+            src.search.return_value = [dup]
+        else:
+            src.search.return_value = []
+        return src
+
+    mock_gs.side_effect = fake_get_source
+
+    from coding_with_beat.server import _multi_angle_search
+    result = _run(_multi_angle_search(["lofi", "jazz"]))
+
+    assert result.count("Same Song — Same Artist") == 1
+
+
+@mock.patch("coding_with_beat.server._write_active_mode")
+@mock.patch("coding_with_beat.server._write_queue_file")
+@mock.patch("coding_with_beat.server.get_source")
+def test_multi_angle_label_in_output(mock_gs, mock_wqf, mock_wam):
+    """Each group header appears in the output."""
+    def fake_get_source(name):
+        src = mock.MagicMock()
+        src.search.return_value = [_hit("Track", "Artist", "library")]
+        return src
+
+    mock_gs.side_effect = fake_get_source
+
+    from coding_with_beat.server import _multi_angle_search
+    result = _run(_multi_angle_search(["lofi hip hop", "synthwave retrowave"]))
+
+    assert "🎧" in result  # lofi label
+    assert "🌆" in result  # synthwave label
+
+
+@mock.patch("coding_with_beat.server._write_active_mode")
+@mock.patch("coding_with_beat.server._write_queue_file")
+@mock.patch("coding_with_beat.server.get_source")
+def test_multi_angle_queue_track_order_matches_output(mock_gs, mock_wqf, mock_wam):
+    """Tracks in the queue are in the same order as the global numbering."""
+    a = _hit("Alpha", "Artist", "library")
+    b = _hit("Beta", "Artist", "library")
+    c = _hit("Gamma", "Artist", "library")
+
+    tracks_by_query = {"q1": [a], "q2": [b], "q3": [c]}
+
+    def fake_get_source(name):
+        src = mock.MagicMock()
+        if name == "apple_music":
+            src.search.side_effect = lambda q, lim: tracks_by_query.get(q, [])
+        else:
+            src.search.return_value = []
+        return src
+
+    mock_gs.side_effect = fake_get_source
+
+    from coding_with_beat.server import _multi_angle_search
+    _run(_multi_angle_search(["q1", "q2", "q3"]))
+
+    written_tracks = mock_wqf.call_args[0][1]["tracks"]
+    titles = [t["title"] for t in written_tracks]
+    assert titles == ["Alpha", "Beta", "Gamma"]

@@ -665,6 +665,78 @@ def _label_for_query(query: str) -> str:
     return " ".join(w.capitalize() for w in words)
 
 
+async def _multi_angle_search(queries: list[str], limit_per_query: int = 6) -> str:
+    import asyncio
+
+    async def _search_one(query: str) -> list[dict]:
+        am_hits, local_hits = await asyncio.gather(
+            asyncio.to_thread(get_source("apple_music").search, query, limit_per_query),
+            asyncio.to_thread(get_source("local").search, query, limit_per_query),
+        )
+        seen: set[str] = set()
+        merged: list[dict] = []
+        for h in (am_hits or []) + (local_hits or []):
+            key = f"{h.get('title', '').lower()}|{h.get('artist', '').lower()}"
+            if key not in seen:
+                seen.add(key)
+                merged.append(h)
+        return merged
+
+    per_query_results = await asyncio.gather(*[_search_one(q) for q in queries])
+
+    global_seen: set[str] = set()
+    groups: list[tuple[str, list[dict]]] = []
+    all_tracks: list[dict] = []
+
+    for query, hits in zip(queries, per_query_results):
+        label = _label_for_query(query)
+        group_tracks: list[dict] = []
+        has_any_hit = bool(hits)
+        for h in hits:
+            key = f"{h.get('title', '').lower()}|{h.get('artist', '').lower()}"
+            if key not in global_seen:
+                global_seen.add(key)
+                group_tracks.append(h)
+                all_tracks.append(h)
+        if has_any_hit:
+            groups.append((label, group_tracks))
+
+    if not all_tracks:
+        return f"(no matches for queries: {', '.join(queries)})"
+
+    _write_queue_file("search", {"tracks": all_tracks, "index": 0, "expected_title": ""})
+    _write_active_mode(context="search")
+
+    lines: list[str] = []
+    has_catalog = False
+    global_idx = 1
+
+    for label, tracks in groups:
+        lines.append(label)
+        for h in tracks:
+            src = h.get("source", "")
+            if src == "library":
+                tag = " [资料库]"
+            elif src == "apple_music":
+                tag = " [Apple Music]"
+                has_catalog = True
+            elif src == "local":
+                tag = " [本地]"
+            else:
+                tag = ""
+            lines.append(
+                f"{global_idx}. {h['title']} — {h.get('artist', '?')} · {h.get('album', '?')}{tag}"
+            )
+            global_idx += 1
+        lines.append("")
+
+    if has_catalog:
+        lines.append("💡 [Apple Music] 曲目需要先添加到资料库才能播放。用 play_number() 尝试，Music.app 会自动打开。")
+    lines.append("喜欢哪首？说编号我来播。")
+
+    return "\n".join(lines).rstrip()
+
+
 @mcp.tool()
 async def smart_search(description: str, limit: int = 8) -> str:
     """Natural-language music search for AI callers (Claude Code / Codex CLI).
