@@ -25,13 +25,17 @@ A retro pixel DJ companion for Claude Code / Codex CLI / Terminal. It plays musi
 
 [中文文档](README_CN.md) ／ [日本語](README_JP.md)
 
-<video src="https://github.com/jaychempan/coding-with-beat/releases/download/v0.3.6/demo.mp4" controls autoplay loop muted width="100%"></video>
+<video src="https://github.com/user-attachments/assets/c51dcac1-115e-4d30-b87f-b1e7043d1347" controls autoplay loop muted width="100%"></video>
 
 ---
 
 ## Features
 
-- **MCP server** — 28 tools so you can tell your AI "play some lofi", "skip this", "what's playing" and it just works.
+- **MCP server** — 28 tools so you can tell your AI "p
+
+
+
+lay some lofi", "skip this", "what's playing" and it just works.
 - **Music sources** — Apple Music (AppleScript, no GUI needed), local files (afplay), QQ Music (search + preview).
 - **Pixel UI** — Album art in half-block ANSI, GameBoy retro border, pseudo-spectrum equalizer.
 - **DJ Buddy** — A headphones-wearing pixel character that reacts to your coding state. Tests failing? It panics with you.
