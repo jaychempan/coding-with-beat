@@ -17,29 +17,13 @@
 >
 > Right. You can't remember.（对，你已经不记得了。）
 
-<video src="https://github.com/jaychempan/coding-with-beat/releases/download/v0.3.6/demo.mp4" controls autoplay loop muted width="100%"></video>
-
 **Your coding soundtrack, now inside the terminal.** Smart music selection, mood-aware playback, and a pixel DJ that vibes with every keystroke — built for Claude Code & Codex CLI.
 
 A retro pixel DJ companion for Claude Code / Codex CLI / Terminal. It plays music, shows lyrics, celebrates when you commit, and panics with you when tests fail.
 
 [中文文档](README_CN.md) ／ [日本語](README_JP.md)
 
-<table>
-  <tr>
-    <th align="center" colspan="2">CLI (cwb watch / karaoke)</th>
-  </tr>
-  <tr>
-    <td><img src="assets/screen_1.png"/></td>
-    <td><img src="assets/screen_2.png"/></td>
-  </tr>
-  <tr>
-    <th align="center" colspan="2">AI Statusline</th>
-  </tr>
-  <tr>
-    <td colspan="2"><img src="assets/screen_6.png" width="100%"/></td>
-  </tr>
-</table>
+<video src="https://github.com/jaychempan/coding-with-beat/releases/download/v0.3.6/demo.mp4" controls autoplay loop muted width="100%"></video>
 
 ---
 
