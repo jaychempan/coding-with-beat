@@ -194,5 +194,24 @@ class AppleMusicListLovedTest(unittest.TestCase):
         self.assertEqual(results, [])
 
 
+class AppleMusicSearchLovedTest(unittest.TestCase):
+    def test_search_loved_returns_matching_loved_tracks(self):
+        SEP = "\x1f"
+        raw = f"Rain Song{SEP}Piano Artist{SEP}Calm Album\n"
+        with mock.patch.object(am, "_osa", return_value=raw) as mock_osa:
+            results = AppleMusic().search_loved("rain", limit=5)
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]["title"], "Rain Song")
+        self.assertEqual(results[0]["source"], "loved")
+        # Verify AppleScript filtered by loved=true
+        script = mock_osa.call_args[0][0]
+        self.assertIn("loved is true", script)
+
+    def test_search_loved_returns_empty_on_no_match(self):
+        with mock.patch.object(am, "_osa", return_value=""):
+            results = AppleMusic().search_loved("xyz", limit=5)
+        self.assertEqual(results, [])
+
+
 if __name__ == "__main__":
     unittest.main()
