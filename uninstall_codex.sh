@@ -33,7 +33,36 @@ if [ -d "$SKILL_DIR" ]; then
   ok "removed $SKILL_DIR"
 fi
 
-# 3. Stop + remove LaunchAgent (shared with Claude Code install)
+# 3. Strip coding-with-beat block from ~/.codex/AGENTS.md
+AGENTS_MD="$CODEX_DIR/AGENTS.md"
+if [ -f "$AGENTS_MD" ] && grep -q ">>> coding-with-beat >>>" "$AGENTS_MD"; then
+  if [ -x "$VENV_PY" ]; then
+    "$VENV_PY" - "$AGENTS_MD" <<'PY'
+import sys; path = sys.argv[1]
+lines = open(path).readlines()
+out, skip = [], False
+for line in lines:
+    if ">>> coding-with-beat >>>" in line: skip = True
+    if not skip: out.append(line)
+    if "<<< coding-with-beat <<<" in line: skip = False
+open(path, "w").writelines(out)
+PY
+  else
+    python3 - "$AGENTS_MD" <<'PY'
+import sys; path = sys.argv[1]
+lines = open(path).readlines()
+out, skip = [], False
+for line in lines:
+    if ">>> coding-with-beat >>>" in line: skip = True
+    if not skip: out.append(line)
+    if "<<< coding-with-beat <<<" in line: skip = False
+open(path, "w").writelines(out)
+PY
+  fi
+  ok "removed coding-with-beat block from $AGENTS_MD"
+fi
+
+# 4. Stop + remove LaunchAgent (shared with Claude Code install)
 MCP_LABEL="com.coding-with-beat.server"
 MCP_PLIST="$HOME/Library/LaunchAgents/$MCP_LABEL.plist"
 if [ -f "$MCP_PLIST" ] && [ "$(uname -s)" = "Darwin" ]; then

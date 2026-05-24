@@ -10,7 +10,8 @@
 #   4. Codex CLI installed / verified via npm
 #   5. ~/.codex/config.toml (MCP) + ~/.codex/hooks.json (hooks) patched
 #   6. cwb skill installed to ~/.codex/skills/cwb/
-#   7. MCP server LaunchAgent started (macOS)
+#   7. Music routing rules injected into ~/.codex/AGENTS.md
+#   8. MCP server LaunchAgent started (macOS)
 set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -244,7 +245,89 @@ install_codex_cli
 ok "Codex config patched"
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 7. MCP LaunchAgent (macOS)
+# 7. AGENTS.md — inject music routing rules into ~/.codex/AGENTS.md
+# ─────────────────────────────────────────────────────────────────────────────
+inject_agents_md() {
+  local agents="$HOME/.codex/AGENTS.md"
+  # Strip existing block on re-run so rules stay up-to-date
+  if [ -f "$agents" ] && grep -q ">>> coding-with-beat >>>" "$agents"; then
+    "$PY" - "$agents" <<'PY'
+import sys; path = sys.argv[1]
+lines = open(path).readlines()
+out, skip = [], False
+for line in lines:
+    if ">>> coding-with-beat >>>" in line: skip = True
+    if not skip: out.append(line)
+    if "<<< coding-with-beat <<<" in line: skip = False
+open(path, "w").writelines(out)
+PY
+  fi
+  touch "$agents"
+  cat >> "$agents" <<'AGENTS'
+
+# >>> coding-with-beat >>>
+# Music routing — added by coding-with-beat install_codex.sh (remove block or run uninstall_codex.sh to revert)
+
+## Music requests — when to use smart_search vs play_song
+
+Use `play_song(query)` only for **specific** song title / artist / album (e.g. "周杰伦 晴天", "Taylor Swift").
+Use `smart_search(queries=[...])` for **everything else**: mood, vibe, scene, fuzzy artist requests, genre + modifier, era, activity.
+
+Call `smart_search` **once** with 2–3 angle queries. Do NOT call it multiple times — each call overwrites the queue.
+After showing results (numbered globally), ask the user to pick by number and call `play_number(N)`. Do NOT auto-play.
+
+## Library-only search
+
+When the user says "从资料库找"/"资料库里有没有"/"我已经有这首"/"in my library"/"library only":
+1. Call `search(query)`.
+2. Only show results where `source == "library"`.
+3. If none found, ask: "资料库里没找到，要不要搜一下线上？" — do NOT auto-expand.
+
+## Scene dispatch
+
+| Scene | Trigger words | queries |
+|---|---|---|
+| 🎧 Lofi | lofi, 深夜, 写代码, chillhop | `["lofi hip hop late night coding chill", "lofi jazz rain study instrumental", "chillhop beats lo-fi bedroom producer"]` |
+| 🧠 Focus | 专注, 心流, ambient, 无人声, flow state | `["deep focus ambient instrumental no vocals", "flow state drone minimal electronic", "study music concentration piano quiet"]` |
+| 🔥 Hype | 充能, 运动, workout, hype, 跑步 | `["morning energy upbeat pop indie fresh", "workout motivation electronic dance", "hype rap trap energetic beats pump"]` |
+| ☕ Jazz | 爵士, jazz, 咖啡馆, bossa nova | `["smooth jazz cafe background mellow", "jazz trio acoustic bossa nova guitar", "late night jazz piano bar cool relaxed"]` |
+| 🌆 Synthwave | 赛博, synthwave, 电子, 夜驾 | `["synthwave retrowave night drive neon", "cyberpunk electronic dark ambient synth", "80s retro synth outrun vapor"]` |
+| 🌅 Relax | 放松, 解压, 下班, unwind | `["relaxing downtempo chill evening unwind", "acoustic folk gentle calm soft", "nature ambient breeze afternoon easy listening"]` |
+| 🎹 Classical | 古典, 钢琴, 弦乐, classical | `["classical piano solo nocturne gentle", "string quartet orchestral cinematic calm", "bach mozart ambient classical study"]` |
+| 💙 Sad | 伤感, 失落, 难过, heartbreak | `["melancholy emotional piano sad indie", "heartbreak slow ballad rnb rainy", "sorrowful strings cinematic emotional"]` |
+| 🎉 Party | 派对, party, edm, 蹦迪 | `["party dance pop upbeat celebratory", "edm festival club electronic banger", "latin pop reggaeton dance floor"]` |
+| 🏮 Chinese | 国风, 华语, 民谣, 古风 | `["中国风 古风 古琴 传统乐器", "华语流行 国语歌 indie 民谣", "chinese traditional folk guzheng erhu instrumental"]` |
+| 🌙 Sleep | 助眠, 失眠, sleep, 白噪音 | `["sleep music white noise ambient drone", "lullaby soft piano rain sleep calm", "meditation deep sleep binaural delta waves"]` |
+
+## Fuzzy / artist-only requests → smart_search
+
+When the user names an artist without a specific song (e.g. "来首周杰伦的", "林明浩最近流行的"):
+`smart_search(queries=["{artist} 热门", "{artist} 新歌 2024", "{artist} 代表作"])`
+
+When the user asks for something similar to an artist (e.g. "像Taylor Swift的"):
+generate 3 queries based on that artist's known style.
+
+## play_number — number parsing
+
+Resolve before calling `play_number(N)`:
+- "第一" / "1" / "one" / "the first" → play_number(1)
+- "第二" / "2" / "second" → play_number(2)
+- "第三首" / "第三个" / "三" / "3" → play_number(3)
+- "最后一首" / "last one" → use the highest number shown in results
+
+Chinese ordinals 第一/第二/第三/第四/第五 = 1/2/3/4/5.
+
+## play_number recovery
+
+If `play_number(N)` errors with "only"/"had"/"out of range": re-run the same `smart_search(queries=[...])` automatically, then call `play_number(N)` again. Do NOT ask the user to retry.
+# <<< coding-with-beat <<<
+AGENTS
+  ok "music routing rules injected into $agents"
+}
+inject_agents_md
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 8. MCP LaunchAgent (macOS)
 # ─────────────────────────────────────────────────────────────────────────────
 start_mcp_service() {
   [ "$(uname -s)" = "Darwin" ] || { warn "Auto-start is macOS-only."; return 0; }
