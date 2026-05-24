@@ -888,6 +888,35 @@ end tell
                 items.append({"title": parts[0], "artist": parts[1], "album": parts[2]})
         return items
 
+    def list_loved(self, limit: int = 100) -> List[dict]:
+        """Return all loved/hearted tracks in the library, up to limit."""
+        script = f"""
+tell application "Music"
+    set SEP to (ASCII character 31)
+    set out to ""
+    set lovedTracks to (every track of library playlist 1 whose loved is true)
+    set n to count of lovedTracks
+    if n > {limit} then set n to {limit}
+    repeat with i from 1 to n
+        set t to item i of lovedTracks
+        set out to out & (name of t as string) & SEP & (artist of t as string) & SEP & (album of t as string) & linefeed
+    end repeat
+    return out
+end tell
+"""
+        try:
+            raw = _osa(script)
+        except Exception:
+            return []
+        items = []
+        for line in raw.splitlines():
+            if not line.strip():
+                continue
+            parts = line.split("\x1f")
+            if len(parts) >= 3:
+                items.append({"title": parts[0], "artist": parts[1], "album": parts[2], "source": "loved"})
+        return items
+
     def lyrics(self) -> Optional[str]:
         """Static lyrics for the current track via AppleScript. Synced timing
         isn't reliably exposed, so callers should estimate the current line

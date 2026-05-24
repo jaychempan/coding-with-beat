@@ -175,5 +175,24 @@ class AppleMusicLovedSearchTest(unittest.TestCase):
         self.assertEqual(normal["source"], "library")
 
 
+class AppleMusicListLovedTest(unittest.TestCase):
+    def test_list_loved_returns_loved_tracks(self):
+        SEP = "\x1f"
+        raw = (
+            f"Heart Song{SEP}DJ A{SEP}Vol 1\n"
+            f"Fave Track{SEP}DJ B{SEP}Vol 2\n"
+        )
+        with mock.patch.object(am, "_osa", return_value=raw):
+            results = AppleMusic().list_loved(limit=10)
+        self.assertEqual(len(results), 2)
+        self.assertEqual(results[0]["title"], "Heart Song")
+        self.assertEqual(results[0]["source"], "loved")
+
+    def test_list_loved_returns_empty_on_error(self):
+        with mock.patch.object(am, "_osa", side_effect=RuntimeError("no music")):
+            results = AppleMusic().list_loved()
+        self.assertEqual(results, [])
+
+
 if __name__ == "__main__":
     unittest.main()
