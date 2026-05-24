@@ -320,7 +320,7 @@ def cmd_smart_search() -> int:
             tag = ""
         lines.append(f"{i + 1}. {h['title']} — {h.get('artist', '?')} · {h.get('album', '?')}{tag}")
     if has_catalog:
-        lines.append("\n💡 [Apple Music] 曲目需要先添加到资料库才能播放。用 play_number() 尝试，Music.app 会自动打开。也可以 cwb source local 切换到本地资料库，直接播放已下载的歌曲。")
+        lines.append("\n💡 [Apple Music] 曲目需要先添加到资料库才能播放。也可以说「播放本地资料库」直接播放已下载的歌曲。")
     print("\n".join(lines))
     return 0
 
