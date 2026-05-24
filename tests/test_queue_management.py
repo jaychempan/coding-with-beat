@@ -1,3 +1,4 @@
+import asyncio
 import json
 import pathlib
 import shutil
@@ -100,7 +101,7 @@ class TestListLibraryWritesQueue(unittest.TestCase):
             mock.patch.object(srv, "get_source", return_value=FakeSrc()),
             mock.patch.object(srv.state, "load", return_value=srv.state.JukeboxState()),
         ):
-            srv.list_library(limit=1)
+            asyncio.run(srv.list_library(limit=1))
 
         data = srv._load_queue_file("library")
         self.assertEqual(data["tracks"], fake_tracks)
@@ -121,7 +122,7 @@ class TestListLibraryWritesQueue(unittest.TestCase):
             mock.patch.object(srv, "get_source", return_value=FakeSrc()),
             mock.patch.object(srv.state, "load", return_value=srv.state.JukeboxState()),
         ):
-            srv.list_library()
+            asyncio.run(srv.list_library())
 
         self.assertEqual(srv._load_queue_file("search"), search_data)
 
@@ -147,7 +148,7 @@ class TestSearchWritesQueue(unittest.TestCase):
             mock.patch.object(srv, "get_source", return_value=FakeSrc()),
             mock.patch.object(srv.state, "load", return_value=srv.state.JukeboxState()),
         ):
-            srv.search("hit")
+            asyncio.run(srv.search("hit"))
 
         data = srv._load_queue_file("search")
         self.assertEqual(data["tracks"], fake_hits)
@@ -165,7 +166,7 @@ class TestSearchWritesQueue(unittest.TestCase):
             mock.patch.object(srv, "get_source", return_value=FakeSrc()),
             mock.patch.object(srv.state, "load", return_value=srv.state.JukeboxState()),
         ):
-            srv.search("s")
+            asyncio.run(srv.search("s"))
 
         self.assertEqual(srv._load_queue_file("library"), lib_data)
 
@@ -180,7 +181,7 @@ class TestSearchWritesQueue(unittest.TestCase):
             mock.patch.object(srv, "get_source", return_value=FakeSrc()),
             mock.patch.object(srv.state, "load", return_value=srv.state.JukeboxState()),
         ):
-            srv.search("s")
+            asyncio.run(srv.search("s"))
 
         self.assertEqual(srv._read_active_mode()["mode"], "library")
 
