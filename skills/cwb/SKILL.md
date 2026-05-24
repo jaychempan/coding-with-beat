@@ -74,6 +74,19 @@ Do NOT generate keywords. For any request that isn't a specific song/artist/comm
 
 Display results grouped by angle with emoji labels (returned by the tool), number globally across groups (1, 2, 3…), end with: 喜欢哪首？说编号我来播。 Do NOT auto-play.
 
+## play_number — number parsing
+
+Always parse the user's number expression before calling `play_number(N)`:
+
+| User says | Call |
+|---|---|
+| "3" / "#3" / "第3首" / "第三首" / "第三个" / "三" | `play_number(3)` |
+| "第一" / "1" / "one" / "the first one" | `play_number(1)` |
+| "第二" / "2" / "second" / "下一个" (when result list is shown) | `play_number(2)` |
+| "最后一首" / "last one" | use the highest number shown in the results |
+
+Chinese ordinals 第一/第二/第三/第四/第五 map to 1/2/3/4/5. Always resolve before calling.
+
 ## play_number recovery — index out of bounds
 
 When `play_number(N)` returns an error containing "only", "had", "items", or "out of range":

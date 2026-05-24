@@ -1,0 +1,158 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 160" width="480" height="160" shape-rendering="crispEdges">
+  <defs>
+    <linearGradient id="titleGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#ffd700"/>
+      <stop offset="55%" stop-color="#ff8c00"/>
+      <stop offset="100%" stop-color="#c45000"/>
+    </linearGradient>
+    <linearGradient id="barGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#ffd700"/>
+      <stop offset="100%" stop-color="#c45000"/>
+    </linearGradient>
+  </defs>
+
+  <!-- ═══════════════════════════════════════════════════ -->
+  <!-- DJ BUDDY — pixel character, transparent background -->
+  <!-- ═══════════════════════════════════════════════════ -->
+
+  <!-- Headphone band (arched: top flat + two descending sides) -->
+  <rect x="40" y="8"  width="48" height="8"  fill="#2d4a6e"/>  <!-- top span -->
+  <rect x="32" y="12" width="8"  height="8"  fill="#2d4a6e"/>  <!-- left descent -->
+  <rect x="88" y="12" width="8"  height="8"  fill="#2d4a6e"/>  <!-- right descent -->
+
+  <!-- Left headphone cup (outer shell) -->
+  <rect x="16" y="16" width="24" height="40" fill="#ff8c00"/>
+  <!-- Left cup inner pad (ear pad recess) -->
+  <rect x="20" y="20" width="16" height="32" fill="#c45000"/>
+  <!-- Left cup center dot (speaker) -->
+  <rect x="26" y="30" width="6"  height="6"  fill="#ff8c00"/>
+
+  <!-- Right headphone cup (outer shell) -->
+  <rect x="88" y="16" width="24" height="40" fill="#ff8c00"/>
+  <!-- Right cup inner pad -->
+  <rect x="92" y="20" width="16" height="32" fill="#c45000"/>
+  <!-- Right cup center dot -->
+  <rect x="96" y="30" width="6"  height="6"  fill="#ff8c00"/>
+
+  <!-- Head (face block) -->
+  <rect x="36" y="20" width="56" height="40" fill="#ffd6a5"/>
+  <!-- Ear nubs (connecting head to cups) -->
+  <rect x="28" y="28" width="8"  height="16" fill="#ffc890"/>
+  <rect x="92" y="28" width="8"  height="16" fill="#ffc890"/>
+
+  <!-- Eyes  •  • -->
+  <rect x="48" y="32" width="8" height="8" fill="#1a1a2e"/>
+  <rect x="72" y="32" width="8" height="8" fill="#1a1a2e"/>
+  <!-- Tiny shine -->
+  <rect x="50" y="33" width="3" height="3" fill="#ffffffaa"/>
+  <rect x="74" y="33" width="3" height="3" fill="#ffffffaa"/>
+
+  <!-- Mouth (flat underscore = (•_•) style) -->
+  <rect x="52" y="50" width="24" height="4" fill="#1a1a2e"/>
+
+  <!-- Body / orange hoodie -->
+  <rect x="28" y="60" width="72" height="52" fill="#ff8c00"/>
+  <!-- Hood opening (skin) -->
+  <rect x="52" y="60" width="24" height="10" fill="#ffd6a5"/>
+  <!-- Hoodie darker shadow detail -->
+  <rect x="28" y="60" width="72" height="8"  fill="#e07800"/>
+  <!-- Pocket -->
+  <rect x="52" y="92" width="24" height="16" fill="#c45000"/>
+  <!-- Pocket line -->
+  <rect x="63" y="92" width="2"  height="16" fill="#a03a00"/>
+
+  <!-- Left arm -->
+  <rect x="8"  y="60" width="20" height="44" fill="#ff8c00"/>
+  <!-- Right arm -->
+  <rect x="100" y="60" width="20" height="44" fill="#ff8c00"/>
+
+  <!-- Left hand -->
+  <rect x="4"  y="100" width="28" height="8" fill="#ffd6a5"/>
+  <!-- Right hand -->
+  <rect x="96" y="100" width="28" height="8" fill="#ffd6a5"/>
+
+  <!-- Legs (dark jeans) -->
+  <rect x="36" y="112" width="22" height="32" fill="#1a3050"/>
+  <rect x="70" y="112" width="22" height="32" fill="#1a3050"/>
+  <!-- Jeans highlight -->
+  <rect x="40" y="112" width="6"  height="32" fill="#243d65"/>
+  <rect x="74" y="112" width="6"  height="32" fill="#243d65"/>
+
+  <!-- Shoes -->
+  <rect x="32" y="140" width="30" height="8" fill="#1a1a2e"/>
+  <rect x="66" y="140" width="30" height="8" fill="#1a1a2e"/>
+  <!-- Shoe sole accent -->
+  <rect x="32" y="145" width="30" height="3" fill="#2d3a4a"/>
+  <rect x="66" y="145" width="30" height="3" fill="#2d3a4a"/>
+
+  <!-- Keyboard under hands -->
+  <rect x="0"  y="108" width="136" height="10" fill="#1a3050"/>
+  <rect x="4"  y="109" width="6"   height="6"  fill="#2d4a6e"/>
+  <rect x="14" y="109" width="6"   height="6"  fill="#2d4a6e"/>
+  <rect x="24" y="109" width="6"   height="6"  fill="#2d4a6e"/>
+  <rect x="34" y="109" width="22"  height="6"  fill="#2d4a6e"/><!-- spacebar -->
+  <rect x="60" y="109" width="6"   height="6"  fill="#2d4a6e"/>
+  <rect x="100" y="109" width="6"  height="6"  fill="#2d4a6e"/>
+  <rect x="110" y="109" width="6"  height="6"  fill="#2d4a6e"/>
+  <rect x="120" y="109" width="6"  height="6"  fill="#2d4a6e"/>
+
+  <!-- Small floating music note near character -->
+  <text x="128" y="30" font-size="14" fill="#ffd700" opacity="0.8" font-family="serif">&#9834;</text>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- TITLE — center, transparent bg              -->
+  <!-- ═══════════════════════════════════════════ -->
+
+  <!-- Dark stroke for legibility on both light/dark backgrounds -->
+  <text x="242" y="58"
+    font-family="'Courier New', Courier, monospace"
+    font-size="13" font-weight="bold"
+    stroke="#1a1a2e" stroke-width="3" paint-order="stroke"
+    fill="#ffd700"
+    text-anchor="middle" letter-spacing="7" opacity="0.95">CODING</text>
+
+  <text x="242" y="100"
+    font-family="'Courier New', Courier, monospace"
+    font-size="36" font-weight="bold"
+    stroke="#1a1a2e" stroke-width="4" paint-order="stroke"
+    fill="url(#titleGrad)"
+    text-anchor="middle" letter-spacing="4">WITH BEAT</text>
+
+  <!-- Subtitle -->
+  <text x="242" y="122"
+    font-family="'Courier New', Courier, monospace"
+    font-size="11"
+    stroke="#1a1a2e" stroke-width="3" paint-order="stroke"
+    fill="#9bbc0f"
+    text-anchor="middle" letter-spacing="1">(&#9834;&#x203F;&#9834;) vibe coding companion</text>
+
+  <!-- Thin accent line under subtitle -->
+  <rect x="168" y="130" width="148" height="2" fill="#ff8c00" opacity="0.5"/>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- EQUALIZER BARS — right, transparent         -->
+  <!-- ═══════════════════════════════════════════ -->
+
+  <!-- Ground base line -->
+  <rect x="352" y="150" width="124" height="4" fill="#1a3050" opacity="0.7"/>
+
+  <!-- Bar 1 (short) -->
+  <rect x="356" y="126" width="16" height="24" fill="url(#barGrad)" opacity="0.85"/>
+  <!-- Bar 2 -->
+  <rect x="376" y="102" width="16" height="48" fill="url(#barGrad)" opacity="0.9"/>
+  <!-- Bar 3 (tallest, peak) -->
+  <rect x="396" y="70"  width="16" height="80" fill="url(#barGrad)"/>
+  <!-- Glowing top pixel on peak bar -->
+  <rect x="396" y="70"  width="16" height="8"  fill="#ffe066"/>
+  <!-- Bar 4 -->
+  <rect x="416" y="102" width="16" height="48" fill="url(#barGrad)" opacity="0.9"/>
+  <!-- Bar 5 (short) -->
+  <rect x="436" y="118" width="16" height="32" fill="url(#barGrad)" opacity="0.85"/>
+  <!-- Bar 6 (tiny) -->
+  <rect x="456" y="134" width="16" height="16" fill="#c45000" opacity="0.7"/>
+
+  <!-- Music notes near bars -->
+  <text x="350" y="58"  font-size="16" fill="#ffd700" opacity="0.7"  font-family="serif">&#9834;</text>
+  <text x="460" y="54"  font-size="12" fill="#ff8c00" opacity="0.6"  font-family="serif">&#9835;</text>
+  <text x="342" y="82"  font-size="10" fill="#9bbc0f" opacity="0.5"  font-family="serif">&#9834;</text>
+</svg>

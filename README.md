@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/logo_icon.svg" width="128" alt="Coding With Beat"/>
+</p>
+
 # Coding With Beat
 
 ![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white)

@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" shape-rendering="crispEdges">
+  <!-- Transparent background — no fill rect -->
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- HEADPHONE BAND                             -->
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- Top span -->
+  <rect x="40" y="8"  width="48" height="8"  fill="#2d4a6e"/>
+  <!-- Left descent -->
+  <rect x="28" y="12" width="12" height="10" fill="#2d4a6e"/>
+  <!-- Right descent -->
+  <rect x="88" y="12" width="12" height="10" fill="#2d4a6e"/>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- LEFT HEADPHONE CUP                        -->
+  <!-- ═══════════════════════════════════════════ -->
+  <rect x="12" y="18" width="24" height="44" fill="#ff8c00"/>  <!-- outer shell -->
+  <rect x="16" y="22" width="16" height="36" fill="#c45000"/>  <!-- ear pad -->
+  <rect x="21" y="34" width="6"  height="6"  fill="#ff8c00"/>  <!-- speaker dot -->
+  <rect x="21" y="42" width="6"  height="2"  fill="#ffa833"/>  <!-- mesh line -->
+  <rect x="21" y="46" width="6"  height="2"  fill="#ffa833"/>  <!-- mesh line -->
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- RIGHT HEADPHONE CUP                       -->
+  <!-- ═══════════════════════════════════════════ -->
+  <rect x="92" y="18" width="24" height="44" fill="#ff8c00"/>  <!-- outer shell -->
+  <rect x="96" y="22" width="16" height="36" fill="#c45000"/>  <!-- ear pad -->
+  <rect x="101" y="34" width="6" height="6"  fill="#ff8c00"/>  <!-- speaker dot -->
+  <rect x="101" y="42" width="6" height="2"  fill="#ffa833"/>  <!-- mesh line -->
+  <rect x="101" y="46" width="6" height="2"  fill="#ffa833"/>  <!-- mesh line -->
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- HEAD                                       -->
+  <!-- ═══════════════════════════════════════════ -->
+  <rect x="32" y="20" width="64" height="48" fill="#ffd6a5"/>
+  <!-- Ear nubs -->
+  <rect x="24" y="30" width="8"  height="16" fill="#ffc890"/>
+  <rect x="96" y="30" width="8"  height="16" fill="#ffc890"/>
+  <!-- Forehead shadow -->
+  <rect x="32" y="20" width="64" height="6"  fill="#ffcf99"/>
+
+  <!-- Eyes  (•  •) -->
+  <rect x="44" y="34" width="10" height="10" fill="#1a1a2e"/>
+  <rect x="74" y="34" width="10" height="10" fill="#1a1a2e"/>
+  <!-- Shine -->
+  <rect x="46" y="35" width="4"  height="4"  fill="#ffffffbb"/>
+  <rect x="76" y="35" width="4"  height="4"  fill="#ffffffbb"/>
+
+  <!-- Cheeks (blush) -->
+  <rect x="36" y="46" width="8"  height="4"  fill="#ffb3a0" opacity="0.6"/>
+  <rect x="84" y="46" width="8"  height="4"  fill="#ffb3a0" opacity="0.6"/>
+
+  <!-- Mouth — the  _  in (•_•) -->
+  <rect x="50" y="58" width="28" height="4"  fill="#1a1a2e"/>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- BODY — orange hoodie                       -->
+  <!-- ═══════════════════════════════════════════ -->
+  <rect x="24" y="68" width="80" height="36" fill="#ff8c00"/>
+  <!-- Collar / hood opening -->
+  <rect x="52" y="68" width="24" height="10" fill="#ffd6a5"/>
+  <!-- Hoodie top band shadow -->
+  <rect x="24" y="68" width="80" height="6"  fill="#e07800"/>
+  <!-- Center zip line -->
+  <rect x="63" y="78" width="2"  height="26" fill="#c45000"/>
+  <!-- Pocket -->
+  <rect x="50" y="86" width="28" height="14" fill="#c45000"/>
+  <rect x="63" y="86" width="2"  height="14" fill="#a03a00"/>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- ARMS                                       -->
+  <!-- ═══════════════════════════════════════════ -->
+  <rect x="6"  y="68" width="18" height="32" fill="#ff8c00"/>
+  <rect x="104" y="68" width="18" height="32" fill="#ff8c00"/>
+  <!-- Hands -->
+  <rect x="2"  y="96" width="24" height="8"  fill="#ffd6a5"/>
+  <rect x="102" y="96" width="24" height="8" fill="#ffd6a5"/>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- LEGS                                       -->
+  <!-- ═══════════════════════════════════════════ -->
+  <rect x="32" y="104" width="24" height="16" fill="#1a3050"/>
+  <rect x="72" y="104" width="24" height="16" fill="#1a3050"/>
+  <!-- Jeans highlight -->
+  <rect x="36" y="104" width="6"  height="16" fill="#243d65"/>
+  <rect x="76" y="104" width="6"  height="16" fill="#243d65"/>
+
+  <!-- Shoes -->
+  <rect x="28" y="118" width="32" height="8"  fill="#1a1a2e"/>
+  <rect x="68" y="118" width="32" height="8"  fill="#1a1a2e"/>
+  <!-- Sole accent -->
+  <rect x="28" y="123" width="32" height="3"  fill="#2d3a4a"/>
+  <rect x="68" y="123" width="32" height="3"  fill="#2d3a4a"/>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- FLOATING MUSIC NOTE                        -->
+  <!-- ═══════════════════════════════════════════ -->
+  <text x="100" y="22" font-size="14" fill="#ffd700" opacity="0.85" font-family="serif">&#9834;</text>
+  <text x="8"   y="20" font-size="10" fill="#9bbc0f" opacity="0.6"  font-family="serif">&#9835;</text>
+</svg>

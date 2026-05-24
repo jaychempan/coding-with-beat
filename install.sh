@@ -122,7 +122,7 @@ bootstrap_via_uv() {
     uv python install 3.12
     found="$(uv python find 3.12)"
   fi
-  [ -n "$found" ] && [ -x "$found" ] || die "uv python install failed."
+  if [ -z "$found" ] || [ ! -x "$found" ]; then die "uv python install failed."; fi
   PY="$found"
 }
 
@@ -190,6 +190,7 @@ inject_path() {
     echo ""
     echo "# >>> coding-with-beat >>>"
     echo '# Added by coding-with-beat install.sh. Remove this block (or run uninstall.sh) to revert.'
+    # shellcheck disable=SC2016
     echo 'case ":$PATH:" in *":$HOME/.local/bin:"*) ;; *) export PATH="$HOME/.local/bin:$PATH";; esac'
     echo "# <<< coding-with-beat <<<"
   } >> "$rc"
@@ -288,6 +289,16 @@ When the user names an artist without a specific song (e.g. "来首周杰伦的"
 When the user asks for something similar to an artist (e.g. "像Taylor Swift的"):
 generate 3 queries based on that artist's known style.
 
+## play_number — number parsing
+
+Always resolve the user's expression to an integer before calling `play_number(N)`:
+- "第一" / "1" / "one" / "the first" → play_number(1)
+- "第二" / "2" / "second" → play_number(2)
+- "第三首" / "第三个" / "三" / "3" → play_number(3)
+- "最后一首" / "last one" → use the highest number shown in results
+
+Chinese ordinals 第一/第二/第三/第四/第五 = 1/2/3/4/5. Always resolve before calling.
+
 ## play_number recovery
 
 If `play_number(N)` errors with "only"/"had"/"out of range": re-run the same `smart_search(queries=[...])` automatically, then call `play_number(N)` again. Do NOT ask the user to retry.
@@ -385,7 +396,8 @@ with open(plist, "wb") as f:
     plistlib.dump(data, f)
 PY
 
-  local domain="gui/$(id -u)"
+  local domain
+  domain="gui/$(id -u)"
   # Clean up legacy plist names from older installs
   launchctl bootout "$domain" "$old_plist" >/dev/null 2>&1 || true
   rm -f "$old_plist"
@@ -479,7 +491,8 @@ with open(plist, "wb") as f:
     plistlib.dump(data, f)
 PY
 
-  local domain="gui/$(id -u)"
+  local domain
+  domain="gui/$(id -u)"
   launchctl bootout "$domain" "$plist" >/dev/null 2>&1 || true
   if launchctl bootstrap "$domain" "$plist" >/dev/null 2>&1; then
     ok "Auto-updater registered (daily at 03:00)"
