@@ -208,6 +208,101 @@ def cmd_search() -> int:
     return _mcp_print("search", {"query": query})
 
 
+def cmd_smart_search() -> int:
+    """smart_search <description> | <q1> -- <q2> -- <q3> — find tracks by mood/scene/vibe."""
+    import asyncio
+
+    raw = sys.argv[2:]
+    if not raw:
+        print("error: usage: smart_search <description>  OR  smart_search <q1> -- <q2> -- <q3>")
+        return 2
+
+    # Split on "--" to detect multi-angle mode
+    queries: list[str] = []
+    current: list[str] = []
+    for arg in raw:
+        if arg == "--":
+            if current:
+                queries.append(" ".join(current).strip())
+            current = []
+        else:
+            current.append(arg)
+    if current:
+        queries.append(" ".join(current).strip())
+    queries = [q for q in queries if q]
+
+    from .server import _multi_angle_search, _write_active_mode, _write_queue_file
+    from .sources import get_source
+
+    if len(queries) > 1:
+        print(f"🔍 多角度搜索: {len(queries)} 个方向", flush=True)
+        result = asyncio.run(_multi_angle_search(queries))
+        print(result)
+        return 0
+
+    # Single-angle (backwards compat)
+    query = queries[0]
+    print(f"🔍 理解描述: {query}", flush=True)
+
+    import threading
+
+    am_hits: list = []
+    local_hits: list = []
+
+    def _search_am() -> None:
+        nonlocal am_hits
+        print("🎵 搜索 Apple Music...", flush=True)
+        am_hits = get_source("apple_music").search(query, 8) or []
+
+    def _search_local() -> None:
+        nonlocal local_hits
+        print("📁 搜索本地文件...", flush=True)
+        local_hits = get_source("local").search(query, 8) or []
+
+    t1 = threading.Thread(target=_search_am, daemon=True)
+    t2 = threading.Thread(target=_search_local, daemon=True)
+    t1.start()
+    t2.start()
+    t1.join()
+    t2.join()
+
+    seen: set[str] = set()
+    merged: list[dict] = []
+    for h in am_hits + local_hits:
+        key = f"{h.get('title', '').lower()}|{h.get('artist', '').lower()}"
+        if key not in seen:
+            seen.add(key)
+            merged.append(h)
+
+    if not merged:
+        print(f"(no matches for '{query}')")
+        return 1
+
+    print(f"✅ 找到 {len(merged)} 首\n", flush=True)
+
+    _write_queue_file("search", {"tracks": merged, "index": 0, "expected_title": ""})
+    _write_active_mode(context="search")
+
+    has_catalog = False
+    lines = []
+    for i, h in enumerate(merged):
+        src = h.get("source", "")
+        if src == "library":
+            tag = " [资料库]"
+        elif src == "apple_music":
+            tag = " [Apple Music]"
+            has_catalog = True
+        elif src == "local":
+            tag = " [本地]"
+        else:
+            tag = ""
+        lines.append(f"{i + 1}. {h['title']} — {h.get('artist', '?')} · {h.get('album', '?')}{tag}")
+    if has_catalog:
+        lines.append("\n💡 [Apple Music] 曲目需要先添加到资料库才能播放。用 play_number() 尝试，Music.app 会自动打开。")
+    print("\n".join(lines))
+    return 0
+
+
 def cmd_play() -> int:
     """play [query] — resume if no query, otherwise search and play."""
     query = " ".join(sys.argv[2:]).strip()
@@ -650,6 +745,7 @@ COMMANDS = {
     "karaoke": cmd_karaoke,
     "list": cmd_list,
     "search": cmd_search,
+    "smart_search": cmd_smart_search,
     "play": cmd_play,
     "resume": cmd_resume,
     "play_number": cmd_play_number,
