@@ -210,7 +210,7 @@ def _needs_library_add(np, retry_query: str = "") -> str:
     artist = np.artist or "—"
     msg = (
         f'Opened Music.app for "{title} — {artist}".\n'
-        "Add the track to your library, then just say \"play it\" and I'll start it right away."
+        'Add the track to your library, then just say "play it" and I\'ll start it right away.'
     )
     if retry_query:
         msg += f'\n\nIf the queue has changed by then, use play_song("{retry_query}") to play directly.'
@@ -729,9 +729,7 @@ async def _multi_angle_search(queries: list[str], limit_per_query: int = 6) -> s
                 tag = " [本地]"
             else:
                 tag = ""
-            lines.append(
-                f"{global_idx}. {h['title']} — {h.get('artist', '?')} · {h.get('album', '?')}{tag}"
-            )
+            lines.append(f"{global_idx}. {h['title']} — {h.get('artist', '?')} · {h.get('album', '?')}{tag}")
             global_idx += 1
         lines.append("")
 
@@ -830,9 +828,7 @@ async def smart_search(
             tag = " [本地]"
         else:
             tag = ""
-        lines.append(
-            f"{i + 1}. {h['title']} — {h.get('artist', '?')} · {h.get('album', '?')}{tag}"
-        )
+        lines.append(f"{i + 1}. {h['title']} — {h.get('artist', '?')} · {h.get('album', '?')}{tag}")
     if has_catalog:
         lines.append("\n💡 [Apple Music] 曲目需要先添加到资料库才能播放。用 play_number() 尝试，Music.app 会自动打开。")
     return "\n".join(lines)

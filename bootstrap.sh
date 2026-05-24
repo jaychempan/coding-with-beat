@@ -21,6 +21,7 @@ DEST="${CWB_SRC:-$HOME/.coding-with-beat/src}"
 _SPARSE_PATHS=(
   coding_with_beat
   commands
+  skills
   scripts/install_settings.py
   pyproject.toml
   install.sh
