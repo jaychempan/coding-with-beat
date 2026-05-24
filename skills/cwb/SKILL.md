@@ -74,6 +74,19 @@ Do NOT generate keywords. For any request that isn't a specific song/artist/comm
 
 Display results grouped by angle with emoji labels (returned by the tool), number globally across groups (1, 2, 3…), end with: 喜欢哪首？说编号我来播。 Do NOT auto-play.
 
+## Library-only search
+
+When the user explicitly restricts the search to their local library — trigger phrases include:
+- 中文: "从资料库找"、"资料库里有没有"、"我已经有这首"、"本地库里"
+- English: "in my library", "library only", "do I have", "from my library"
+
+**Do this:**
+1. Call `search(query)` as normal.
+2. From the results, **only show entries where `source == "library"`**.
+3. If none are found, tell the user: "资料库里没找到，要不要搜一下线上？" — do NOT auto-expand to catalog.
+
+Do NOT call `list_library` for this — `search()` is more targeted. `list_library` is only useful when the user wants to **browse all** tracks without a specific query.
+
 ## play_number — number parsing
 
 Always parse the user's number expression before calling `play_number(N)`:
