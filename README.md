@@ -1,8 +1,7 @@
-<p align="center">
+<div align="center">
   <img src="assets/logo_icon.svg" width="128" alt="Coding With Beat"/>
-</p>
-
-# Coding With Beat
+  <h1>Coding With Beat</h1>
+</div>
 
 ![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white)
 ![Platform](https://img.shields.io/badge/platform-macOS-000000?style=flat-square&logo=apple&logoColor=white)
