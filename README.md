@@ -36,7 +36,7 @@ A retro pixel DJ companion for Claude Code / Codex CLI / Terminal. It plays musi
     <th align="center" colspan="2">AI Statusline</th>
   </tr>
   <tr>
-    <td colspan="2"><img src="assets/screen_3.png" width="100%"/></td>
+    <td colspan="2"><img src="assets/screen_6.png" width="100%"/></td>
   </tr>
 </table>
 
