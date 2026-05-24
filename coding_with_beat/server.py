@@ -703,7 +703,7 @@ async def search(query: str, limit: int = 8) -> str:
             has_catalog = True
         lines.append(f"{i + 1}. {h['title']} — {h.get('artist', '?')} · {h.get('album', '?')}{_source_tag(src)}")
     if has_catalog:
-        lines.append("\n💡 [Apple Music] 曲目需要先添加到资料库才能播放。用 play_number() 尝试，Music.app 会自动打开。")
+        lines.append("\n💡 [Apple Music] 曲目需要先添加到资料库才能播放。用 play_number() 尝试，Music.app 会自动打开。也可以 cwb source local 切换到本地资料库，直接播放已下载的歌曲。")
     return "\n".join(lines)
 
 
@@ -808,7 +808,7 @@ async def _multi_angle_search(queries: list[str], limit_per_query: int = 6) -> s
         lines.append("")
 
     if has_catalog:
-        lines.append("💡 [Apple Music] 曲目需要先添加到资料库才能播放。用 play_number() 尝试，Music.app 会自动打开。")
+        lines.append("💡 [Apple Music] 曲目需要先添加到资料库才能播放。用 play_number() 尝试，Music.app 会自动打开。也可以 cwb source local 切换到本地资料库，直接播放已下载的歌曲。")
     lines.append("喜欢哪首？说编号我来播。")
 
     return "\n".join(lines).rstrip()
@@ -900,7 +900,7 @@ async def smart_search(
         tag = _source_tag(src)
         lines.append(f"{i + 1}. {h['title']} — {h.get('artist', '?')} · {h.get('album', '?')}{tag}")
     if has_catalog:
-        lines.append("\n💡 [Apple Music] 曲目需要先添加到资料库才能播放。用 play_number() 尝试，Music.app 会自动打开。")
+        lines.append("\n💡 [Apple Music] 曲目需要先添加到资料库才能播放。用 play_number() 尝试，Music.app 会自动打开。也可以 cwb source local 切换到本地资料库，直接播放已下载的歌曲。")
     return "\n".join(lines)
 
 
