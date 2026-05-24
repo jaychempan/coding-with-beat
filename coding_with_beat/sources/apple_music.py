@@ -607,14 +607,18 @@ def _search_catalog_api(query: str, limit: int = 8, timeout: float = 3.0) -> Lis
     except ImportError:
         return []
     detected = _detect_storefront()
-    # Only try detected storefront first, then one fallback — keeps search fast
-    # and avoids blocking the MCP server for up to 30 s with 5 × 6 s timeouts.
-    storefronts = [detected] if detected else []
-    if not storefronts or storefronts[0] != "us":
-        storefronts.append("us")
+    # Build storefront priority: detected region first, then CJK fallbacks, then us.
+    # CJK storefronts (cn/hk/tw) are always included so Chinese songs are found
+    # even when nothing is playing and the storefront cannot be auto-detected.
+    seen: set[str] = set()
+    storefronts: list[str] = []
+    for sf in ([detected] if detected else []) + ["cn", "hk", "tw", "us"]:
+        if sf and sf not in seen:
+            seen.add(sf)
+            storefronts.append(sf)
     try:
         with httpx.Client(timeout=timeout) as c:
-            for sf in storefronts[:2]:
+            for sf in storefronts:
                 try:
                     r = c.get(
                         "https://itunes.apple.com/search",
