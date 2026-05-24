@@ -1,4 +1,5 @@
 """Companion mode: proactive check-ins and context-aware music suggestions."""
+
 from __future__ import annotations
 
 import random

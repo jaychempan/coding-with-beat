@@ -1075,6 +1075,7 @@ async def companion_check(trigger: str) -> str:
     When '(not needed right now)' is returned, do NOT mention it to the user.
     """
     from . import companion as _companion
+
     st = state.load()
     if not _companion.can_trigger(st, trigger):
         return "(not needed right now)"

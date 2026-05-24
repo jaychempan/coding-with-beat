@@ -4,19 +4,17 @@ from scripts import install_settings
 
 
 class InstallSettingsTest(unittest.TestCase):
-    def test_defaults_to_http_mcp_server(self):
+    def test_does_not_write_mcp_servers_to_settings(self):
+        # MCP server is now registered via `claude mcp add` (writes to ~/.claude.json),
+        # not settings.json. merge() must not add mcpServers here.
         settings = install_settings.merge({}, "python3", "/remote/repo")
 
-        self.assertEqual(
-            settings["mcpServers"]["coding-with-beat"],
-            {
-                "type": "http",
-                "url": install_settings.DEFAULT_MCP_URL,
-            },
-        )
+        self.assertNotIn("mcpServers", settings)
         self.assertEqual(settings["statusLine"]["command"], "python3 -m coding_with_beat statusline")
 
-    def test_can_write_custom_http_mcp_server(self):
+    def test_mcp_url_param_accepted_without_writing_to_settings(self):
+        # mcp_url is still accepted (used by install.sh for `claude mcp add`),
+        # but must not be written into settings.json mcpServers.
         settings = install_settings.merge(
             {},
             "python3",
@@ -24,15 +22,9 @@ class InstallSettingsTest(unittest.TestCase):
             mcp_url="http://127.0.0.1:9876/mcp",
         )
 
-        self.assertEqual(
-            settings["mcpServers"]["coding-with-beat"],
-            {
-                "type": "http",
-                "url": "http://127.0.0.1:9876/mcp",
-            },
-        )
+        self.assertNotIn("mcpServers", settings)
 
-    def test_migrates_legacy_cc_jukebox_settings_to_coding_with_beat(self):
+    def test_migrates_legacy_cc_jukebox_settings(self):
         settings = {
             "mcpServers": {
                 "cc-jukebox": {
@@ -58,8 +50,8 @@ class InstallSettingsTest(unittest.TestCase):
 
         migrated = install_settings.merge(settings, "python3", "/repo")
 
-        self.assertNotIn("cc-jukebox", migrated["mcpServers"])
-        self.assertIn("coding-with-beat", migrated["mcpServers"])
+        # Legacy mcpServers entry removed; new registration is via claude mcp add
+        self.assertNotIn("mcpServers", migrated)
         self.assertEqual(migrated["statusLine"]["command"], "python3 -m coding_with_beat statusline")
         self.assertEqual(migrated["statusLine"]["_owner"], "coding-with-beat")
         self.assertEqual(len(migrated["hooks"]["UserPromptExpansion"]), 1)

@@ -635,6 +635,7 @@ def cmd_restart() -> int:
     plist = _Path.home() / "Library/LaunchAgents/com.coding-with-beat.server.plist"
     if plist.exists():
         import os
+
         label = "com.coding-with-beat.server"
         domain = f"gui/{os.getuid()}"
         print("Restarting MCP server via launchctl ...")

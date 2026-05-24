@@ -163,6 +163,7 @@ def handle_hook(event: dict) -> dict:
         print(_build_session_greeting(st), flush=True)
     elif hook == "stop":
         from .companion import MIN_SESSION_SECS
+
         if (time.time() - st.companion_session_start) >= MIN_SESSION_SECS:
             print(_build_session_farewell(st), flush=True)
 
