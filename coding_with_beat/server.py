@@ -217,6 +217,25 @@ def _needs_library_add(np, retry_query: str = "") -> str:
     return msg
 
 
+def _companion_card(message: str, music_results: str) -> str:
+    frame_idx = int(time.time() * 2) % 3
+    sprite = dj.pixel_person_frame("groove", frame_idx)  # colored=True, shown in CC terminal
+    sprite_lines = sprite.splitlines()
+    sprite_w = 10
+    pad = "  "
+    music_lines = music_results.splitlines()[:12]
+    right_lines = [message, ""] + music_lines
+    offset = max(0, (len(sprite_lines) - len(right_lines)) // 2)
+    rows = []
+    total = max(len(sprite_lines), len(right_lines) + offset)
+    for i in range(total):
+        sl = sprite_lines[i] if i < len(sprite_lines) else " " * sprite_w
+        ri = i - offset
+        rl = right_lines[ri] if 0 <= ri < len(right_lines) else ""
+        rows.append(f"{sl}{pad}{rl}" if rl else sl)
+    return "\n".join(rows)
+
+
 def _wait_and_play_from_library(src, title: str, artist: str, timeout: int = 15, interval: int = 3) -> Optional[str]:
     """Poll until the track appears in the local library, then play it.
 
@@ -1035,6 +1054,39 @@ def dj_say(mood: str = "") -> str:
     st = state.load()
     m = mood or st.dj_mood or "neutral"
     return f"{dj.face(m)}  “{dj.quip(m)}”"
+
+
+@mcp.tool()
+async def companion_check(trigger: str) -> str:
+    """DJ Buddy companion check-in.
+
+    trigger must be one of: session_start, debug_struggle, victory,
+    idle_checkin, session_end.
+
+    Call this proactively at key moments:
+    - session_start: in your first reply of a new session
+    - debug_struggle: after observing 3+ consecutive test/command failures
+    - victory: right after a successful git commit or all tests passing
+    - idle_checkin: after 20+ tool calls with no music suggestion in 25+ min
+    - session_end: when the user signals they are done (bye, 收工, 下班, etc.)
+
+    Returns a companion card with a caring message and music suggestions,
+    or '(not needed right now)' if cooldown is active or conditions unmet.
+    When '(not needed right now)' is returned, do NOT mention it to the user.
+    """
+    from . import companion as _companion
+    st = state.load()
+    if not _companion.can_trigger(st, trigger):
+        return "(not needed right now)"
+    queries = _companion.get_queries(trigger)
+    try:
+        music_results = await _multi_angle_search(queries, limit_per_query=4)
+    except Exception:
+        music_results = "(music search unavailable — say what you'd like to hear)"
+    st.companion_last_at = time.time()
+    state.save(st)
+    message = _companion.get_message(trigger)
+    return _companion_card(message, music_results)
 
 
 @mcp.tool()
