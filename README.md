@@ -17,7 +17,7 @@
 >
 > Right. You can't remember.（对，你已经不记得了。）
 
-![](assets/welcome_log.png)
+<video src="https://github.com/jaychempan/coding-with-beat/releases/download/v0.3.6/demo.mp4" controls autoplay loop muted width="100%"></video>
 
 **Your coding soundtrack, now inside the terminal.** Smart music selection, mood-aware playback, and a pixel DJ that vibes with every keystroke — built for Claude Code & Codex CLI.
 
