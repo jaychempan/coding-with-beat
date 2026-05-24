@@ -9,7 +9,8 @@
 #   3. Symlinks `cwb` into ~/.local/bin/ and makes sure that dir
 #      is on your PATH (writes a marked block into ~/.zshrc / ~/.bashrc).
 #   4. Symlinks the /cwb slash command into ~/.claude/commands/.
-#   5. Registers HTTP MCP server, statusline, vibe hooks, and the /cwb
+#   5. Symlinks all cwb skills into ~/.claude/skills/.
+#   6. Registers HTTP MCP server, statusline, vibe hooks, and the /cwb
 #      UserPromptExpansion hook with Claude Code via ~/.claude/settings.json.
 set -euo pipefail
 
@@ -216,7 +217,29 @@ else
   warn "$CMD_LINK already exists as a regular file — leaving it alone."
 fi
 
-# 6. patch ~/.claude/settings.json
+# 6. install Claude Code skills (symlink so repo is source of truth)
+SKILLS_SRC_DIR="$REPO/skills"
+SKILLS_DST_DIR="$HOME/.claude/skills"
+if [ -d "$SKILLS_SRC_DIR" ]; then
+  mkdir -p "$SKILLS_DST_DIR"
+  for skill_src in "$SKILLS_SRC_DIR"/*/; do
+    skill_name="$(basename "$skill_src")"
+    skill_dst="$SKILLS_DST_DIR/$skill_name"
+    if [ -L "$skill_dst" ]; then
+      ln -sfn "$skill_src" "$skill_dst"
+      ok "skill $skill_name updated"
+    elif [ ! -e "$skill_dst" ]; then
+      ln -sfn "$skill_src" "$skill_dst"
+      ok "skill $skill_name linked"
+    else
+      warn "skill $skill_name already exists as a non-symlink — leaving it alone."
+    fi
+  done
+else
+  warn "skills/ directory not found in repo — skipping skill installation."
+fi
+
+# 7. patch ~/.claude/settings.json
 SETTINGS_DIR="$HOME/.claude"
 SETTINGS_FILE="$SETTINGS_DIR/settings.json"
 mkdir -p "$SETTINGS_DIR"
@@ -409,7 +432,7 @@ PY
 
 start_updater_service
 
-# 7. Make sure data dir exists
+# 8. Make sure data dir exists
 "$VENV_PY" -c "from coding_with_beat.config import ensure_dirs; ensure_dirs()"
 ok "data dir ready: ~/.coding-with-beat/"
 
