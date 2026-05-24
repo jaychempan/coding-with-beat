@@ -12,8 +12,7 @@ def _run(coro):
     return asyncio.run(coro)
 
 
-def _mock_state(companion_last_at=0.0, companion_failure_streak=0,
-                companion_tool_count=0, companion_session_start=0.0):
+def _mock_state(companion_last_at=0.0, companion_failure_streak=0, companion_tool_count=0, companion_session_start=0.0):
     return SimpleNamespace(
         source="apple_music",
         companion_last_at=companion_last_at,

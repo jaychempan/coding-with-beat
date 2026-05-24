@@ -2,7 +2,6 @@
 import time
 import unittest
 from types import SimpleNamespace
-from unittest import mock
 
 from coding_with_beat import vibe
 
