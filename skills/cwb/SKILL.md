@@ -156,6 +156,8 @@ cwb np                  # now playing
 cwb volume 70           # volume
 cwb like                # like current
 cwb search "query"      # search without playing
+cwb loved               # list all loved/hearted tracks
+cwb search_loved "q"    # search within loved tracks only
 ```
 
 ## Response style

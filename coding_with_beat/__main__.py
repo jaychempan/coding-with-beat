@@ -22,6 +22,8 @@ Commands:
     play <n>     — play track #n from the last search or list results
     search <q>   — search library + Apple Music catalog and show numbered results
     list [n]     — list all library tracks (default 100)
+    loved [n]    — list all loved/hearted tracks (default 50)
+    search_loved <q> — search only within loved tracks
     pause        — pause playback
     next         — skip to next track
     prev         — go to previous track
@@ -197,6 +199,26 @@ def cmd_list() -> int:
         except ValueError:
             pass
     return _mcp_print("list_library", {"limit": limit})
+
+
+def cmd_loved() -> int:
+    """loved [n] — list all loved/hearted tracks (default 50)."""
+    limit = 50
+    if len(sys.argv) > 2:
+        try:
+            limit = int(sys.argv[2])
+        except ValueError:
+            pass
+    return _mcp_print("list_loved", {"limit": limit})
+
+
+def cmd_search_loved() -> int:
+    """search_loved <query> — search within loved tracks only."""
+    query = " ".join(sys.argv[2:]).strip()
+    if not query:
+        print("error: usage: search_loved <query>")
+        return 2
+    return _mcp_print("search_loved", {"query": query})
 
 
 def cmd_search() -> int:
@@ -461,6 +483,8 @@ def cmd_help() -> int:
             row("play <序号>", "按编号播放（来自搜索或列表结果）"),
             row("search <关键词>", "搜索资料库 + Apple Music 目录"),
             row("list [n]", "列出资料库所有歌曲（默认100首）"),
+            row("loved [n]", "列出喜欢列表（默认50首）"),
+            row("search_loved <q>", "在喜欢列表里搜索"),
             row("pause / 暂停", "暂停"),
             row("next  / 下一首", "下一首"),
             row("prev  / 上一首", "上一首"),
@@ -500,6 +524,8 @@ def cmd_help() -> int:
             row("play <n>", "Play track #n from last search or list"),
             row("search <query>", "Search library + Apple Music catalog"),
             row("list [n]", "List all library tracks (default 100)"),
+            row("loved [n]", "List all loved/hearted tracks (default 50)"),
+            row("search_loved <q>", "Search within loved tracks only"),
             row("pause", "Pause playback"),
             row("next", "Skip to next track"),
             row("prev", "Go to previous track"),
@@ -755,6 +781,8 @@ COMMANDS = {
     "source": cmd_source,
     "karaoke": cmd_karaoke,
     "list": cmd_list,
+    "loved": cmd_loved,
+    "search_loved": cmd_search_loved,
     "search": cmd_search,
     "smart_search": cmd_smart_search,
     "play": cmd_play,
@@ -783,6 +811,10 @@ COMMANDS = {
     "找歌": cmd_search,
     "列表": cmd_list,
     "资料库": cmd_list,
+    "喜欢": cmd_loved,
+    "喜欢列表": cmd_loved,
+    "收藏列表": cmd_loved,
+    "搜索喜欢": cmd_search_loved,
     "收藏": cmd_like,
     "歌词": cmd_lyrics,
     "播放器": cmd_player,
