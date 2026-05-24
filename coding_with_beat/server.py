@@ -1210,7 +1210,7 @@ def session_intro() -> str:
     if np.title:
         parts.append(f"\n♪ {np.title} — {np.artist}  ({st.source})")
     parts.append(f"\n{dj.face('happy')}  {dj.quip('happy')}")
-    parts.append("\n想知道能对我说什么？跟我说「能做什么」就行～")
+    parts.append("\n想知道能对我说什么？跟我说「DJ 能做什么」就行～")
     return "\n".join(parts)
 
 

@@ -98,7 +98,7 @@ See **[README_CODEX.md](README_CODEX.md)** for the full integration guide — ho
 ## Usage
 
 > [!TIP]
-> **Not sure what to say?** Just ask — `能做什么` / `what can you do` — and DJ Buddy will show you a full list of phrases you can use.
+> **Not sure what to say?** Just ask — `DJ 能做什么` / `DJ help` — and DJ Buddy will show you a full list of phrases you can use.
 
 ### Just talk to your AI assistant
 
