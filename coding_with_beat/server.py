@@ -669,10 +669,13 @@ async def _multi_angle_search(queries: list[str], limit_per_query: int = 6) -> s
     import asyncio
 
     async def _search_one(query: str) -> list[dict]:
-        am_hits, local_hits = await asyncio.gather(
-            asyncio.to_thread(get_source("apple_music").search, query, limit_per_query),
-            asyncio.to_thread(get_source("local").search, query, limit_per_query),
-        )
+        try:
+            am_hits, local_hits = await asyncio.gather(
+                asyncio.to_thread(get_source("apple_music").search, query, limit_per_query),
+                asyncio.to_thread(get_source("local").search, query, limit_per_query),
+            )
+        except Exception:
+            return []
         seen: set[str] = set()
         merged: list[dict] = []
         for h in (am_hits or []) + (local_hits or []):
@@ -691,14 +694,13 @@ async def _multi_angle_search(queries: list[str], limit_per_query: int = 6) -> s
     for query, hits in zip(queries, per_query_results):
         label = _label_for_query(query)
         group_tracks: list[dict] = []
-        has_any_hit = bool(hits)
         for h in hits:
             key = f"{h.get('title', '').lower()}|{h.get('artist', '').lower()}"
             if key not in global_seen:
                 global_seen.add(key)
                 group_tracks.append(h)
                 all_tracks.append(h)
-        if has_any_hit:
+        if group_tracks:
             groups.append((label, group_tracks))
 
     if not all_tracks:

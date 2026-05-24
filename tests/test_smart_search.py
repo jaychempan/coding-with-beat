@@ -207,10 +207,18 @@ def test_multi_angle_global_dedup(mock_gs, mock_wqf, mock_wam):
 @mock.patch("coding_with_beat.server._write_queue_file")
 @mock.patch("coding_with_beat.server.get_source")
 def test_multi_angle_label_in_output(mock_gs, mock_wqf, mock_wam):
-    """Each group header appears in the output."""
+    """Each group header appears in the output (distinct tracks so neither group is empty after dedup)."""
+    tracks_by_query = {
+        "lofi hip hop": [_hit("Lofi Track", "Artist A", "library")],
+        "synthwave retrowave": [_hit("Synth Track", "Artist B", "library")],
+    }
+
     def fake_get_source(name):
         src = mock.MagicMock()
-        src.search.return_value = [_hit("Track", "Artist", "library")]
+        if name == "apple_music":
+            src.search.side_effect = lambda q, lim: tracks_by_query.get(q, [])
+        else:
+            src.search.return_value = []
         return src
 
     mock_gs.side_effect = fake_get_source
