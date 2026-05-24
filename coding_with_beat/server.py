@@ -662,6 +662,22 @@ async def search(query: str, limit: int = 8) -> str:
     return "\n".join(lines)
 
 
+_SOURCE_ORDER: dict[str, int] = {"loved": 0, "library": 1, "local": 2, "apple_music": 3}
+
+
+def _source_tag(src: str) -> str:
+    return {
+        "loved": " [♥ 喜欢]",
+        "library": " [资料库]",
+        "local": " [本地]",
+        "apple_music": " [Apple Music]",
+    }.get(src, "")
+
+
+def _sort_by_source(tracks: list[dict]) -> list[dict]:
+    return sorted(tracks, key=lambda h: _SOURCE_ORDER.get(h.get("source", ""), 99))
+
+
 _QUERY_LABEL_MAP: list[tuple[tuple[str, ...], str]] = [
     (("jazz", "bossa nova", "smooth jazz"), "🎷 Jazz"),
     (("lofi", "lo-fi", "chillhop"), "🎧 Lofi"),

@@ -3,7 +3,7 @@ from types import SimpleNamespace
 from unittest import mock
 
 from coding_with_beat import server
-from coding_with_beat.server import _label_for_query
+from coding_with_beat.server import _label_for_query, _source_tag, _sort_by_source
 
 
 def _hit(title, artist, source):
@@ -12,6 +12,37 @@ def _hit(title, artist, source):
 
 def _run(coro):
     return asyncio.run(coro)
+
+
+def test_source_tag_loved():
+    assert _source_tag("loved") == " [♥ 喜欢]"
+
+
+def test_source_tag_library():
+    assert _source_tag("library") == " [资料库]"
+
+
+def test_source_tag_local():
+    assert _source_tag("local") == " [本地]"
+
+
+def test_source_tag_apple_music():
+    assert _source_tag("apple_music") == " [Apple Music]"
+
+
+def test_source_tag_unknown():
+    assert _source_tag("") == ""
+
+
+def test_sort_by_source_order():
+    tracks = [
+        {"title": "C", "source": "apple_music"},
+        {"title": "A", "source": "loved"},
+        {"title": "D", "source": "local"},
+        {"title": "B", "source": "library"},
+    ]
+    result = _sort_by_source(tracks)
+    assert [t["title"] for t in result] == ["A", "B", "D", "C"]
 
 
 @mock.patch("coding_with_beat.server._write_active_mode")
