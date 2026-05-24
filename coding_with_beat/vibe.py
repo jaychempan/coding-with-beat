@@ -7,6 +7,7 @@ shared state. A background "auto-switch" can optionally retrigger playback.
 
 from __future__ import annotations
 
+import datetime as _dt
 import json
 import os
 import sys
@@ -42,6 +43,48 @@ def _is_test_file(path: str) -> bool:
         or "\\test\\" in path
         or "\\tests\\" in path
     )
+
+
+_TEST_KEYWORDS = ("pytest", "npm test", "jest", "go test", "cargo test", " test", "vitest")
+
+
+def _is_test_command(cmd: str) -> bool:
+    lc = cmd.lower()
+    return any(k in lc for k in _TEST_KEYWORDS)
+
+
+def _update_companion_tracking(st, event: dict) -> None:
+    tool = (event.get("tool_name") or "").lower()
+    tool_input = event.get("tool_input") or {}
+    tool_response = event.get("tool_response") or {}
+    cmd = tool_input.get("command") or ""
+    if tool == "bash" and _is_test_command(cmd):
+        ok = bool(tool_response.get("success", True))
+        stderr = (tool_response.get("stderr") or "").lower()
+        failed = ("fail" in stderr or "error" in stderr) and "0 failures" not in stderr
+        if failed or not ok:
+            st.companion_failure_streak += 1
+        else:
+            st.companion_failure_streak = 0
+    st.companion_tool_count += 1
+
+
+def _build_session_greeting(st) -> str:
+    hour = _dt.datetime.now().hour
+    if 6 <= hour < 12:
+        greeting = "早安！新的一天开始了"
+    elif 12 <= hour < 18:
+        greeting = "下午好！继续保持"
+    else:
+        greeting = "晚上好——深夜写代码辛苦了"
+    sprite = dj.pixel_person_frame("happy", 0, colored=False)
+    return f"\n♪ · · · DJ Buddy · · · ♪\n{sprite}\n  {greeting}\n  说想听什么风格，我来找\n"
+
+
+def _build_session_farewell(st) -> str:
+    sprite = dj.sprite("sleep")  # SPRITES["sleep"] exists; PIXEL_FRAMES["sleep"] does not
+    quip = dj.quip("sleep")
+    return f"\n♪ · · · DJ Buddy · · · ♪\n{sprite}\n  {quip}\n  下次见 ♩\n"
 
 
 def classify(event: dict) -> Tuple[str, str]:
@@ -95,7 +138,6 @@ def handle_hook(event: dict) -> dict:
     st.dj_mood = mood
     st.vibe = vibe
 
-    # Fire a DJ quip when something significant happens
     hook = (event.get("hook_event_name") or "").lower()
     if hook in ("pretooluse", "posttooluse"):
         st.last_tool_at = time.time()
@@ -106,8 +148,24 @@ def handle_hook(event: dict) -> dict:
         st.dj_quip = dj.quip("sleep")
         st.dj_quip_at = time.time()
 
+    if hook == "sessionstart":
+        st.companion_session_start = time.time()
+        st.companion_failure_streak = 0
+        st.companion_tool_count = 0
+        st.companion_last_at = 0.0
+    elif hook == "posttooluse":
+        _update_companion_tracking(st, event)
+
     state.save(st)
     _log(f"hook {event.get('hook_event_name')} tool={event.get('tool_name')} → mood={mood} vibe={vibe}")
+
+    if hook == "sessionstart":
+        print(_build_session_greeting(st), flush=True)
+    elif hook == "stop":
+        from .companion import MIN_SESSION_SECS
+        if (time.time() - st.companion_session_start) >= MIN_SESSION_SECS:
+            print(_build_session_farewell(st), flush=True)
+
     return {"mood": mood, "vibe": vibe}
 
 
