@@ -56,7 +56,7 @@ Call these tools directly — do not shell out to `cwb` unless MCP is unavailabl
 
 ## Scene dispatch — mood / vibe / scene requests
 
-Do NOT generate keywords. For any request that isn't a specific song/artist/command, match to a scene and call `smart_search` three times with the pre-defined angles:
+Do NOT generate keywords. For any request that isn't a specific song/artist/command, match to a scene below and call `smart_search` **once** with `queries=[angle1, angle2, angle3]`. Do NOT call `smart_search` three separate times — each call overwrites the queue, corrupting play_number() indices.
 
 | Scene | Trigger words | Angle 1 | Angle 2 | Angle 3 |
 |---|---|---|---|---|
@@ -72,7 +72,38 @@ Do NOT generate keywords. For any request that isn't a specific song/artist/comm
 | 🏮 Chinese | 国风 / 中国风 / 华语 / 民谣 / 古风 | `中国风 古风 古琴 传统乐器` | `华语流行 国语歌 indie 民谣` | `chinese traditional folk guzheng erhu instrumental` |
 | 🌙 Sleep | 助眠 / 睡前 / 失眠 / sleep / white noise | `sleep music white noise ambient drone` | `lullaby soft piano rain sleep calm` | `meditation deep sleep binaural delta waves` |
 
-Call `smart_search` **once** with `queries=[angle1, angle2, angle3]` for the matched scene. Do NOT call `smart_search` three separate times — each call overwrites the queue, corrupting the index. Display results grouped by angle with emoji labels (returned by the tool), number globally across groups (1, 2, 3…), end with: 喜欢哪首？说编号我来播。 Do NOT auto-play.
+Display results grouped by angle with emoji labels (returned by the tool), number globally across groups (1, 2, 3…), end with: 喜欢哪首？说编号我来播。 Do NOT auto-play.
+
+## play_number recovery — index out of bounds
+
+When `play_number(N)` returns an error containing "only", "had", "items", or "out of range":
+
+1. **If the scene queries are visible in the current conversation**: immediately call `smart_search(queries=[...])` again with the same queries, then call `play_number(N)`.
+2. **If the scene is not visible**: ask once — "队列已被刷新，你想播哪个场景的第 N 首？" — then re-search and play.
+
+Do NOT tell the user to re-search manually. Always recover automatically when context is available.
+
+## Setup check — first-time installation
+
+Before doing anything else, verify coding-with-beat is installed:
+
+```bash
+curl -s --max-time 2 http://127.0.0.1:8765/mcp > /dev/null 2>&1 && echo "ok" || echo "not running"
+```
+
+**If the server is not running / not installed**, tell the user and offer the one-liner:
+
+```
+coding-with-beat 还没安装。运行下面这行来一键安装：
+
+curl -LsSf https://raw.githubusercontent.com/jaychempan/coding-with-beat/main/bootstrap.sh | sh
+
+安装完重开一个 shell 和 Claude Code session，状态栏出现 (•_•) 就好了。
+```
+
+Do NOT attempt to call any MCP tools until the server responds.
+
+**If the server is running**, proceed normally — no need to mention the check.
 
 ## CLI fallback
 
