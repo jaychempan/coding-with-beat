@@ -647,18 +647,18 @@ async def search(query: str, limit: int = 8) -> str:
     hits = await asyncio.to_thread(get_source(st.source).search, query, limit)
     if not hits:
         return f"(no matches for '{query}' in source={st.source})"
+    hits = _sort_by_source(hits)
     _write_queue_file("search", {"tracks": hits, "index": 0, "expected_title": ""})
     _write_active_mode(context="search")
     lines = []
+    has_catalog = False
     for i, h in enumerate(hits):
-        tag = (
-            " [Library]"
-            if h.get("source") == "library"
-            else " [Apple Music]"
-            if h.get("source") == "apple_music"
-            else ""
-        )
-        lines.append(f"{i + 1}. {h['title']} — {h.get('artist', '?')} · {h.get('album', '?')}{tag}")
+        src = h.get("source", "")
+        if src == "apple_music":
+            has_catalog = True
+        lines.append(f"{i + 1}. {h['title']} — {h.get('artist', '?')} · {h.get('album', '?')}{_source_tag(src)}")
+    if has_catalog:
+        lines.append("\n💡 [Apple Music] 曲目需要先添加到资料库才能播放。用 play_number() 尝试，Music.app 会自动打开。")
     return "\n".join(lines)
 
 
@@ -721,7 +721,7 @@ async def _multi_angle_search(queries: list[str], limit_per_query: int = 6) -> s
             if key not in seen:
                 seen.add(key)
                 merged.append(h)
-        return merged
+        return _sort_by_source(merged)
 
     per_query_results = await asyncio.gather(*[_search_one(q) for q in queries])
 
@@ -755,15 +755,9 @@ async def _multi_angle_search(queries: list[str], limit_per_query: int = 6) -> s
         lines.append(label)
         for h in tracks:
             src = h.get("source", "")
-            if src == "library":
-                tag = " [资料库]"
-            elif src == "apple_music":
-                tag = " [Apple Music]"
+            if src == "apple_music":
                 has_catalog = True
-            elif src == "local":
-                tag = " [本地]"
-            else:
-                tag = ""
+            tag = _source_tag(src)
             lines.append(f"{global_idx}. {h['title']} — {h.get('artist', '?')} · {h.get('album', '?')}{tag}")
             global_idx += 1
         lines.append("")
@@ -847,6 +841,8 @@ async def smart_search(
     if not merged:
         return f"(no matches for '{description}')"
 
+    merged = _sort_by_source(merged)
+
     _write_queue_file("search", {"tracks": merged, "index": 0, "expected_title": ""})
     _write_active_mode(context="search")
 
@@ -854,15 +850,9 @@ async def smart_search(
     has_catalog = False
     for i, h in enumerate(merged):
         src = h.get("source", "")
-        if src == "library":
-            tag = " [资料库]"
-        elif src == "apple_music":
-            tag = " [Apple Music]"
+        if src == "apple_music":
             has_catalog = True
-        elif src == "local":
-            tag = " [本地]"
-        else:
-            tag = ""
+        tag = _source_tag(src)
         lines.append(f"{i + 1}. {h['title']} — {h.get('artist', '?')} · {h.get('album', '?')}{tag}")
     if has_catalog:
         lines.append("\n💡 [Apple Music] 曲目需要先添加到资料库才能播放。用 play_number() 尝试，Music.app 会自动打开。")

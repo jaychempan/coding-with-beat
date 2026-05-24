@@ -308,3 +308,32 @@ def test_smart_search_delegates_to_multi_angle_when_queries_given(mock_multi):
     result = asyncio.run(server.smart_search(queries=["lofi hip hop", "jazz cozy", "synthwave"]))
     mock_multi.assert_called_once_with(["lofi hip hop", "jazz cozy", "synthwave"], limit_per_query=6)
     assert result == "mocked result"
+
+
+@mock.patch("coding_with_beat.server._write_active_mode")
+@mock.patch("coding_with_beat.server._write_queue_file")
+@mock.patch("coding_with_beat.server.state")
+@mock.patch("coding_with_beat.server.get_source")
+def test_smart_search_loved_ranked_first_and_tagged(mock_gs, mock_state, mock_wqf, mock_wam):
+    mock_state.load.return_value = SimpleNamespace(source="apple_music")
+
+    am_hits = [
+        _hit("Normal Song", "Artist B", "library"),
+        _hit("Loved Song", "Artist A", "loved"),
+        _hit("Catalog Song", "Artist C", "apple_music"),
+    ]
+
+    def fake_get_source(name):
+        src = mock.MagicMock()
+        src.search.return_value = am_hits if name == "apple_music" else []
+        return src
+
+    mock_gs.side_effect = fake_get_source
+
+    result = _run(server.smart_search("late night chill"))
+
+    lines = [l for l in result.splitlines() if l.startswith(("1.", "2.", "3."))]
+    assert lines[0].startswith("1.") and "Loved Song" in lines[0]
+    assert "[♥ 喜欢]" in lines[0]
+    assert "[资料库]" in lines[1]
+    assert "[Apple Music]" in lines[2]
