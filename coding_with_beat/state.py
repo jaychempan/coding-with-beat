@@ -42,6 +42,10 @@ class JukeboxState:
     dj_quip_at: float = 0.0
     last_tool_at: float = 0.0
     statusline_mode: str = "show"  # show | hide | auto
+    companion_last_at: float = 0.0
+    companion_session_start: float = 0.0
+    companion_failure_streak: int = 0
+    companion_tool_count: int = 0
 
 
 def load() -> JukeboxState:
