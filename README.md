@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="assets/logo_icon.svg" width="128" alt="Coding With Beat"/>
+  <img src="assets/logo_icon.png" width="128" alt="Coding With Beat"/>
   <h1>Coding With Beat</h1>
 </div>
 
@@ -22,7 +22,7 @@
 
 A retro pixel DJ companion for Claude Code / Codex CLI / Terminal. It plays music, shows lyrics, celebrates when you commit, and panics with you when tests fail.
 
-[中文文档](README_CN.md) ／ [日本語](README_JP.md)
+[中文文档](README_CN.md) ／ [日本語](README_JP.md) ／ [Technical Report](#)
 
 <table>
   <tr>
