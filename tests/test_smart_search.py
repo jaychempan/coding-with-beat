@@ -337,3 +337,56 @@ def test_smart_search_loved_ranked_first_and_tagged(mock_gs, mock_state, mock_wq
     assert "[♥ 喜欢]" in lines[0]
     assert "[资料库]" in lines[1]
     assert "[Apple Music]" in lines[2]
+
+
+@mock.patch("coding_with_beat.server._write_active_mode")
+@mock.patch("coding_with_beat.server._write_queue_file")
+@mock.patch("coding_with_beat.server.state")
+@mock.patch("coding_with_beat.server.get_source")
+def test_list_loved_returns_numbered_loved_tracks(mock_gs, mock_state, mock_wqf, mock_wam):
+    mock_state.load.return_value = SimpleNamespace(source="apple_music")
+    src = mock.MagicMock()
+    src.list_loved.return_value = [
+        {"title": "Heart Song", "artist": "DJ A", "album": "Vol 1", "source": "loved"},
+        {"title": "Fave Track", "artist": "DJ B", "album": "Vol 2", "source": "loved"},
+    ]
+    mock_gs.return_value = src
+
+    result = _run(server.list_loved())
+
+    assert "1. Heart Song" in result
+    assert "[♥ 喜欢]" in result
+    assert "2. Fave Track" in result
+
+
+@mock.patch("coding_with_beat.server._write_active_mode")
+@mock.patch("coding_with_beat.server._write_queue_file")
+@mock.patch("coding_with_beat.server.state")
+@mock.patch("coding_with_beat.server.get_source")
+def test_search_loved_returns_numbered_results(mock_gs, mock_state, mock_wqf, mock_wam):
+    mock_state.load.return_value = SimpleNamespace(source="apple_music")
+    src = mock.MagicMock()
+    src.search_loved.return_value = [
+        {"title": "Rain Song", "artist": "Piano", "album": "Calm", "source": "loved"},
+    ]
+    mock_gs.return_value = src
+
+    result = _run(server.search_loved("rain"))
+
+    assert "1. Rain Song" in result
+    assert "[♥ 喜欢]" in result
+    src.search_loved.assert_called_once_with("rain", 8)
+
+
+@mock.patch("coding_with_beat.server._write_active_mode")
+@mock.patch("coding_with_beat.server._write_queue_file")
+@mock.patch("coding_with_beat.server.state")
+@mock.patch("coding_with_beat.server.get_source")
+def test_search_loved_no_results(mock_gs, mock_state, mock_wqf, mock_wam):
+    mock_state.load.return_value = SimpleNamespace(source="apple_music")
+    src = mock.MagicMock()
+    src.search_loved.return_value = []
+    mock_gs.return_value = src
+
+    result = _run(server.search_loved("zzz"))
+    assert "no loved tracks" in result

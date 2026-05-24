@@ -637,6 +637,51 @@ async def list_library(limit: int = 100) -> str:
 
 
 @mcp.tool()
+async def list_loved(limit: int = 50) -> str:
+    """List all loved/hearted tracks in the current source's library.
+    Returns a numbered list tagged [♥ 喜欢]. Use play_number() to play."""
+    import asyncio
+
+    st = state.load()
+    src = get_source(st.source)
+    fn = getattr(src, "list_loved", None)
+    if not callable(fn):
+        return f"(list_loved not supported for source={st.source})"
+    hits = await asyncio.to_thread(fn, limit)
+    if not hits:
+        return "(no loved tracks found — heart some songs in Music.app first)"
+    _write_queue_file("search", {"tracks": hits, "index": 0, "expected_title": ""})
+    _write_active_mode(context="search")
+    return "\n".join(
+        f"{i + 1}. {h['title']} — {h.get('artist', '?')} · {h.get('album', '?')} [♥ 喜欢]"
+        for i, h in enumerate(hits)
+    )
+
+
+@mcp.tool()
+async def search_loved(query: str, limit: int = 8) -> str:
+    """Search only within the user's loved/hearted tracks.
+    Call this when the user says 从喜欢里找/收藏里搜/loved only/play from liked.
+    Returns a numbered list. Use play_number() to play."""
+    import asyncio
+
+    st = state.load()
+    src = get_source(st.source)
+    fn = getattr(src, "search_loved", None)
+    if not callable(fn):
+        return f"(search_loved not supported for source={st.source})"
+    hits = await asyncio.to_thread(fn, query, limit)
+    if not hits:
+        return f"(no loved tracks match '{query}')"
+    _write_queue_file("search", {"tracks": hits, "index": 0, "expected_title": ""})
+    _write_active_mode(context="search")
+    return "\n".join(
+        f"{i + 1}. {h['title']} — {h.get('artist', '?')} · {h.get('album', '?')} [♥ 喜欢]"
+        for i, h in enumerate(hits)
+    )
+
+
+@mcp.tool()
 async def search(query: str, limit: int = 8) -> str:
     """Search the current source for tracks matching the query. Returns a
     numbered list. Does NOT affect current playback. Only call play_number
