@@ -331,6 +331,16 @@ Chinese ordinals 第一/第二/第三/第四/第五 = 1/2/3/4/5. Always resolve 
 ## play_number recovery
 
 If `play_number(N)` errors with "only"/"had"/"out of range": re-run the same `smart_search(queries=[...])` automatically, then call `play_number(N)` again. Do NOT ask the user to retry.
+
+## Loved / 喜欢列表
+
+When user says: 从喜欢里 / 收藏里找 / 我喜欢的 / loved only / play from liked / 心动歌单
+→ call `search_loved(query)` instead of `smart_search()`
+
+When user says: 列出收藏 / 我的喜欢 / show liked / list loved / 喜欢列表
+→ call `list_loved()`
+
+Normal `smart_search()` already includes loved tracks (ranked first, tagged [♥ 喜欢]).
 # <<< coding-with-beat <<<
 CLAUDEMD
   ok "music routing rules written to $GLOBAL_CLAUDE_MD"
