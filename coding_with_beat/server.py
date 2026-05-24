@@ -205,13 +205,16 @@ def _preview_message(np) -> str:
     )
 
 
-def _needs_library_add(np) -> str:
+def _needs_library_add(np, retry_query: str = "") -> str:
     title = np.title or "?"
     artist = np.artist or "—"
-    return (
+    msg = (
         f'Opened Music.app for "{title} — {artist}".\n'
         "Add the track to your library, then just say \"play it\" and I'll start it right away."
     )
+    if retry_query:
+        msg += f'\n\nIf the queue has changed by then, use play_song("{retry_query}") to play directly.'
+    return msg
 
 
 def _wait_and_play_from_library(src, title: str, artist: str, timeout: int = 15, interval: int = 3) -> Optional[str]:
@@ -870,7 +873,7 @@ def play_number(number: int) -> str:
         result = _wait_and_play_from_library(src, title, artist)
         if result:
             return result
-        return _needs_library_add(np)
+        return _needs_library_add(np, retry_query=f"{title} {artist}".strip())
     if _unsupported_reason(np):
         return _unsupported(np.source or st.source, "play_number", _unsupported_reason(np))
     if not np.title:
@@ -897,7 +900,8 @@ def play_song(query: str) -> str:
         result = _wait_and_play_from_library(src, np.title or "", np.artist or "")
         if result:
             return result
-        return _needs_library_add(np)
+        retry = f"{np.title or ''} {np.artist or ''}".strip()
+        return _needs_library_add(np, retry_query=retry)
     if _unsupported_reason(np):
         return _unsupported(np.source or st.source, "play_song", _unsupported_reason(np))
     if not np.title:
