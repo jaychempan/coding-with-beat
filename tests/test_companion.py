@@ -20,7 +20,13 @@ def _st(**kwargs):
 
 class TestCanTrigger(unittest.TestCase):
     def test_cooldown_blocks_when_recent(self):
-        st = _st(companion_last_at=time.time() - 100)
+        # All triggers with their preconditions satisfied, but cooldown active
+        st = _st(
+            companion_last_at=time.time() - 100,  # 100s < 900s cooldown
+            companion_failure_streak=3,
+            companion_tool_count=20,
+            companion_session_start=time.time() - 301,
+        )
         for t in ("session_start", "debug_struggle", "victory", "idle_checkin", "session_end"):
             self.assertFalse(companion.can_trigger(st, t), f"should block {t} during cooldown")
 
@@ -51,7 +57,7 @@ class TestGetMessageAndQueries(unittest.TestCase):
     def test_get_message_returns_nonempty_string_for_all_triggers(self):
         st = _st()
         for t in ("session_start", "debug_struggle", "victory", "idle_checkin", "session_end"):
-            msg = companion.get_message(t, st)
+            msg = companion.get_message(t)
             self.assertIsInstance(msg, str)
             self.assertGreater(len(msg), 0)
 

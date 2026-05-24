@@ -100,7 +100,7 @@ def can_trigger(st: "JukeboxState", trigger: str) -> bool:
     return True
 
 
-def get_message(trigger: str, st: "JukeboxState") -> str:
+def get_message(trigger: str) -> str:
     key = _trigger_key(trigger)
     pool = MESSAGES.get(key, MESSAGES["idle_checkin"])
     return random.choice(pool)
