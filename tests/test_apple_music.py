@@ -205,7 +205,7 @@ class AppleMusicSearchLovedTest(unittest.TestCase):
         self.assertEqual(results[0]["source"], "loved")
         # Verify AppleScript filtered by loved=true
         script = mock_osa.call_args[0][0]
-        self.assertIn("loved is true", script)
+        self.assertIn("favorited is true", script)
 
     def test_search_loved_returns_empty_on_no_match(self):
         with mock.patch.object(am, "_osa", return_value=""):
