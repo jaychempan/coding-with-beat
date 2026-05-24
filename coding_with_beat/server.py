@@ -740,10 +740,30 @@ async def _multi_angle_search(queries: list[str], limit_per_query: int = 6) -> s
 
 
 @mcp.tool()
-async def smart_search(description: str, limit: int = 8) -> str:
+async def smart_search(
+    description: str = "",
+    queries: list[str] | None = None,
+    limit: int = 8,
+) -> str:
     """Natural-language music search for AI callers (Claude Code / Codex CLI).
 
-    IMPORTANT — translate `description` into music keywords BEFORE calling:
+    **Multi-angle mode (preferred for mood/vibe requests):**
+    Pass `queries` with 2–3 keyword expansions of the user's request.
+    All queries run in parallel; results are merged, deduplicated, and
+    written to a single queue so play_number() indices are correct.
+
+      smart_search(queries=[
+          "lofi hip hop late night coding instrumental",
+          "lofi jazz late night rain cozy",
+          "synthwave retrowave night drive electronic",
+      ])
+
+    **Single-angle mode (backwards compat):**
+    Pass `description` with pre-expanded music keywords.
+
+      smart_search(description="lofi hip hop late night study")
+
+    IMPORTANT — translate raw user text into music keywords BEFORE calling.
 
     Mood / emotion
       "安静" / "calm"          → "ambient instrumental chill"
@@ -763,13 +783,12 @@ async def smart_search(description: str, limit: int = 8) -> str:
       "复古感"                 → "vintage retro soul funk"
       "纯音乐 / no vocals"     → append "instrumental"
 
-    Pass the expanded keyword string as `description`, not the raw user text.
-
-    Searches Apple Music library (marked [资料库]), Apple Music catalog
-    (marked [Apple Music]), and local files (marked [本地]). Results are
-    numbered — use play_number() to play by index.
+    Results are numbered — use play_number() to play by index.
     """
     import asyncio
+
+    if queries:
+        return await _multi_angle_search(queries, limit_per_query=min(limit, 6))
 
     am_hits, local_hits = await asyncio.gather(
         asyncio.to_thread(get_source("apple_music").search, description, limit),

@@ -257,3 +257,18 @@ def test_multi_angle_queue_track_order_matches_output(mock_gs, mock_wqf, mock_wa
     written_tracks = mock_wqf.call_args[0][1]["tracks"]
     titles = [t["title"] for t in written_tracks]
     assert titles == ["Alpha", "Beta", "Gamma"]
+
+
+@mock.patch("coding_with_beat.server._multi_angle_search")
+def test_smart_search_delegates_to_multi_angle_when_queries_given(mock_multi):
+    """When queries= is passed, smart_search delegates to _multi_angle_search."""
+    import asyncio
+
+    async def fake_multi(queries, limit_per_query=6):
+        return "mocked result"
+
+    mock_multi.side_effect = fake_multi
+
+    result = asyncio.run(server.smart_search(queries=["lofi hip hop", "jazz cozy", "synthwave"]))
+    mock_multi.assert_called_once_with(["lofi hip hop", "jazz cozy", "synthwave"], limit_per_query=6)
+    assert result == "mocked result"
