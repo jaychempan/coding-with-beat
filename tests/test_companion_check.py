@@ -63,3 +63,39 @@ class TestCompanionCheck(unittest.TestCase):
         mock_search.return_value = "1. Song — Artist"
         _run(server.companion_check("victory"))
         self.assertGreater(st.companion_last_at, 0)
+
+    @mock.patch("coding_with_beat.server.state")
+    @mock.patch("coding_with_beat.server._multi_angle_search")
+    @mock.patch("coding_with_beat.server.get_source")
+    def test_companion_check_shows_loved_picks_when_available(self, mock_gs, mock_search, mock_state):
+        mock_state.load.return_value = _mock_state()
+        mock_search.return_value = "1. Song — Artist [资料库]"
+
+        loved_src = mock.MagicMock()
+        loved_src.list_loved.return_value = [
+            {"title": "My Fave", "artist": "DJ X", "album": "A", "source": "loved"},
+            {"title": "Heart Track", "artist": "DJ Y", "album": "B", "source": "loved"},
+            {"title": "Love This", "artist": "DJ Z", "album": "C", "source": "loved"},
+        ]
+        mock_gs.return_value = loved_src
+
+        result = _run(server.companion_check("session_start"))
+        assert result != "(not needed right now)"
+        assert "[♥ 喜欢]" in result or any(
+            t in result for t in ["My Fave", "Heart Track", "Love This"]
+        )
+
+    @mock.patch("coding_with_beat.server.state")
+    @mock.patch("coding_with_beat.server._multi_angle_search")
+    @mock.patch("coding_with_beat.server.get_source")
+    def test_companion_check_falls_back_when_no_loved(self, mock_gs, mock_search, mock_state):
+        mock_state.load.return_value = _mock_state()
+        mock_search.return_value = "1. Song — Artist [资料库]"
+
+        loved_src = mock.MagicMock()
+        loved_src.list_loved.return_value = []
+        mock_gs.return_value = loved_src
+
+        result = _run(server.companion_check("session_start"))
+        assert result != "(not needed right now)"
+        assert "Song" in result

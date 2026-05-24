@@ -1130,11 +1130,33 @@ async def companion_check(trigger: str) -> str:
     st = state.load()
     if not _companion.can_trigger(st, trigger):
         return "(not needed right now)"
+    import asyncio
+    import random as _random
+
+    # Try loved tracks for a personal touch
+    loved_section = ""
+    try:
+        am_src = get_source("apple_music")
+        fn = getattr(am_src, "list_loved", None)
+        if callable(fn):
+            all_loved = await asyncio.to_thread(fn, 30)
+            if all_loved:
+                picks = _random.sample(all_loved, min(3, len(all_loved)))
+                loved_section = "♥ 从你的喜欢列表:\n" + "\n".join(
+                    f"  · {h['title']} — {h.get('artist', '?')} [♥ 喜欢]"
+                    for h in picks
+                ) + "\n直接说歌名播放，或选下面编号\n"
+    except Exception:
+        loved_section = ""
+
     queries = _companion.get_queries(trigger)
     try:
         music_results = await _multi_angle_search(queries, limit_per_query=4)
     except Exception:
         music_results = "(music search unavailable — say what you'd like to hear)"
+
+    if loved_section:
+        music_results = loved_section + "\n" + music_results
     st.companion_last_at = time.time()
     state.save(st)
     message = _companion.get_message(trigger)
