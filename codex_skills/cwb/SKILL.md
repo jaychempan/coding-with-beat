@@ -72,7 +72,7 @@ Do NOT generate keywords. For any request that isn't a specific song/artist/comm
 | 🏮 Chinese | 国风 / 中国风 / 华语 / 民谣 / 古风 | `中国风 古风 古琴 传统乐器` | `华语流行 国语歌 indie 民谣` | `chinese traditional folk guzheng erhu instrumental` |
 | 🌙 Sleep | 助眠 / 睡前 / 失眠 / sleep / white noise | `sleep music white noise ambient drone` | `lullaby soft piano rain sleep calm` | `meditation deep sleep binaural delta waves` |
 
-Call all three `smart_search(query)` for the matched scene. Display results grouped by angle with emoji labels, number globally across groups (1, 2, 3…), end with: 喜欢哪首？说编号我来播。 Do NOT auto-play.
+Call `smart_search` **once** with `queries=[angle1, angle2, angle3]` for the matched scene. Do NOT call `smart_search` three separate times — each call overwrites the queue, corrupting the index. Display results grouped by angle with emoji labels (returned by the tool), number globally across groups (1, 2, 3…), end with: 喜欢哪首？说编号我来播。 Do NOT auto-play.
 
 ## CLI fallback
 
