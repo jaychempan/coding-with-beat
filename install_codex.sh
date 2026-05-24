@@ -74,8 +74,8 @@ bootstrap_via_uv() {
   fi
   command -v uv >/dev/null 2>&1 || die "uv install failed"
   local found; found="$(uv python find 3.12 2>/dev/null || true)"
-  [ -n "$found" ] && [ -x "$found" ] || { uv python install 3.12; found="$(uv python find 3.12)"; }
-  [ -n "$found" ] && [ -x "$found" ] || die "uv python install failed"
+  if [ -z "$found" ] || [ ! -x "$found" ]; then uv python install 3.12; found="$(uv python find 3.12)"; fi
+  if [ -z "$found" ] || [ ! -x "$found" ]; then die "uv python install failed"; fi
   PY="$found"
 }
 
@@ -128,6 +128,7 @@ inject_path() {
   local rc="$1"; [ -f "$rc" ] || return 0
   grep -q ">>> coding-with-beat >>>" "$rc" && return 0
   { echo ""; echo "# >>> coding-with-beat >>>";
+    # shellcheck disable=SC2016
     echo 'case ":$PATH:" in *":$HOME/.local/bin:"*) ;; *) export PATH="$HOME/.local/bin:$PATH";; esac';
     echo "# <<< coding-with-beat <<<"; } >> "$rc"
   ok "PATH block added to $rc"
@@ -287,7 +288,8 @@ data = {
 with open(plist, "wb") as f: plistlib.dump(data, f)
 PY
 
-  local domain="gui/$(id -u)"
+  local domain
+  domain="gui/$(id -u)"
   # Skip restart if the server is already responding at the configured URL
   if "$VENV_PY" - "$host" "$port" 2>/dev/null <<'PY'
 import socket, sys

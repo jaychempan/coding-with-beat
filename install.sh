@@ -122,7 +122,7 @@ bootstrap_via_uv() {
     uv python install 3.12
     found="$(uv python find 3.12)"
   fi
-  [ -n "$found" ] && [ -x "$found" ] || die "uv python install failed."
+  if [ -z "$found" ] || [ ! -x "$found" ]; then die "uv python install failed."; fi
   PY="$found"
 }
 
@@ -190,6 +190,7 @@ inject_path() {
     echo ""
     echo "# >>> coding-with-beat >>>"
     echo '# Added by coding-with-beat install.sh. Remove this block (or run uninstall.sh) to revert.'
+    # shellcheck disable=SC2016
     echo 'case ":$PATH:" in *":$HOME/.local/bin:"*) ;; *) export PATH="$HOME/.local/bin:$PATH";; esac'
     echo "# <<< coding-with-beat <<<"
   } >> "$rc"
@@ -385,7 +386,8 @@ with open(plist, "wb") as f:
     plistlib.dump(data, f)
 PY
 
-  local domain="gui/$(id -u)"
+  local domain
+  domain="gui/$(id -u)"
   # Clean up legacy plist names from older installs
   launchctl bootout "$domain" "$old_plist" >/dev/null 2>&1 || true
   rm -f "$old_plist"
@@ -479,7 +481,8 @@ with open(plist, "wb") as f:
     plistlib.dump(data, f)
 PY
 
-  local domain="gui/$(id -u)"
+  local domain
+  domain="gui/$(id -u)"
   launchctl bootout "$domain" "$plist" >/dev/null 2>&1 || true
   if launchctl bootstrap "$domain" "$plist" >/dev/null 2>&1; then
     ok "Auto-updater registered (daily at 03:00)"
