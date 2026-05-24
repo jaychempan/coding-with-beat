@@ -78,3 +78,31 @@ class TestGetMessageAndQueries(unittest.TestCase):
             m.now.return_value.hour = 22
             q_evening = companion.get_queries("session_start")
         self.assertNotEqual(q_morning, q_evening)
+
+
+class TestJukeboxStateCompanionFields(unittest.TestCase):
+    def test_defaults_are_zero(self):
+        from coding_with_beat.state import JukeboxState
+        st = JukeboxState()
+        self.assertEqual(st.companion_last_at, 0.0)
+        self.assertEqual(st.companion_session_start, 0.0)
+        self.assertEqual(st.companion_failure_streak, 0)
+        self.assertEqual(st.companion_tool_count, 0)
+
+    def test_load_without_fields_returns_defaults(self):
+        import json
+        import tempfile
+        from pathlib import Path
+        from unittest import mock
+        from coding_with_beat import state as st_mod
+
+        old_state = {"playing": False, "source": "apple_music", "volume": 60,
+                     "track": {}, "vibe": "focus", "dj_mood": "neutral"}
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            json.dump(old_state, f)
+            path = Path(f.name)
+        with mock.patch.object(st_mod, "STATE_FILE", path):
+            loaded = st_mod.load()
+        self.assertEqual(loaded.companion_last_at, 0.0)
+        self.assertEqual(loaded.companion_failure_streak, 0)
+        path.unlink(missing_ok=True)
