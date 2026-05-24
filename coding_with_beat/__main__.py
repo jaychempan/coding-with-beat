@@ -634,9 +634,19 @@ def cmd_restart() -> int:
 
     plist = _Path.home() / "Library/LaunchAgents/com.coding-with-beat.server.plist"
     if plist.exists():
+        import os
+        label = "com.coding-with-beat.server"
+        domain = f"gui/{os.getuid()}"
         print("Restarting MCP server via launchctl ...")
-        _sp.run(["launchctl", "unload", str(plist)], capture_output=True)
-        _sp.run(["launchctl", "load", str(plist)], capture_output=True)
+        # kickstart -k kills the running instance before starting a new one
+        r = _sp.run(
+            ["launchctl", "kickstart", "-k", f"{domain}/{label}"],
+            capture_output=True,
+        )
+        if r.returncode != 0:
+            # Service may not be bootstrapped yet — fall back to bootout+bootstrap
+            _sp.run(["launchctl", "bootout", domain, str(plist)], capture_output=True)
+            _sp.run(["launchctl", "bootstrap", domain, str(plist)], capture_output=True)
         print("MCP server restarted.")
         return 0
 

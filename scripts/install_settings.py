@@ -25,7 +25,15 @@ DEFAULT_MCP_URL = "http://127.0.0.1:8765/mcp"
 
 
 def _owned(entry: object) -> bool:
-    return isinstance(entry, dict) and entry.get("_owner") in OWNERS
+    if not isinstance(entry, dict):
+        return False
+    if entry.get("_owner") in OWNERS:
+        return True
+    # Legacy entries written before _owner was introduced — detect by command signature.
+    for hook in entry.get("hooks", []):
+        if isinstance(hook, dict) and "coding_with_beat hook" in hook.get("command", ""):
+            return True
+    return False
 
 
 def hook_entry(python: str, repo: str) -> dict:
@@ -94,15 +102,16 @@ def merge(
 ) -> dict:
     mcp_url = mcp_url or DEFAULT_MCP_URL
 
-    # mcpServers
-    servers = settings.setdefault("mcpServers", {})
+    # mcpServers — Claude Code CLI reads from ~/.claude.json (via `claude mcp add`),
+    # not from settings.json. Remove any stale entry we may have written here before.
+    servers = settings.get("mcpServers", {})
+    servers.pop(TAG, None)
     for legacy in LEGACY_TAGS:
         servers.pop(legacy, None)
-    server = {
-        "type": "http",
-        "url": mcp_url,
-    }
-    servers[TAG] = server
+    if not servers:
+        settings.pop("mcpServers", None)
+    elif "mcpServers" not in settings:
+        pass  # already removed
 
     # statusLine — only set if not present OR already ours
     sl = settings.get("statusLine")

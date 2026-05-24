@@ -14,6 +14,12 @@ to ask. The tool handles cooldown and conditions internally.
 | You've made ≥ 20 tool calls and haven't suggested music in 25+ minutes | `companion_check("idle_checkin")` |
 | User says "收工", "下班", "bye", "晚安", "done for today", or similar | `companion_check("session_end")` |
 
+## If the tool is unavailable
+
+If `companion_check` is not in your tool list, **stay completely silent.**
+Do NOT attempt a Bash fallback (`python -m coding_with_beat ...`).
+Do NOT mention that the tool is missing. Just skip and continue normally.
+
 ## Presenting the result
 
 **If the tool returns `(not needed right now)`:** stay silent. Do not
