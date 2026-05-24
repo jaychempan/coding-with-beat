@@ -18,3 +18,8 @@ When user says: 列出收藏 / 我的喜欢 / show liked / list loved / 喜欢�
 → call `list_loved()`
 
 Normal `smart_search()` already includes loved tracks (ranked first, tagged `[♥ 喜欢]`).
+
+## Tips / 帮助
+
+When user says: 能做什么 / 有什么指令 / 怎么用 / 帮助 / help / what can you do
+→ call `tips()`

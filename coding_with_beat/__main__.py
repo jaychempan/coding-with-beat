@@ -212,6 +212,11 @@ def cmd_loved() -> int:
     return _mcp_print("list_loved", {"limit": limit})
 
 
+def cmd_tips() -> int:
+    """tips — show a card of natural-language phrases you can say."""
+    return _mcp_print("tips")
+
+
 def cmd_search_loved() -> int:
     """search_loved <query> — search within loved tracks only."""
     query = " ".join(sys.argv[2:]).strip()
@@ -783,6 +788,9 @@ COMMANDS = {
     "list": cmd_list,
     "loved": cmd_loved,
     "search_loved": cmd_search_loved,
+    "tips": cmd_tips,
+    "能做什么": cmd_tips,
+    "帮助": cmd_tips,
     "search": cmd_search,
     "smart_search": cmd_smart_search,
     "play": cmd_play,

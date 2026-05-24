@@ -1210,7 +1210,38 @@ def session_intro() -> str:
     if np.title:
         parts.append(f"\n♪ {np.title} — {np.artist}  ({st.source})")
     parts.append(f"\n{dj.face('happy')}  {dj.quip('happy')}")
+    parts.append("\n想知道能对我说什么？跟我说「能做什么」就行～")
     return "\n".join(parts)
+
+
+@mcp.tool()
+def tips() -> str:
+    """Return a card of natural-language phrases the user can say to control music."""
+    return """\
+🎵 你可以对我说：
+
+▸ 按心情找歌
+  · 「来首深夜写代码的」
+  · 「放点专注的背景音乐」
+  · 「来点爵士/lofi/古典/电子」
+  · 「我想放松一下」
+
+▸ 喜欢的歌
+  · 「喜欢列表」— 展示收藏的歌
+  · 「从喜欢里找周杰伦」— 在收藏里搜索
+  · 「我喜欢这首」— 收藏当前歌曲
+
+▸ 播放控制
+  · 「下一首」「暂停」「继续」
+  · 「大声一点」「小声一点」
+  · 「打开资料库」— 播放本地歌曲
+  · 「播放第3首」— 按编号播放搜索结果
+
+▸ 查看状态
+  · 「现在播的是什么」
+  · 「显示播放器」
+\
+"""
 
 
 @mcp.tool()
