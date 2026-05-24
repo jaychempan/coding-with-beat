@@ -390,9 +390,11 @@ ok "Claude Code settings patched: $SETTINGS_FILE"
 # Register MCP server via `claude mcp add` (user scope = all directories).
 # This writes to ~/.claude.json which is what Claude Code CLI actually reads.
 if [ -n "$MCP_URL" ] && command -v claude >/dev/null 2>&1; then
-  claude mcp add --transport http --scope user coding-with-beat "$MCP_URL" >/dev/null 2>&1 && \
-    ok "MCP server registered (user scope): $MCP_URL" || \
+  if claude mcp add --transport http --scope user coding-with-beat "$MCP_URL" >/dev/null 2>&1; then
+    ok "MCP server registered (user scope): $MCP_URL"
+  else
     warn "claude mcp add failed — run manually: claude mcp add --transport http --scope user coding-with-beat $MCP_URL"
+  fi
 fi
 
 start_mcp_service() {
@@ -526,7 +528,7 @@ start_updater_service() {
   local plist="$HOME/Library/LaunchAgents/$label.plist"
   local log_dir="$HOME/.coding-with-beat/logs"
   local updater="$HOME/.coding-with-beat/updater.sh"
-  local src="$HOME/.coding-with-beat/src"
+
 
   # Write the updater shell script
   cat > "$updater" <<UPDATER
