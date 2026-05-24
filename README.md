@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/logo.svg" width="480" alt="Coding With Beat"/>
+  <img src="assets/logo_icon.svg" width="128" alt="Coding With Beat"/>
 </p>
 
 # Coding With Beat
