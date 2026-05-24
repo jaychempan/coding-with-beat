@@ -205,14 +205,36 @@ def _preview_message(np) -> str:
     )
 
 
-def _needs_library_add(np) -> str:
+def _needs_library_add(np, retry_query: str = "") -> str:
     title = np.title or "?"
     artist = np.artist or "—"
-    return (
-        f'Found "{title} — {artist}" in the Apple Music catalog, but full playback did not start.\n'
-        "Opened the Music.app search page. Add the track to your library, then try again.\n"
-        "(Automatic catalog playback requires an active Apple Music subscription.)"
+    msg = (
+        f'Opened Music.app for "{title} — {artist}".\n'
+        "Add the track to your library, then just say \"play it\" and I'll start it right away."
     )
+    if retry_query:
+        msg += f'\n\nIf the queue has changed by then, use play_song("{retry_query}") to play directly.'
+    return msg
+
+
+def _wait_and_play_from_library(src, title: str, artist: str, timeout: int = 15, interval: int = 3) -> Optional[str]:
+    """Poll until the track appears in the local library, then play it.
+
+    Returns a '▶ now playing' string on success, or None on timeout.
+    """
+    import time
+
+    query = f"{title} {artist}".strip()
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        time.sleep(interval)
+        hits = src.search(query, 3)
+        library_hit = next((h for h in (hits or []) if h.get("source") == "library"), None)
+        if library_hit:
+            np2 = src.play_query(query)
+            if np2 and not _unsupported_reason(np2) and np2.title:
+                return f"▶ now playing: {np2.title} — {np2.artist or '—'}  source={np2.source}"
+    return None
 
 
 def _refresh_now_playing():
@@ -621,6 +643,201 @@ async def search(query: str, limit: int = 8) -> str:
     return "\n".join(lines)
 
 
+_QUERY_LABEL_MAP: list[tuple[tuple[str, ...], str]] = [
+    (("jazz", "bossa nova", "smooth jazz"), "🎷 Jazz"),
+    (("lofi", "lo-fi", "chillhop"), "🎧 Lofi"),
+    (("synthwave", "retrowave", "outrun"), "🌆 Synthwave"),
+    (("drone", "meditation"), "🌫️ Ambient"),
+    (("classical", "piano", "nocturne", "string"), "🎹 Classical"),
+    (("hype", "workout", "energetic", "edm"), "🔥 Hype"),
+    (("sleep", "lullaby", "white noise"), "🌙 Sleep"),
+    (("sad", "melancholy", "heartbreak"), "💙 Sad"),
+    (("party", "celebrat"), "🎉 Party"),
+    (("chinese", "中国", "古风", "国风"), "🏮 Chinese"),
+    (("focus", "study", "concentration"), "🧠 Focus"),
+    (("relax", "unwind", "calm"), "🌅 Relax"),
+]
+
+
+def _label_for_query(query: str) -> str:
+    q_lower = query.lower()
+    for keywords, label in _QUERY_LABEL_MAP:
+        if any(kw in q_lower for kw in keywords):
+            return label
+    words = query.split()[:3]
+    return " ".join(w.capitalize() for w in words)
+
+
+async def _multi_angle_search(queries: list[str], limit_per_query: int = 6) -> str:
+    import asyncio
+
+    async def _search_one(query: str) -> list[dict]:
+        try:
+            am_hits, local_hits = await asyncio.gather(
+                asyncio.to_thread(get_source("apple_music").search, query, limit_per_query),
+                asyncio.to_thread(get_source("local").search, query, limit_per_query),
+            )
+        except Exception:
+            return []
+        seen: set[str] = set()
+        merged: list[dict] = []
+        for h in (am_hits or []) + (local_hits or []):
+            key = f"{h.get('title', '').lower()}|{h.get('artist', '').lower()}"
+            if key not in seen:
+                seen.add(key)
+                merged.append(h)
+        return merged
+
+    per_query_results = await asyncio.gather(*[_search_one(q) for q in queries])
+
+    global_seen: set[str] = set()
+    groups: list[tuple[str, list[dict]]] = []
+    all_tracks: list[dict] = []
+
+    for query, hits in zip(queries, per_query_results):
+        label = _label_for_query(query)
+        group_tracks: list[dict] = []
+        for h in hits:
+            key = f"{h.get('title', '').lower()}|{h.get('artist', '').lower()}"
+            if key not in global_seen:
+                global_seen.add(key)
+                group_tracks.append(h)
+                all_tracks.append(h)
+        if group_tracks:
+            groups.append((label, group_tracks))
+
+    if not all_tracks:
+        return f"(no matches for queries: {', '.join(queries)})"
+
+    _write_queue_file("search", {"tracks": all_tracks, "index": 0, "expected_title": ""})
+    _write_active_mode(context="search")
+
+    lines: list[str] = []
+    has_catalog = False
+    global_idx = 1
+
+    for label, tracks in groups:
+        lines.append(label)
+        for h in tracks:
+            src = h.get("source", "")
+            if src == "library":
+                tag = " [资料库]"
+            elif src == "apple_music":
+                tag = " [Apple Music]"
+                has_catalog = True
+            elif src == "local":
+                tag = " [本地]"
+            else:
+                tag = ""
+            lines.append(
+                f"{global_idx}. {h['title']} — {h.get('artist', '?')} · {h.get('album', '?')}{tag}"
+            )
+            global_idx += 1
+        lines.append("")
+
+    if has_catalog:
+        lines.append("💡 [Apple Music] 曲目需要先添加到资料库才能播放。用 play_number() 尝试，Music.app 会自动打开。")
+    lines.append("喜欢哪首？说编号我来播。")
+
+    return "\n".join(lines).rstrip()
+
+
+@mcp.tool()
+async def smart_search(
+    description: str = "",
+    queries: list[str] | None = None,
+    limit: int = 8,
+) -> str:
+    """Natural-language music search for AI callers (Claude Code / Codex CLI).
+
+    **Multi-angle mode (preferred for mood/vibe requests):**
+    Pass `queries` with 2–3 keyword expansions of the user's request.
+    All queries run in parallel; results are merged, deduplicated, and
+    written to a single queue so play_number() indices are correct.
+
+      smart_search(queries=[
+          "lofi hip hop late night coding instrumental",
+          "lofi jazz late night rain cozy",
+          "synthwave retrowave night drive electronic",
+      ])
+
+    **Single-angle mode (backwards compat):**
+    Pass `description` with pre-expanded music keywords.
+
+      smart_search(description="lofi hip hop late night study")
+
+    IMPORTANT — translate raw user text into music keywords BEFORE calling.
+
+    Mood / emotion
+      "安静" / "calm"          → "ambient instrumental chill"
+      "想兴奋起来" / "hype"    → "energetic upbeat electronic"
+      "放松" / "relax"         → "relaxing calm downtempo"
+      "伤感" / "sad"           → "melancholy emotional piano"
+
+    Scene / time
+      "深夜写代码"             → "lofi hip hop late night study"
+      "早晨跑步"               → "running motivation pop upbeat"
+      "专注 / 摸鱼"            → "focus deep work instrumental"
+      "通勤路上"               → "commute indie pop"
+
+    Style reference
+      "像 Daft Punk 那种"      → "electronic synth funk dance"
+      "带点爵士"               → "jazz fusion smooth"
+      "复古感"                 → "vintage retro soul funk"
+      "纯音乐 / no vocals"     → append "instrumental"
+
+    Results are numbered — use play_number() to play by index.
+    """
+    import asyncio
+
+    if queries:
+        return await _multi_angle_search(queries, limit_per_query=min(limit, 6))
+
+    am_hits, local_hits = await asyncio.gather(
+        asyncio.to_thread(get_source("apple_music").search, description, limit),
+        asyncio.to_thread(get_source("local").search, description, limit),
+    )
+
+    seen: set[str] = set()
+    merged: list[dict] = []
+
+    def _dedup_add(hits: list) -> None:
+        for h in hits:
+            key = f"{h.get('title', '').lower()}|{h.get('artist', '').lower()}"
+            if key not in seen:
+                seen.add(key)
+                merged.append(h)
+
+    _dedup_add(am_hits or [])
+    _dedup_add(local_hits or [])
+
+    if not merged:
+        return f"(no matches for '{description}')"
+
+    _write_queue_file("search", {"tracks": merged, "index": 0, "expected_title": ""})
+    _write_active_mode(context="search")
+
+    lines = []
+    has_catalog = False
+    for i, h in enumerate(merged):
+        src = h.get("source", "")
+        if src == "library":
+            tag = " [资料库]"
+        elif src == "apple_music":
+            tag = " [Apple Music]"
+            has_catalog = True
+        elif src == "local":
+            tag = " [本地]"
+        else:
+            tag = ""
+        lines.append(
+            f"{i + 1}. {h['title']} — {h.get('artist', '?')} · {h.get('album', '?')}{tag}"
+        )
+    if has_catalog:
+        lines.append("\n💡 [Apple Music] 曲目需要先添加到资料库才能播放。用 play_number() 尝试，Music.app 会自动打开。")
+    return "\n".join(lines)
+
+
 @mcp.tool()
 def play_number(number: int) -> str:
     """Play a track by its 1-based index from the last search or list results."""
@@ -651,7 +868,12 @@ def play_number(number: int) -> str:
     if _unsupported_reason(np) == "preview_playing":
         return _preview_message(np)
     if _unsupported_reason(np) == "needs_library_add":
-        return _needs_library_add(np)
+        title = np.title or hit.get("title", "")
+        artist = np.artist or hit.get("artist", "")
+        result = _wait_and_play_from_library(src, title, artist)
+        if result:
+            return result
+        return _needs_library_add(np, retry_query=f"{title} {artist}".strip())
     if _unsupported_reason(np):
         return _unsupported(np.source or st.source, "play_number", _unsupported_reason(np))
     if not np.title:
@@ -675,7 +897,11 @@ def play_song(query: str) -> str:
     if _unsupported_reason(np) == "preview_playing":
         return _preview_message(np)
     if _unsupported_reason(np) == "needs_library_add":
-        return _needs_library_add(np)
+        result = _wait_and_play_from_library(src, np.title or "", np.artist or "")
+        if result:
+            return result
+        retry = f"{np.title or ''} {np.artist or ''}".strip()
+        return _needs_library_add(np, retry_query=retry)
     if _unsupported_reason(np):
         return _unsupported(np.source or st.source, "play_song", _unsupported_reason(np))
     if not np.title:
