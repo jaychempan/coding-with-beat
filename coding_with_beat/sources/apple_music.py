@@ -831,7 +831,7 @@ tell application "Music"
     if n > {limit} then set n to {limit}
     repeat with i from 1 to n
         set t to item i of results
-        set out to out & (name of t as string) & SEP & (artist of t as string) & SEP & (album of t as string) & linefeed
+        set out to out & (name of t as string) & SEP & (artist of t as string) & SEP & (album of t as string) & SEP & (loved of t as string) & linefeed
     end repeat
     return out
 end tell
@@ -846,7 +846,13 @@ end tell
                 continue
             parts = line.split("\x1f")
             if len(parts) >= 3:
-                items.append({"title": parts[0], "artist": parts[1], "album": parts[2], "source": "library"})
+                is_loved = len(parts) >= 4 and parts[3].strip().lower() == "true"
+                items.append({
+                    "title": parts[0],
+                    "artist": parts[1],
+                    "album": parts[2],
+                    "source": "loved" if is_loved else "library",
+                })
         # Fill remaining slots with Apple Music catalog results
         remaining = limit - len(items)
         if remaining > 0:

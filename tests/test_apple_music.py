@@ -158,5 +158,22 @@ class AppleMusicPlayQueryTest(unittest.TestCase):
         play_catalog.assert_called_once_with("小小")
 
 
+class AppleMusicLovedSearchTest(unittest.TestCase):
+    def test_search_marks_loved_tracks(self):
+        """search() sets source='loved' for loved tracks, 'library' for others."""
+        SEP = "\x1f"
+        raw = (
+            f"Loved Song{SEP}Artist A{SEP}Album X{SEP}true\n"
+            f"Normal Song{SEP}Artist B{SEP}Album Y{SEP}false\n"
+        )
+        with mock.patch.object(am, "_osa", return_value=raw):
+            with mock.patch.object(am, "_search_catalog_api", return_value=[]):
+                results = AppleMusic().search("song", limit=8)
+        loved = next(r for r in results if r["title"] == "Loved Song")
+        normal = next(r for r in results if r["title"] == "Normal Song")
+        self.assertEqual(loved["source"], "loved")
+        self.assertEqual(normal["source"], "library")
+
+
 if __name__ == "__main__":
     unittest.main()
