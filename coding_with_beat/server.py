@@ -737,7 +737,7 @@ async def history_search() -> str:
 @mcp.tool()
 async def list_loved(limit: int = 50) -> str:
     """List all loved/hearted tracks in the current source's library.
-    Returns a numbered list tagged [♥ 喜欢]. Use play_number() to play."""
+    Returns a numbered list tagged [♥ Loved]. Use play_number() to play."""
     import asyncio
 
     st = state.load()
@@ -751,7 +751,7 @@ async def list_loved(limit: int = 50) -> str:
     _write_queue_file("search", {"tracks": hits, "index": 0, "expected_title": ""})
     _write_active_mode(context="search", label="♥ Loved")
     return "\n".join(
-        f"{i + 1}. {h['title']} — {h.get('artist', '?')} · {h.get('album', '?')} [♥ 喜欢]" for i, h in enumerate(hits)
+        f"{i + 1}. {h['title']} — {h.get('artist', '?')} · {h.get('album', '?')} [♥ Loved]" for i, h in enumerate(hits)
     )
 
 
@@ -773,7 +773,7 @@ async def search_loved(query: str, limit: int = 8) -> str:
     _write_queue_file("search", {"tracks": hits, "index": 0, "expected_title": ""})
     _write_active_mode(context="search", label=f"♥ {query[:22]}")
     return "\n".join(
-        f"{i + 1}. {h['title']} — {h.get('artist', '?')} · {h.get('album', '?')} [♥ 喜欢]" for i, h in enumerate(hits)
+        f"{i + 1}. {h['title']} — {h.get('artist', '?')} · {h.get('album', '?')} [♥ Loved]" for i, h in enumerate(hits)
     )
 
 
@@ -845,7 +845,8 @@ async def search(query: str, limit: int = 8) -> str:
         lines.append(f"{i + 1}. {h['title']} — {h.get('artist', '?')} · {h.get('album', '?')}{_source_tag(src)}")
     if has_catalog:
         lines.append(
-            "\n💡 [Apple Music] 曲目需要先添加到资料库才能播放。如果想直接播放已下载的歌曲，跟我说「打开资料库」就行。"
+            "\n💡 [Apple Music] tracks need to be added to your library before they can play. "
+            'Say "play from library" to search only your downloaded songs.'
         )
     return "\n".join(lines)
 
@@ -855,9 +856,9 @@ _SOURCE_ORDER: dict[str, int] = {"loved": 0, "library": 1, "local": 2, "apple_mu
 
 def _source_tag(src: str) -> str:
     return {
-        "loved": " [♥ 喜欢]",
-        "library": " [资料库]",
-        "local": " [本地]",
+        "loved": " [♥ Loved]",
+        "library": " [Library]",
+        "local": " [Local]",
         "apple_music": " [Apple Music]",
     }.get(src, "")
 
@@ -953,9 +954,10 @@ async def _multi_angle_search(queries: list[str], limit_per_query: int = 6, labe
 
     if has_catalog:
         lines.append(
-            "💡 [Apple Music] 曲目需要先添加到资料库才能播放。如果想直接播放已下载的歌曲，跟我说「打开资料库」就行。"
+            "💡 [Apple Music] tracks need to be added to your library before they can play. "
+            'Say "play from library" to search only your downloaded songs.'
         )
-    lines.append("喜欢哪首？说编号我来播。")
+    lines.append("Pick a number to play.")
 
     return "\n".join(lines).rstrip()
 
@@ -1049,7 +1051,8 @@ async def smart_search(
         lines.append(f"{i + 1}. {h['title']} — {h.get('artist', '?')} · {h.get('album', '?')}{tag}")
     if has_catalog:
         lines.append(
-            "\n💡 [Apple Music] 曲目需要先添加到资料库才能播放。如果想直接播放已下载的歌曲，跟我说「打开资料库」就行。"
+            "\n💡 [Apple Music] tracks need to be added to your library before they can play. "
+            'Say "play from library" to search only your downloaded songs.'
         )
     return "\n".join(lines)
 
@@ -1296,9 +1299,9 @@ async def companion_check(trigger: str) -> str:
             if all_loved:
                 picks = _random.sample(all_loved, min(3, len(all_loved)))
                 loved_section = (
-                    "♥ 从你的喜欢列表:\n"
-                    + "\n".join(f"  · {h['title']} — {h.get('artist', '?')} [♥ 喜欢]" for h in picks)
-                    + "\n直接说歌名播放，或选下面编号\n"
+                    "♥ From your loved tracks:\n"
+                    + "\n".join(f"  · {h['title']} — {h.get('artist', '?')} [♥ Loved]" for h in picks)
+                    + "\nSay a song name to play, or pick a number below.\n"
                 )
     except Exception:
         loved_section = ""
@@ -1364,7 +1367,7 @@ def session_intro() -> str:
     if np.title:
         parts.append(f"\n♪ {np.title} — {np.artist}  ({st.source})")
     parts.append(f"\n{dj.face('happy')}  {dj.quip('happy')}")
-    parts.append("\n想知道能对我说什么？跟我说「DJ 能做什么」就行～")
+    parts.append("\nSay 'DJ help' / 「DJ 能做什么」to see what you can ask.")
     return "\n".join(parts)
 
 
@@ -1372,32 +1375,38 @@ def session_intro() -> str:
 def tips() -> str:
     """Return a card of natural-language phrases the user can say to control music."""
     return """\
-🎵 你可以对我说：
+🎵 What you can say / 你可以对我说：
 
-▸ 按心情找歌
-  · 「来首深夜写代码的」
-  · 「放点专注的背景音乐」
-  · 「来点爵士/lofi/古典/电子」
-  · 「我想放松一下」
+▸ Mood / 按心情找歌
+  · "play some late-night lofi" / 「来首深夜写代码的」
+  · "focus music, no lyrics" / 「放点专注的背景音乐」
+  · "jazz / lofi / classical / synthwave"
+  · "I want to relax" / 「我想放松一下」
 
-▸ 喜欢的歌
-  · 「喜欢列表」— 展示收藏的歌
-  · 「从喜欢里找周杰伦」— 在收藏里搜索
-  · 「我喜欢这首」— 收藏当前歌曲
+▸ Playlists / 歌单
+  · "show my playlists" / 「我有哪些歌单」
+  · "play the Jay Chou playlist" / 「播放周杰伦代表作」
 
-▸ 播放控制
-  · 「下一首」「暂停」「继续」
-  · 「大声一点」「小声一点」
-  · 「打开资料库」— 播放本地歌曲
-  · 「播放第3首」— 按编号播放搜索结果
+▸ Loved tracks / 喜欢的歌
+  · "show loved tracks" / 「喜欢列表」
+  · "search Jay Chou in loved" / 「从喜欢里找周杰伦」
+  · "like this" / 「我喜欢这首」
 
-▸ 查看状态
-  · 「现在播的是什么」
-  · 「显示播放器」
+▸ History & recommendations / 历史与推荐
+  · "show my recently played" / 「最近播放」
+  · "recommend based on my history" / 「根据我的历史推荐」
 
-💡 推荐在另一个终端里运行 cwb watch，实时查看正在播放的歌曲、歌词和进度条。
-💡 Apple Music 曲目首次播放会弹窗，点击「加入资料库」后再跟我说一次播放就好。
-\
+▸ Playback / 播放控制
+  · "next" "pause" "resume" / 「下一首」「暂停」「继续」
+  · "louder" "quieter" / 「大声一点」「小声一点」
+  · "play #3" / 「播放第3首」
+
+▸ Status / 查看状态
+  · "what's playing" / 「现在播的是什么」
+  · "show player" / 「显示播放器」
+
+💡 Run 'cwb watch' in another terminal for a live player with lyrics and progress.
+💡 Apple Music tracks: if a popup appears, click 'Add to Library', then say 'play it' again.
 """
 
 
