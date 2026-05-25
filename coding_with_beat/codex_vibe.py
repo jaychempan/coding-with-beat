@@ -194,11 +194,24 @@ def main() -> int:
 
     # ── session start: auto-play + music context ──────────────────────────────
     if hook == "sessionstart":
-        handle_hook(event)
+        # Redirect stdout during handle_hook so companion card text doesn't
+        # contaminate the JSON-only hook output stream that Codex reads.
+        import io as _io
+        _buf = _io.StringIO()
+        _old_stdout = sys.stdout
+        sys.stdout = _buf
+        try:
+            handle_hook(event)
+        finally:
+            sys.stdout = _old_stdout
+        card_text = _buf.getvalue().strip()
         _maybe_auto_play()
         ctx = _music_context()
-        if ctx:
-            print(json.dumps({"continue": True, "systemMessage": ctx}))
+        msg = ctx or ""
+        if card_text:
+            msg = (card_text + "\n" + msg).strip() if msg else card_text
+        if msg:
+            print(json.dumps({"continue": True, "systemMessage": msg}, ensure_ascii=False))
         return 0
 
     # ── tool use: vibe tracking + surface significant mood changes ────────────
