@@ -83,11 +83,12 @@ def summarize(tracks: list[dict], window_days: int = 14) -> dict:
             try:
                 ts = datetime.datetime.strptime(ts[:19], "%Y-%m-%d %H:%M:%S")
             except ValueError:
-                ts = None
+                continue  # discard corrupt entry
         if ts is None or ts >= cutoff:
             recent.append(t)
         else:
             older.append(t)
+
 
     # top artists (recent window)
     artist_counter: Counter = Counter()
@@ -107,7 +108,10 @@ def summarize(tracks: list[dict], window_days: int = 14) -> dict:
     style_tags = [tag for tag, _ in tag_counter.most_common(3)]
 
     # unheard candidates: artists in older not seen in recent, deduplicated by artist
-    recent_artists_lower = {(t.get("artist") or "").strip().lower() for t in recent}
+    recent_artists_lower = {
+        a for t in recent
+        if (a := (t.get("artist") or "").strip().lower()) and a != "?"
+    }
     recent_titles_lower = {(t.get("title") or "").strip().lower() for t in recent}
     seen_unheard: set[str] = set()
     unheard_candidates: list[dict] = []
