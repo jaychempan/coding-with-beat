@@ -73,7 +73,10 @@ def _load_queue_file(name: str) -> dict:
 
 def _write_queue_file(name: str, data: dict) -> None:
     try:
-        _queue_file(name).write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+        path = _queue_file(name)
+        tmp = path.with_suffix(".tmp")
+        tmp.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+        os.replace(tmp, path)
     except Exception:
         pass
 
@@ -104,7 +107,10 @@ def _write_active_mode(
     if label is not None:
         current["label"] = label
     try:
-        (DATA_DIR / "active_mode.json").write_text(json.dumps(current, ensure_ascii=False), encoding="utf-8")
+        path = DATA_DIR / "active_mode.json"
+        tmp = path.with_suffix(".tmp")
+        tmp.write_text(json.dumps(current, ensure_ascii=False), encoding="utf-8")
+        os.replace(tmp, path)
     except Exception:
         pass
 
@@ -660,8 +666,7 @@ async def list_loved(limit: int = 50) -> str:
     _write_queue_file("search", {"tracks": hits, "index": 0, "expected_title": ""})
     _write_active_mode(context="search", label="♥ Loved")
     return "\n".join(
-        f"{i + 1}. {h['title']} — {h.get('artist', '?')} · {h.get('album', '?')} [♥ 喜欢]"
-        for i, h in enumerate(hits)
+        f"{i + 1}. {h['title']} — {h.get('artist', '?')} · {h.get('album', '?')} [♥ 喜欢]" for i, h in enumerate(hits)
     )
 
 
@@ -683,8 +688,7 @@ async def search_loved(query: str, limit: int = 8) -> str:
     _write_queue_file("search", {"tracks": hits, "index": 0, "expected_title": ""})
     _write_active_mode(context="search", label=f"♥ {query[:22]}")
     return "\n".join(
-        f"{i + 1}. {h['title']} — {h.get('artist', '?')} · {h.get('album', '?')} [♥ 喜欢]"
-        for i, h in enumerate(hits)
+        f"{i + 1}. {h['title']} — {h.get('artist', '?')} · {h.get('album', '?')} [♥ 喜欢]" for i, h in enumerate(hits)
     )
 
 
@@ -710,7 +714,9 @@ async def search(query: str, limit: int = 8) -> str:
             has_catalog = True
         lines.append(f"{i + 1}. {h['title']} — {h.get('artist', '?')} · {h.get('album', '?')}{_source_tag(src)}")
     if has_catalog:
-        lines.append("\n💡 [Apple Music] 曲目需要先添加到资料库才能播放。如果想直接播放已下载的歌曲，跟我说「打开资料库」就行。")
+        lines.append(
+            "\n💡 [Apple Music] 曲目需要先添加到资料库才能播放。如果想直接播放已下载的歌曲，跟我说「打开资料库」就行。"
+        )
     return "\n".join(lines)
 
 
@@ -816,7 +822,9 @@ async def _multi_angle_search(queries: list[str], limit_per_query: int = 6, labe
         lines.append("")
 
     if has_catalog:
-        lines.append("💡 [Apple Music] 曲目需要先添加到资料库才能播放。如果想直接播放已下载的歌曲，跟我说「打开资料库」就行。")
+        lines.append(
+            "💡 [Apple Music] 曲目需要先添加到资料库才能播放。如果想直接播放已下载的歌曲，跟我说「打开资料库」就行。"
+        )
     lines.append("喜欢哪首？说编号我来播。")
 
     return "\n".join(lines).rstrip()
@@ -910,7 +918,9 @@ async def smart_search(
         tag = _source_tag(src)
         lines.append(f"{i + 1}. {h['title']} — {h.get('artist', '?')} · {h.get('album', '?')}{tag}")
     if has_catalog:
-        lines.append("\n💡 [Apple Music] 曲目需要先添加到资料库才能播放。如果想直接播放已下载的歌曲，跟我说「打开资料库」就行。")
+        lines.append(
+            "\n💡 [Apple Music] 曲目需要先添加到资料库才能播放。如果想直接播放已下载的歌曲，跟我说「打开资料库」就行。"
+        )
     return "\n".join(lines)
 
 
@@ -984,7 +994,9 @@ def play_song(query: str) -> str:
         return _unsupported(st.source, "play_song", "The source returned no playable track.")
     if has_queue:
         try:
-            _one_off_file().write_text(
+            path = _one_off_file()
+            tmp = path.with_suffix(".tmp")
+            tmp.write_text(
                 json.dumps(
                     {
                         "one_off_title": np.title,
@@ -994,6 +1006,7 @@ def play_song(query: str) -> str:
                 ),
                 encoding="utf-8",
             )
+            os.replace(tmp, path)
         except Exception:
             pass
     else:
@@ -1152,10 +1165,11 @@ async def companion_check(trigger: str) -> str:
             all_loved = await asyncio.to_thread(fn, 30)
             if all_loved:
                 picks = _random.sample(all_loved, min(3, len(all_loved)))
-                loved_section = "♥ 从你的喜欢列表:\n" + "\n".join(
-                    f"  · {h['title']} — {h.get('artist', '?')} [♥ 喜欢]"
-                    for h in picks
-                ) + "\n直接说歌名播放，或选下面编号\n"
+                loved_section = (
+                    "♥ 从你的喜欢列表:\n"
+                    + "\n".join(f"  · {h['title']} — {h.get('artist', '?')} [♥ 喜欢]" for h in picks)
+                    + "\n直接说歌名播放，或选下面编号\n"
+                )
     except Exception:
         loved_section = ""
 

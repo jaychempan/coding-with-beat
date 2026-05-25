@@ -25,7 +25,8 @@ from typing import List, Optional
 
 import httpx
 
-from ..config import COVER_CACHE, DATA_DIR, LOG_FILE, LYRICS_CACHE, ensure_dirs
+from ..config import COVER_CACHE, DATA_DIR, LYRICS_CACHE, ensure_dirs
+from ..utils import log as _log
 from .apple_music import _netease_lyrics
 from .base import NowPlaying, unsupported_now_playing
 from .local import LocalFiles, _pid_alive, _read, _write
@@ -81,15 +82,6 @@ def _to_float(value, default: float = 0.0) -> float:
         return default
 
 
-def _log(msg: str) -> None:
-    try:
-        ensure_dirs()
-        with open(LOG_FILE, "a", encoding="utf-8") as f:
-            f.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} qq_music {msg}\n")
-    except Exception:
-        pass
-
-
 def _read_qq_state() -> dict:
     if QQ_STATE.exists():
         try:
@@ -117,10 +109,10 @@ def _run_osascript(script: str, timeout: float = 8.0) -> bool:
             timeout=timeout,
         )
     except Exception as e:
-        _log(f"osascript exception: {e}")
+        _log(f"osascript exception: {e}", prefix="qq_music")
         return False
     if p.returncode != 0:
-        _log(f"osascript failed: {p.stderr.strip() or p.stdout.strip()}")
+        _log(f"osascript failed: {p.stderr.strip() or p.stdout.strip()}", prefix="qq_music")
         return False
     return True
 
