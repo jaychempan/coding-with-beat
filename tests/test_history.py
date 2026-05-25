@@ -239,3 +239,69 @@ def test_refresh_now_playing_skips_history_for_apple_music(tmp_path, monkeypatch
         _refresh_now_playing()
 
     assert not (tmp_path / "history.log").exists()
+
+
+# ── list_history MCP tool ─────────────────────────────────────────────────────
+
+def test_list_history_apple_music_source():
+    import asyncio
+    import datetime
+    from types import SimpleNamespace
+    from unittest.mock import MagicMock, patch
+
+    fake_tracks = [
+        {"title": "天空之城", "artist": "久石譲", "album": "OST", "played_count": 9, "ts": datetime.datetime.now()},
+        {"title": "夜曲", "artist": "周杰伦", "album": "十一月的萧邦", "played_count": 3, "ts": datetime.datetime.now()},
+    ]
+
+    with (
+        patch("coding_with_beat.server.state.load",
+              return_value=SimpleNamespace(source="apple_music")),
+        patch("coding_with_beat.server.get_source") as mock_gs,
+    ):
+        src = MagicMock()
+        src.play_history.return_value = fake_tracks
+        mock_gs.return_value = src
+        from coding_with_beat.server import list_history
+        result = asyncio.run(list_history())
+
+    assert "天空之城" in result
+    assert "9次播放" in result
+    assert "夜曲" in result
+    assert "3次播放" in result
+
+
+def test_list_history_empty_returns_friendly_message():
+    import asyncio
+    from types import SimpleNamespace
+    from unittest.mock import MagicMock, patch
+
+    with (
+        patch("coding_with_beat.server.state.load",
+              return_value=SimpleNamespace(source="apple_music")),
+        patch("coding_with_beat.server.get_source") as mock_gs,
+    ):
+        src = MagicMock()
+        src.play_history.return_value = []
+        mock_gs.return_value = src
+        from coding_with_beat.server import list_history
+        result = asyncio.run(list_history())
+
+    assert "还没有" in result
+
+
+def test_list_history_non_am_reads_log(tmp_path, monkeypatch):
+    import asyncio
+    from types import SimpleNamespace
+    from unittest.mock import patch
+
+    monkeypatch.setattr(history, "_LOG_FILE", tmp_path / "history.log")
+    monkeypatch.setattr(history, "ensure_dirs", lambda: None)
+    history.write("Log Track", "Log Artist", "Log Album")
+
+    with patch("coding_with_beat.server.state.load",
+               return_value=SimpleNamespace(source="local")):
+        from coding_with_beat.server import list_history
+        result = asyncio.run(list_history())
+
+    assert "Log Track" in result

@@ -647,6 +647,37 @@ async def list_library(limit: int = 100) -> str:
 
 
 @mcp.tool()
+async def list_history(limit: int = 20) -> str:
+    """List recently played tracks from play history.
+    For Apple Music: reads native played date / play count (covers all listening).
+    For other sources: reads ~/.coding-with-beat/history.log."""
+    import asyncio as _asyncio
+
+    st = state.load()
+    if st.source == "apple_music":
+        src = get_source("apple_music")
+        fn = getattr(src, "play_history", None)
+        if not callable(fn):
+            return "(list_history not supported for this Apple Music version)"
+        tracks = await _asyncio.to_thread(fn, 30, limit)
+    else:
+        tracks = history.read(limit=limit)
+
+    if not tracks:
+        return "(还没有播放历史，多听一会儿再来试试吧 🎵)"
+
+    lines = [f"最近播放（{len(tracks)} 首）："]
+    for i, t in enumerate(tracks):
+        title = t.get("title", "?")
+        artist = t.get("artist", "?")
+        album = t.get("album", "?")
+        pc = t.get("played_count", 0)
+        suffix = f" · {pc}次播放" if pc else ""
+        lines.append(f"{i + 1}. {title} — {artist} · {album}{suffix}")
+    return "\n".join(lines)
+
+
+@mcp.tool()
 async def list_loved(limit: int = 50) -> str:
     """List all loved/hearted tracks in the current source's library.
     Returns a numbered list tagged [♥ 喜欢]. Use play_number() to play."""
