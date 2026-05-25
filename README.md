@@ -7,7 +7,7 @@
 ![Platform](https://img.shields.io/badge/platform-macOS-000000?style=flat-square&logo=apple&logoColor=white)
 ![Claude Code](https://img.shields.io/badge/Claude_Code-compatible-c85f41?style=flat-square)
 ![Codex CLI](https://img.shields.io/badge/Codex_CLI-compatible-10a37f?style=flat-square)
-![MCP](https://img.shields.io/badge/MCP-28_tools-7c5cbf?style=flat-square)
+![MCP](https://img.shields.io/badge/MCP-34_tools-7c5cbf?style=flat-square)
 ![Apple Music](https://img.shields.io/badge/Apple_Music-supported-FC3C44?style=flat-square)
 ![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)
 [![Website](https://img.shields.io/badge/website-codebeat.top-9bbc0f?style=flat-square)](https://codebeat.top)
@@ -33,7 +33,7 @@ A retro pixel DJ companion for Claude Code / Codex CLI / Terminal. It plays musi
 
 ## Features
 
-- **MCP server** — 28 tools so you can tell your AI "play some lofi", "skip this", "what's playing" and it just works.
+- **MCP server** — 34 tools so you can tell your AI "play some lofi", "skip this", "what's playing" and it just works.
 - **Music sources** — Apple Music (AppleScript, no GUI needed), local files (afplay), QQ Music (search + preview).
 - **Pixel UI** — Album art in half-block ANSI, GameBoy retro border, pseudo-spectrum equalizer.
 - **DJ Buddy** — A headphones-wearing pixel character that reacts to your coding state. Tests failing? It panics with you.
