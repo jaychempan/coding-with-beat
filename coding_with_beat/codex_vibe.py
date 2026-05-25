@@ -228,7 +228,14 @@ def main() -> int:
 
     # ── session stop ──────────────────────────────────────────────────────────
     if hook == "stop":
-        handle_hook(event)
+        import io as _io
+        _buf = _io.StringIO()
+        _old = sys.stdout
+        sys.stdout = _buf
+        try:
+            handle_hook(event)
+        finally:
+            sys.stdout = _old
         return 0
 
     # ── Codex-specific: multi-agent events ───────────────────────────────────
