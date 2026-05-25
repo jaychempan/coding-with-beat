@@ -27,6 +27,8 @@ A retro pixel DJ companion for Claude Code / Codex CLI / Terminal. It plays musi
 
 <video src="https://github.com/user-attachments/assets/c51dcac1-115e-4d30-b87f-b1e7043d1347" controls autoplay loop muted width="100%"></video>
 
+![](assets/demo.png)
+
 ---
 
 ## Features
