@@ -194,8 +194,8 @@ def main() -> int:
 
     # ── session start: auto-play + music context ──────────────────────────────
     if hook == "sessionstart":
-        # Redirect stdout during handle_hook so companion card text doesn't
-        # contaminate the JSON-only hook output stream that Codex reads.
+        # Suppress companion card stdout — ASCII art doesn't render in Codex
+        # notification area. Use a short greeting instead.
         import io as _io
         _buf = _io.StringIO()
         _old_stdout = sys.stdout
@@ -204,14 +204,17 @@ def main() -> int:
             handle_hook(event)
         finally:
             sys.stdout = _old_stdout
-        card_text = _buf.getvalue().strip()
         _maybe_auto_play()
         ctx = _music_context()
-        msg = ctx or ""
-        if card_text:
-            msg = (card_text + "\n" + msg).strip() if msg else card_text
-        if msg:
-            print(json.dumps({"continue": True, "systemMessage": msg}, ensure_ascii=False))
+        hour = __import__("datetime").datetime.now().hour
+        if hour < 12:
+            greeting = "早安！"
+        elif hour < 18:
+            greeting = "下午好！"
+        else:
+            greeting = "晚上好！"
+        msg = f"🎵 DJ Buddy — {greeting}" + (f" {ctx}" if ctx else " 说想听什么风格，我来找。")
+        print(json.dumps({"continue": True, "systemMessage": msg}, ensure_ascii=False))
         return 0
 
     # ── tool use: vibe tracking + surface significant mood changes ────────────
