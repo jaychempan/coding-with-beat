@@ -172,16 +172,21 @@
     .t-music  { color: var(--amber); }
 
     .ctx-switch-inline {
-      display: inline-flex; align-items: center; gap: 4px;
-      font-family: 'JetBrains Mono', monospace; font-size: 11px;
-      color: var(--dim); white-space: nowrap; margin-left: 4px;
+      display: inline-flex; align-items: center; gap: 5px;
+      white-space: nowrap; margin-left: 6px; vertical-align: middle;
     }
-    .music-app-icon {
-      width: 16px; height: 16px; border-radius: 3px; flex-shrink: 0;
-      background: linear-gradient(135deg, #fc3c44, #c2185b);
-      display: inline-flex; align-items: center; justify-content: center; font-size: 9px;
+    .ctx-arrow { font-size: 13px; color: var(--dim); }
+    /* ── brand logo badges ── */
+    .brand-badge {
+      width: 20px; height: 20px; border-radius: 5px; flex-shrink: 0;
+      display: inline-flex; align-items: center; justify-content: center;
     }
-    .ctx-arrow { font-size: 11px; color: var(--dim); }
+    .am-badge { background: linear-gradient(145deg, #fc5c7d, #a2195b); }
+    .qq-badge { background: linear-gradient(145deg, #25d366, #09974a); }
+    .sc-logo { width: 32px; height: 32px; border-radius: 8px; margin-bottom: 8px; display: flex; align-items: center; justify-content: center; }
+    .sc-logo.am { background: linear-gradient(145deg, #fc5c7d, #a2195b); }
+    .sc-logo.qq { background: linear-gradient(145deg, #25d366, #09974a); }
+    .sc-logo.local { background: linear-gradient(145deg, #6a6aaa, #3a3a7a); }
 
     .comp-result {
       display: flex; align-items: center; gap: 10px;
@@ -555,7 +560,11 @@
     <div class="comp-result bad">
       <span class="result-emoji">😟</span>
       <span data-i18n="lose-focus">Lose Focus. Lose Momentum.</span>
-      <span class="ctx-switch-inline">(<span class="music-app-icon">♪</span><span class="ctx-arrow">→</span><span data-i18n="ctx-switch">Context Switch</span>)</span>
+      <span class="ctx-switch-inline">
+        <span class="brand-badge am-badge"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M8.5 2.5v5a1.5 1.5 0 11-1-1.42V3.8L5 4.3V8.5a1.5 1.5 0 11-1-1.42V3.5l4.5-1z" fill="white"/></svg></span>
+        <span class="ctx-arrow">⇌</span>
+        <span class="brand-badge qq-badge"><svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6.5C2 4.5 3.8 3 6 3s4 1.5 4 3.5v1.2c0 .5-.4.8-.8.8h-.7c-.4 0-.8-.4-.8-.8V6.5M2 6.5v1.2c0 .5.4.8.8.8h.7c.4 0 .8-.4.8-.8V6.5" stroke="white" stroke-width="1.2" stroke-linecap="round"/></svg></span>
+      </span>
     </div>
   </div>
 
@@ -732,18 +741,21 @@
   <p class="section-head" data-i18n="src-head">music sources</p>
   <div class="source-grid">
     <div class="source-card">
+      <div class="sc-logo am"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M14 4.5v8.5a2.5 2.5 0 11-1.5-2.27V7L8 8v6a2.5 2.5 0 11-1.5-2.27V6.5l7.5-2z" fill="white"/></svg></div>
       <div class="sc-name">Apple Music</div>
       <div class="sc-tag ok"   data-i18n="src-am-1">✓ full playback</div>
       <div class="sc-tag ok"   data-i18n="src-am-2">✓ lyrics / art</div>
       <div class="sc-tag ok"   data-i18n="src-am-3">✓ like / seek</div>
     </div>
     <div class="source-card">
+      <div class="sc-logo local"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><rect x="4" y="5" width="12" height="10" rx="1.5" stroke="white" stroke-width="1.5"/><path d="M7 5V4a1 1 0 011-1h4a1 1 0 011 1v1" stroke="white" stroke-width="1.5"/><path d="M10 9v4M8 11h4" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg></div>
       <div class="sc-name" data-i18n="src-local-name">Local Files</div>
       <div class="sc-tag ok"   data-i18n="src-lo-1">✓ afplay</div>
       <div class="sc-tag warn" data-i18n="src-lo-2">⚠ no like</div>
       <div class="sc-tag warn" data-i18n="src-lo-3">⚠ seek via restart</div>
     </div>
     <div class="source-card">
+      <div class="sc-logo qq"><svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M4 11C4 7.5 6.7 5 10 5s6 2.5 6 6v2c0 .8-.6 1.3-1.3 1.3h-1c-.7 0-1.3-.6-1.3-1.3V11M4 11v2c0 .8.6 1.3 1.3 1.3h1c.7 0 1.3-.6 1.3-1.3V11" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg></div>
       <div class="sc-name">QQ Music</div>
       <div class="sc-tag warn" data-i18n="src-qq-1">⚠ 30s preview</div>
       <div class="sc-tag ok"   data-i18n="src-qq-2">✓ search</div>
@@ -817,9 +829,9 @@
     <span class="hl-purple" data-i18n="footer-t2">Your beat.</span>
   </div>
   <div class="footer-sources">
-    <div class="footer-src"><div class="src-icon apple">♪</div><span>Apple Music</span></div>
-    <div class="footer-src"><div class="src-icon qq">♫</div><span>QQ Music</span></div>
-    <div class="footer-src"><div class="src-icon local">📁</div><span data-i18n="footer-local">Local Library</span></div>
+    <div class="footer-src"><div class="src-icon am-badge brand-badge"><svg width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M14 4.5v8.5a2.5 2.5 0 11-1.5-2.27V7L8 8v6a2.5 2.5 0 11-1.5-2.27V6.5l7.5-2z" fill="white"/></svg></div><span>Apple Music</span></div>
+    <div class="footer-src"><div class="src-icon qq-badge brand-badge"><svg width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M4 11C4 7.5 6.7 5 10 5s6 2.5 6 6v2c0 .8-.6 1.3-1.3 1.3h-1c-.7 0-1.3-.6-1.3-1.3V11M4 11v2c0 .8.6 1.3 1.3 1.3h1c.7 0 1.3-.6 1.3-1.3V11" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg></div><span>QQ Music</span></div>
+    <div class="footer-src"><div class="src-icon">📁</div><span data-i18n="footer-local">Local Library</span></div>
   </div>
   <div class="footer-slogan" data-i18n="footer-slogan">Unified. Seamless. Yours.</div>
 </div>
