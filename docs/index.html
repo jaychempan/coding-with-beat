@@ -338,7 +338,19 @@
     .chat-bubble-resp .dm { color: var(--dim); }
 
     /* ── FEATURES LIST ── */
-    .features-wrap { max-width: 860px; margin: 0 auto 72px; padding: 0 28px; }
+    .features-wrap { max-width: 860px; margin: 0 auto 48px; padding: 0 28px; }
+    .scene-wrap { max-width: 860px; margin: 0 auto 72px; padding: 0 28px; }
+    .scene-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 16px; }
+    .scene-pill {
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 6px; padding: 8px 10px;
+      display: flex; flex-direction: column; gap: 3px;
+      transition: border-color .2s, background .2s;
+    }
+    .scene-pill:hover { border-color: rgba(139,92,246,.4); background: var(--bg3); }
+    .scene-pill-top { font-size: 13px; display: flex; align-items: center; gap: 6px; }
+    .scene-pill-name { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; color: var(--bright); }
+    .scene-pill-tags { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--dim); line-height: 1.4; }
     .section-head { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .18em; color: var(--dim); text-transform: uppercase; margin-bottom: 18px; }
     .feature-list { list-style: none; display: flex; flex-direction: column; gap: 2px; }
     .feature-item { display: flex; gap: 12px; padding: 11px 14px; border-radius: 5px; transition: background .15s; }
@@ -498,6 +510,7 @@
       .source-grid { grid-template-columns: 1fr; }
       .screens-grid { grid-template-columns: 1fr; }
       .links-grid { grid-template-columns: 1fr; }
+      .scene-grid { grid-template-columns: repeat(2, 1fr); }
       .comp-buddy-pre { display: none; }
     }
   </style>
@@ -723,6 +736,24 @@
   </ul>
 </div>
 
+<!-- SCENE GRID -->
+<div class="scene-wrap">
+  <p class="section-head" data-i18n="scene-head">smart search scenes</p>
+  <div class="scene-grid">
+    <div class="scene-pill"><div class="scene-pill-top"><span>🎧</span><span class="scene-pill-name">Lofi</span></div><div class="scene-pill-tags">lofi · 深夜写代码 · chillhop</div></div>
+    <div class="scene-pill"><div class="scene-pill-top"><span>🧠</span><span class="scene-pill-name">Focus</span></div><div class="scene-pill-tags">专注 · ambient · flow state</div></div>
+    <div class="scene-pill"><div class="scene-pill-top"><span>🔥</span><span class="scene-pill-name">Hype</span></div><div class="scene-pill-tags">workout · 充能 · 运动</div></div>
+    <div class="scene-pill"><div class="scene-pill-top"><span>☕</span><span class="scene-pill-name">Jazz</span></div><div class="scene-pill-tags">jazz · 咖啡馆 · bossa nova</div></div>
+    <div class="scene-pill"><div class="scene-pill-top"><span>🌆</span><span class="scene-pill-name">Synthwave</span></div><div class="scene-pill-tags">synthwave · 赛博 · 夜驾</div></div>
+    <div class="scene-pill"><div class="scene-pill-top"><span>🌅</span><span class="scene-pill-name">Relax</span></div><div class="scene-pill-tags">放松 · unwind · 下班</div></div>
+    <div class="scene-pill"><div class="scene-pill-top"><span>🎹</span><span class="scene-pill-name">Classical</span></div><div class="scene-pill-tags">古典 · 钢琴 · classical</div></div>
+    <div class="scene-pill"><div class="scene-pill-top"><span>💙</span><span class="scene-pill-name">Sad</span></div><div class="scene-pill-tags">伤感 · heartbreak · 难过</div></div>
+    <div class="scene-pill"><div class="scene-pill-top"><span>🎉</span><span class="scene-pill-name">Party</span></div><div class="scene-pill-tags">party · edm · 蹦迪</div></div>
+    <div class="scene-pill"><div class="scene-pill-top"><span>🏮</span><span class="scene-pill-name">Chinese</span></div><div class="scene-pill-tags">国风 · 华语 · 古风</div></div>
+    <div class="scene-pill"><div class="scene-pill-top"><span>🌙</span><span class="scene-pill-name">Sleep</span></div><div class="scene-pill-tags">助眠 · sleep · 白噪音</div></div>
+  </div>
+</div>
+
 <hr class="divider">
 
 <!-- STATUSLINE PREVIEW -->
@@ -901,6 +932,7 @@
       f3t: 'Vibe Engine',            f3d: 'Hooks track git commits, test runs, and tool calls — buddy reacts in real time.',
       f4t: 'Karaoke & Live Player',  f4d: 'Full-screen LRC lyrics, album art in ANSI half-block, GameBoy retro border.',
       f5t: 'Statusline',             f5d: 'One line: mood face + track + progress bar + beat wave + current lyric.',
+      'scene-head':   'smart search scenes',
       'status-head':  'statusline preview',
       'screens-head': 'demo',
       'src-head':     'music sources',
@@ -958,6 +990,7 @@
       f3t: '氛围引擎',             f3d: 'Hooks 实时感知 git commit、测试运行、工具调用——Buddy 随之切换表情',
       f4t: '卡拉 OK & 实时播放器', f4d: '全屏 LRC 歌词，ANSI 半格专辑封面，GameBoy 复古边框',
       f5t: '状态栏',               f5d: '一行：心情 + 曲目 + 进度条 + 律动波纹 + 当前歌词',
+      'scene-head':   '智能搜索场景',
       'status-head':  '状态栏预览',
       'screens-head': 'demo 演示',
       'src-head':     '音乐来源',

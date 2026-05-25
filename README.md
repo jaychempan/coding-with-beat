@@ -35,6 +35,20 @@ A retro pixel DJ companion for Claude Code / Codex CLI / Terminal. It plays musi
 
 - **MCP server** — 34 tools so you can tell your AI "play some lofi", "skip this", "what's playing" and it just works.
 - **`/cwb` skill** — Auto-registered routing brain: mood/vibe → multi-angle smart search, specific song/artist → catalog lookup, "play 3" → `play_number`. The AI always calls the right tool.
+
+  | Scene | Say… |
+  |-------|------|
+  | 🎧 Lofi | lofi · 深夜写代码 · chillhop |
+  | 🧠 Focus | 专注 · ambient · flow state |
+  | 🔥 Hype | workout · 充能 · 运动 |
+  | ☕ Jazz | jazz · 咖啡馆 · bossa nova |
+  | 🌆 Synthwave | synthwave · 赛博 · 夜驾 |
+  | 🌅 Relax | 放松 · unwind · 下班 |
+  | 🎹 Classical | 古典 · 钢琴 · classical |
+  | 💙 Sad | 伤感 · heartbreak · 难过 |
+  | 🎉 Party | party · edm · 蹦迪 |
+  | 🏮 Chinese | 国风 · 华语 · 古风 |
+  | 🌙 Sleep | 助眠 · sleep · 白噪音 |
 - **Music sources** — Apple Music (AppleScript, no GUI needed), local files (afplay), QQ Music (search + preview).
 - **Pixel UI** — Album art in half-block ANSI, GameBoy retro border, pseudo-spectrum equalizer.
 - **DJ Buddy** — A headphones-wearing pixel character that reacts to your coding state. Tests failing? It panics with you.
