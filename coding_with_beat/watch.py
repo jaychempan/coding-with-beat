@@ -448,6 +448,8 @@ def run(width: int = 0) -> int:
     queue: list[dict] = []
     cur_idx = -1
     queue_label = "Queue"
+    _active_mode_file = DATA_DIR / "active_mode.json"
+    _queue_mtime: float = 0.0
     num_buf = ""
     num_ts = 0.0
 
@@ -542,7 +544,15 @@ def run(width: int = 0) -> int:
                         lyrics_key = new["lyrics_key"]
                 snap = new
 
-            if new is not None:
+            # Reload queue whenever active_mode.json changes on disk — this
+            # fires immediately when cwb list / cwb loved / cwb search runs,
+            # without waiting for the next MCP fetch cycle.
+            try:
+                _mt = _active_mode_file.stat().st_mtime
+            except OSError:
+                _mt = 0.0
+            if new is not None or _mt != _queue_mtime:
+                _queue_mtime = _mt
                 queue, cur_idx, queue_label = _load_queue()
                 # Only rescan when something is actively playing — if paused/stopped,
                 # trust the queue's stored index so cwb next/prev stays in sync.
