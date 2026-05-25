@@ -324,7 +324,7 @@ As long as the SSH tunnel is active, all Codex sessions on the server control th
 
 ```bash
 # Check if MCP server is running
-curl http://127.0.0.1:8765/mcp
+nc -z 127.0.0.1 8765 && echo "MCP port is listening"
 
 # Start manually
 cwb server --host 127.0.0.1 --port 8765 --path /mcp

@@ -129,25 +129,24 @@ Do NOT tell the user to re-search manually. Always recover automatically when co
 
 ## Setup check — first-time installation
 
-Before doing anything else, verify coding-with-beat is installed:
+Do **not** run a shell `curl` preflight against `/mcp`. Streamable HTTP MCP
+endpoints are not plain health-check URLs, and Codex shell sandboxing may block
+local sockets even when the MCP tools are available.
 
-```bash
-curl -s --max-time 2 http://127.0.0.1:8765/mcp > /dev/null 2>&1 && echo "ok" || echo "not running"
-```
+Use the MCP tools as the source of truth:
 
-**If the server is not running / not installed**, tell the user and offer the one-liner:
+1. If `mcp__coding_with_beat__` tools are available, call the requested tool directly.
+2. If MCP tools are unavailable or the MCP call itself reports the server is unreachable,
+   fall back to the `cwb` CLI commands below.
+3. If both MCP and CLI are unavailable, tell the user and offer the one-liner:
 
 ```
 coding-with-beat 还没安装。运行下面这行来一键安装：
 
-curl -LsSf https://raw.githubusercontent.com/jaychempan/coding-with-beat/main/bootstrap.sh | sh
+curl -LsSf https://raw.githubusercontent.com/jaychempan/coding-with-beat/main/bootstrap_codex.sh | sh
 
-安装完重开一个 shell 和 Claude Code session，状态栏出现 (•_•) 就好了。
+安装完重开一个 shell 和 Codex session，状态栏出现 (•_•) 就好了。
 ```
-
-Do NOT attempt to call any MCP tools until the server responds.
-
-**If the server is running**, proceed normally — no need to mention the check.
 
 ## CLI fallback
 
