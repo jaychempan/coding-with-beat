@@ -89,14 +89,20 @@ def _read_active_mode() -> dict:
         return {"mode": "library", "context": "library"}
 
 
-def _write_active_mode(mode: str | None = None, context: str | None = None) -> None:
-    if mode is None and context is None:
+def _write_active_mode(
+    mode: str | None = None,
+    context: str | None = None,
+    label: str | None = None,
+) -> None:
+    if mode is None and context is None and label is None:
         return
     current = _read_active_mode()
     if mode is not None:
         current["mode"] = mode
     if context is not None:
         current["context"] = context
+    if label is not None:
+        current["label"] = label
     try:
         (DATA_DIR / "active_mode.json").write_text(json.dumps(current, ensure_ascii=False), encoding="utf-8")
     except Exception:
@@ -536,7 +542,7 @@ def next_track() -> str:
         if mode == "search":
             lib_data = _load_queue_file("library")
             if lib_data.get("tracks"):
-                _write_active_mode(mode="library", context="library")
+                _write_active_mode(mode="library", context="library", label="Library")
                 result = _play_queue_at(lib_data.get("index", 0), "library")
                 return f"⏭ next (→ library)  {result}"
         if mode == "library":
@@ -564,7 +570,7 @@ def prev_track() -> str:
         if mode == "search":
             lib_data = _load_queue_file("library")
             if lib_data.get("tracks"):
-                _write_active_mode(mode="library", context="library")
+                _write_active_mode(mode="library", context="library", label="Library")
                 result = _play_queue_at(lib_data.get("index", 0), "library")
                 return f"⏮ prev (→ library)  {result}"
         if mode == "library":
@@ -628,7 +634,7 @@ async def list_library(limit: int = 100) -> str:
         return f"(list not supported for source={st.source})"
     hits = await asyncio.to_thread(fn, limit)
     _write_queue_file("library", {"tracks": hits or [], "index": 0, "expected_title": ""})
-    _write_active_mode(context="library")
+    _write_active_mode(context="library", label="Library")
     if not hits:
         return "(library is empty)"
     return "\n".join(
@@ -651,7 +657,7 @@ async def list_loved(limit: int = 50) -> str:
     if not hits:
         return "(no loved tracks found — heart some songs in Music.app first)"
     _write_queue_file("search", {"tracks": hits, "index": 0, "expected_title": ""})
-    _write_active_mode(context="search")
+    _write_active_mode(context="search", label="♥ Loved")
     return "\n".join(
         f"{i + 1}. {h['title']} — {h.get('artist', '?')} · {h.get('album', '?')} [♥ 喜欢]"
         for i, h in enumerate(hits)
@@ -674,7 +680,7 @@ async def search_loved(query: str, limit: int = 8) -> str:
     if not hits:
         return f"(no loved tracks match '{query}')"
     _write_queue_file("search", {"tracks": hits, "index": 0, "expected_title": ""})
-    _write_active_mode(context="search")
+    _write_active_mode(context="search", label=f"♥ {query[:22]}")
     return "\n".join(
         f"{i + 1}. {h['title']} — {h.get('artist', '?')} · {h.get('album', '?')} [♥ 喜欢]"
         for i, h in enumerate(hits)
@@ -694,7 +700,7 @@ async def search(query: str, limit: int = 8) -> str:
         return f"(no matches for '{query}' in source={st.source})"
     hits = _sort_by_source(hits)
     _write_queue_file("search", {"tracks": hits, "index": 0, "expected_title": ""})
-    _write_active_mode(context="search")
+    _write_active_mode(context="search", label=f"Search · {query[:22]}")
     lines = []
     has_catalog = False
     for i, h in enumerate(hits):
@@ -748,7 +754,7 @@ def _label_for_query(query: str) -> str:
     return " ".join(w.capitalize() for w in words)
 
 
-async def _multi_angle_search(queries: list[str], limit_per_query: int = 6) -> str:
+async def _multi_angle_search(queries: list[str], limit_per_query: int = 6, label: str | None = None) -> str:
     import asyncio
 
     async def _search_one(query: str) -> list[dict]:
@@ -790,7 +796,8 @@ async def _multi_angle_search(queries: list[str], limit_per_query: int = 6) -> s
         return f"(no matches for queries: {', '.join(queries)})"
 
     _write_queue_file("search", {"tracks": all_tracks, "index": 0, "expected_title": ""})
-    _write_active_mode(context="search")
+    _q0 = queries[0][:22] + ("…" if len(queries[0]) > 22 else "")
+    _write_active_mode(context="search", label=label or f"Search · {_q0}")
 
     lines: list[str] = []
     has_catalog = False
@@ -863,7 +870,8 @@ async def smart_search(
     import asyncio
 
     if queries:
-        return await _multi_angle_search(queries, limit_per_query=min(limit, 6))
+        _q0 = queries[0][:22] + ("…" if len(queries[0]) > 22 else "")
+        return await _multi_angle_search(queries, limit_per_query=min(limit, 6), label=f"Search · {_q0}")
 
     am_hits, local_hits = await asyncio.gather(
         asyncio.to_thread(get_source("apple_music").search, description, limit),
@@ -889,7 +897,8 @@ async def smart_search(
     merged = _sort_by_source(merged)
 
     _write_queue_file("search", {"tracks": merged, "index": 0, "expected_title": ""})
-    _write_active_mode(context="search")
+    _desc = description[:22] + ("…" if len(description) > 22 else "")
+    _write_active_mode(context="search", label=f"Search · {_desc}")
 
     lines = []
     has_catalog = False

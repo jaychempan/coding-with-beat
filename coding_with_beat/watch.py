@@ -199,15 +199,17 @@ def _trunc(s: str, width: int) -> str:
     return s[:lo] + "…"
 
 
-def _load_queue() -> tuple[list[dict], int]:
+def _load_queue() -> tuple[list[dict], int, str]:
     # Use context (last listed/searched) for display, not mode (currently playing).
     # This mirrors the old last_results.json behaviour: the panel always shows
     # whatever the user most recently loaded, whether or not playback has started.
     try:
         am = json.loads((DATA_DIR / "active_mode.json").read_text(encoding="utf-8"))
         context = am.get("context", "library")
+        label = am.get("label", "Library" if context == "library" else "Queue")
     except Exception:
         context = "library"
+        label = "Library"
     fname = "library_queue.json" if context == "library" else "search_queue.json"
     try:
         data = json.loads((DATA_DIR / fname).read_text(encoding="utf-8"))
@@ -224,7 +226,7 @@ def _load_queue() -> tuple[list[dict], int]:
                 tracks = raw
         except Exception:
             pass
-    return tracks, cur_idx
+    return tracks, cur_idx, label
 
 
 def _render_player_top(snap: dict, width: int, height: int, t: float) -> list[str]:
@@ -341,13 +343,13 @@ def _render_lyrics_bottom(
     return [_pad(r, width) for r in rows[:height]]
 
 
-def _render_queue_lines(tracks: list[dict], cur_idx: int, width: int, height: int) -> list[str]:
+def _render_queue_lines(tracks: list[dict], cur_idx: int, width: int, height: int, label: str = "Queue") -> list[str]:
     """Right panel: scrollable queue list, no line wrapping."""
-    header = _pad(f" {_DIM}Queue ({len(tracks)}){_RESET}", width)
+    header = _pad(f" {_DIM}{label}  ({len(tracks)}){_RESET}", width)
     rows: list[str] = ["", header, _sep(width)]
 
     if not tracks:
-        rows.append(_pad(f" {_DIM}run cwb list to load queue{_RESET}", width))
+        rows.append(_pad(f" {_DIM}cwb list / cwb loved / cwb search{_RESET}", width))
     else:
         visible = max(1, height - len(rows))
         # Scroll so current track is centered
@@ -445,6 +447,7 @@ def run(width: int = 0) -> int:
     last_render = 0.0
     queue: list[dict] = []
     cur_idx = -1
+    queue_label = "Queue"
     num_buf = ""
     num_ts = 0.0
 
@@ -540,7 +543,7 @@ def run(width: int = 0) -> int:
                 snap = new
 
             if new is not None:
-                queue, cur_idx = _load_queue()
+                queue, cur_idx, queue_label = _load_queue()
                 # Only rescan when something is actively playing — if paused/stopped,
                 # trust the queue's stored index so cwb next/prev stays in sync.
                 if snap.get("playing") and snap.get("title") and queue:
@@ -590,7 +593,7 @@ def run(width: int = 0) -> int:
                     cc_mood=cc_mood,
                     cc_quip=cc_quip,
                 )
-                queue_lines = _render_queue_lines(queue, cur_idx, right_w, panels_h)
+                queue_lines = _render_queue_lines(queue, cur_idx, right_w, panels_h, queue_label)
                 frame = _compose3(player_lines, lyrics_lines, queue_lines, left_w, panels_h)
 
                 if num_buf:
