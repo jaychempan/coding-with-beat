@@ -125,3 +125,39 @@ def test_read_malformed_lines_are_skipped(tmp_path, monkeypatch):
     entries = history.read()
     assert len(entries) == 1
     assert entries[0]["title"] == "Good Track"
+
+
+# ── apple_music.play_history ───────────────────────────────────────────────────
+
+def test_play_history_parses_applescript_output():
+    import datetime
+    from unittest.mock import patch
+    from coding_with_beat.sources.apple_music import AppleMusic as AppleMusicSource
+
+    fake_osa_output = (
+        "Clair de Lune|||Debussy|||Suite bergamasque|||5|||3\n"
+        "夜曲|||周杰伦|||十一月的萧邦|||12|||0\n"
+    )
+
+    with patch("coding_with_beat.sources.apple_music._osa", return_value=fake_osa_output):
+        src = AppleMusicSource()
+        result = src.play_history(window_days=14, limit=50)
+
+    assert len(result) == 2
+    assert result[0]["title"] == "Clair de Lune"
+    assert result[0]["artist"] == "Debussy"
+    assert result[0]["played_count"] == 5
+    assert isinstance(result[0]["ts"], datetime.datetime)
+    assert result[1]["title"] == "夜曲"
+    assert result[1]["played_count"] == 12
+
+
+def test_play_history_returns_empty_on_applescript_error():
+    from unittest.mock import patch
+    from coding_with_beat.sources.apple_music import AppleMusic as AppleMusicSource
+
+    with patch("coding_with_beat.sources.apple_music._osa", side_effect=RuntimeError("fail")):
+        src = AppleMusicSource()
+        result = src.play_history()
+
+    assert result == []

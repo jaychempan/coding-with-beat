@@ -1029,3 +1029,54 @@ end tell
                 return np
             return catalog_np
         return None
+
+    def play_history(self, window_days: int = 90, limit: int = 100) -> list[dict]:
+        """Return tracks played within the last window_days days via AppleScript.
+
+        Each dict has: title, artist, album, played_count (int), ts (datetime).
+        Fields are separated by ||| so they survive most title/artist text.
+        """
+        import datetime as _dt
+
+        script = f"""tell application "Music"
+    set cutoff to (current date) - {window_days} * days
+    set recentTracks to (every track of library playlist 1 whose played date > cutoff)
+    set output to ""
+    set n to count of recentTracks
+    if n > {limit} then set n to {limit}
+    repeat with i from 1 to n
+        set t to item i of recentTracks
+        set pc to played count of t
+        set daysAgo to ((current date) - (played date of t)) div days
+        set output to output & (name of t) & "|||" & (artist of t) & "|||" & (album of t) & "|||" & pc & "|||" & daysAgo & linefeed
+    end repeat
+    return output
+end tell"""
+        try:
+            raw = _osa(script)
+        except Exception:
+            return []
+
+        now = _dt.datetime.now()
+        result: list[dict] = []
+        for line in raw.splitlines():
+            parts = line.split("|||")
+            if len(parts) < 5:
+                continue
+            title, artist, album, pc_str, days_str = parts[:5]
+            try:
+                played_count = int(pc_str)
+            except ValueError:
+                played_count = 0
+            try:
+                ts = now - _dt.timedelta(days=int(days_str))
+            except ValueError:
+                ts = now
+            result.append({
+                "title": title,
+                "artist": artist,
+                "album": album,
+                "played_count": played_count,
+                "ts": ts,
+            })
+        return result
