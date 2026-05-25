@@ -230,7 +230,8 @@ def _companion_card(message: str, music_results: str) -> str:
     sprite_w = 10
     pad = "  "
     music_lines = music_results.splitlines()[:12]
-    right_lines = [message, ""] + music_lines
+    header = "\033[1mDJ Buddy\033[0m"
+    right_lines = [header, message, ""] + music_lines
     offset = max(0, (len(sprite_lines) - len(right_lines)) // 2)
     rows = []
     total = max(len(sprite_lines), len(right_lines) + offset)
