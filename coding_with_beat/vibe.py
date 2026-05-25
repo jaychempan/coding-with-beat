@@ -16,7 +16,8 @@ from pathlib import Path
 from typing import Optional, Tuple
 
 from . import cwb_agent, dj, state
-from .config import FILE_KIND_VIBES, LOG_FILE, ensure_dirs
+from .config import FILE_KIND_VIBES
+from .utils import log as _log
 
 
 def _file_kind(path: str) -> Optional[str]:
@@ -168,15 +169,6 @@ def handle_hook(event: dict) -> dict:
             print(_build_session_farewell(st), flush=True)
 
     return {"mood": mood, "vibe": vibe}
-
-
-def _log(msg: str) -> None:
-    ensure_dirs()
-    try:
-        with open(LOG_FILE, "a") as f:
-            f.write(f"{time.strftime('%H:%M:%S')} {msg}\n")
-    except Exception:
-        pass
 
 
 def main() -> int:

@@ -130,7 +130,7 @@ def _osa_silent(script: str) -> None:
 
 
 def _osa_quote(text: str) -> str:
-    return (text or "").replace('"', '\\"')
+    return (text or "").replace("\\", "\\\\").replace('"', '\\"')
 
 
 def _strip_result_format(query: str) -> str:
@@ -384,22 +384,39 @@ def _best_hit(results: list, query: str) -> Optional[dict]:
     return results[0]
 
 
+_preview_proc: subprocess.Popen | None = None
+
+
+def _kill_preview() -> None:
+    """Kill any running preview process."""
+    global _preview_proc
+    if _preview_proc and _preview_proc.poll() is None:
+        try:
+            _preview_proc.kill()
+            _preview_proc.wait(timeout=1)
+        except Exception:
+            pass
+    _preview_proc = None
+
+
 def _play_preview(preview_url: str, title: str, artist: str) -> bool:
     """Play a 30-second iTunes preview via afplay (works without subscription).
     Pauses Music.app first so the audio doesn't clash."""
+    global _preview_proc
     import time
 
     if not preview_url:
         return False
     try:
+        _kill_preview()
         _osa_silent('tell application "Music" to pause')
-        proc = subprocess.Popen(
+        _preview_proc = subprocess.Popen(
             ["afplay", preview_url],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
         time.sleep(0.5)
-        return proc.poll() is None
+        return _preview_proc.poll() is None
     except Exception:
         return False
 
@@ -745,6 +762,7 @@ end tell
         return None
 
     def play(self) -> None:
+        _kill_preview()
         _osa_silent('tell application "Music" to play')
 
     def pause(self) -> None:

@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from ..utils import display_width as _display_width
+from ..utils import strip_ansi as _strip_ansi
+
 GB_GREEN = "\x1b[38;2;155;188;15m"
 GB_DARK = "\x1b[38;2;15;56;15m"
 GB_BG = "\x1b[48;2;15;56;15m"
@@ -16,35 +19,6 @@ EDGE_H = "▀"
 EDGE_H_BOT = "▄"
 EDGE_V = "▌"
 EDGE_V_R = "▐"
-
-
-def _strip_ansi(s: str) -> str:
-    import re
-
-    return re.sub(r"\x1b\[[0-9;]*m", "", s)
-
-
-def _display_width(s: str) -> int:
-    total = 0
-    for ch in s:
-        cp = ord(ch)
-        if (
-            0x1100 <= cp <= 0x115F
-            or 0x2E80 <= cp <= 0x303E
-            or 0x3040 <= cp <= 0x33FF
-            or 0x3400 <= cp <= 0x4DBF
-            or 0x4E00 <= cp <= 0x9FFF
-            or 0xA000 <= cp <= 0xA4CF
-            or 0xAC00 <= cp <= 0xD7AF
-            or 0xF900 <= cp <= 0xFAFF
-            or 0xFE10 <= cp <= 0xFE6F
-            or 0xFF01 <= cp <= 0xFF60
-            or 0xFFE0 <= cp <= 0xFFE6
-        ):
-            total += 2
-        else:
-            total += 1
-    return total
 
 
 def boxed(title: str, body: str, width: int = 40, color: str = GB_GREEN) -> str:

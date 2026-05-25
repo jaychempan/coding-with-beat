@@ -13,6 +13,9 @@ import math
 import re
 from typing import List, Optional, Tuple
 
+from ..utils import char_width as _char_width
+from ..utils import display_width as _display_width
+
 HIGHLIGHT = "\x1b[1;38;2;255;230;100m"
 NEXT = "\x1b[38;2;200;200;230m"
 DIM = "\x1b[38;2;120;130;130m"
@@ -20,29 +23,6 @@ EDGE = "\x1b[38;2;90;90;105m"
 RESET = "\x1b[0m"
 
 _PREFIX_W = 2  # "▶ " / "  " prefix display width
-
-
-def _char_width(ch: str) -> int:
-    cp = ord(ch)
-    if (
-        0x1100 <= cp <= 0x115F
-        or 0x2E80 <= cp <= 0x303E
-        or 0x3040 <= cp <= 0x33FF
-        or 0x3400 <= cp <= 0x4DBF
-        or 0x4E00 <= cp <= 0x9FFF
-        or 0xA000 <= cp <= 0xA4CF
-        or 0xAC00 <= cp <= 0xD7AF
-        or 0xF900 <= cp <= 0xFAFF
-        or 0xFE10 <= cp <= 0xFE6F
-        or 0xFF01 <= cp <= 0xFF60
-        or 0xFFE0 <= cp <= 0xFFE6
-    ):
-        return 2
-    return 1
-
-
-def _display_width(s: str) -> int:
-    return sum(_char_width(c) for c in s)
 
 
 def _wrap_text(line: str, max_w: int) -> List[str]:

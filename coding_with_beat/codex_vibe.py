@@ -197,6 +197,7 @@ def main() -> int:
         # Suppress companion card stdout — ASCII art doesn't render in Codex
         # notification area. Use a short greeting instead.
         import io as _io
+
         _buf = _io.StringIO()
         _old_stdout = sys.stdout
         sys.stdout = _buf
@@ -229,6 +230,7 @@ def main() -> int:
     # ── session stop ──────────────────────────────────────────────────────────
     if hook == "stop":
         import io as _io
+
         _buf = _io.StringIO()
         _old = sys.stdout
         sys.stdout = _buf

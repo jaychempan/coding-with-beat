@@ -9,14 +9,11 @@ from __future__ import annotations
 
 import math
 
+from ..utils import mmss as _mmss
+
 SPECTRUM_GLYPHS = " ▁▂▃▄▅▆▇█"
 BAR_FILLED = "█"
 BAR_EMPTY = "░"
-
-
-def _mmss(seconds: float) -> str:
-    s = max(0, int(seconds))
-    return f"{s // 60:02d}:{s % 60:02d}"
 
 
 def render_progress(position: float, duration: float, width: int = 28, accent: tuple = (155, 188, 15)) -> str:

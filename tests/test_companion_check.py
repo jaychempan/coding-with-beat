@@ -81,9 +81,7 @@ class TestCompanionCheck(unittest.TestCase):
 
         result = _run(server.companion_check("session_start"))
         assert result != "(not needed right now)"
-        assert "[♥ 喜欢]" in result or any(
-            t in result for t in ["My Fave", "Heart Track", "Love This"]
-        )
+        assert "[♥ 喜欢]" in result or any(t in result for t in ["My Fave", "Heart Track", "Love This"])
 
     @mock.patch("coding_with_beat.server.state")
     @mock.patch("coding_with_beat.server._multi_angle_search")

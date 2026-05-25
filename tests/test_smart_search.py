@@ -3,7 +3,7 @@ from types import SimpleNamespace
 from unittest import mock
 
 from coding_with_beat import server
-from coding_with_beat.server import _label_for_query, _source_tag, _sort_by_source
+from coding_with_beat.server import _label_for_query, _sort_by_source, _source_tag
 
 
 def _hit(title, artist, source):
@@ -300,13 +300,15 @@ def test_smart_search_delegates_to_multi_angle_when_queries_given(mock_multi):
     """When queries= is passed, smart_search delegates to _multi_angle_search."""
     import asyncio
 
-    async def fake_multi(queries, limit_per_query=6):
+    async def fake_multi(queries, limit_per_query=6, label=None):
         return "mocked result"
 
     mock_multi.side_effect = fake_multi
 
     result = asyncio.run(server.smart_search(queries=["lofi hip hop", "jazz cozy", "synthwave"]))
-    mock_multi.assert_called_once_with(["lofi hip hop", "jazz cozy", "synthwave"], limit_per_query=6)
+    mock_multi.assert_called_once_with(
+        ["lofi hip hop", "jazz cozy", "synthwave"], limit_per_query=6, label="Search · lofi hip hop"
+    )
     assert result == "mocked result"
 
 
@@ -332,7 +334,7 @@ def test_smart_search_loved_ranked_first_and_tagged(mock_gs, mock_state, mock_wq
 
     result = _run(server.smart_search("late night chill"))
 
-    lines = [l for l in result.splitlines() if l.startswith(("1.", "2.", "3."))]
+    lines = [line for line in result.splitlines() if line.startswith(("1.", "2.", "3."))]
     assert lines[0].startswith("1.") and "Loved Song" in lines[0]
     assert "[♥ 喜欢]" in lines[0]
     assert "[资料库]" in lines[1]

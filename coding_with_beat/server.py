@@ -73,7 +73,10 @@ def _load_queue_file(name: str) -> dict:
 
 def _write_queue_file(name: str, data: dict) -> None:
     try:
-        _queue_file(name).write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+        path = _queue_file(name)
+        tmp = path.with_suffix(".tmp")
+        tmp.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+        os.replace(tmp, path)
     except Exception:
         pass
 
@@ -104,7 +107,10 @@ def _write_active_mode(
     if label is not None:
         current["label"] = label
     try:
-        (DATA_DIR / "active_mode.json").write_text(json.dumps(current, ensure_ascii=False), encoding="utf-8")
+        path = DATA_DIR / "active_mode.json"
+        tmp = path.with_suffix(".tmp")
+        tmp.write_text(json.dumps(current, ensure_ascii=False), encoding="utf-8")
+        os.replace(tmp, path)
     except Exception:
         pass
 
@@ -1118,7 +1124,9 @@ def play_song(query: str) -> str:
         return _unsupported(st.source, "play_song", "The source returned no playable track.")
     if has_queue:
         try:
-            _one_off_file().write_text(
+            path = _one_off_file()
+            tmp = path.with_suffix(".tmp")
+            tmp.write_text(
                 json.dumps(
                     {
                         "one_off_title": np.title,
@@ -1128,6 +1136,7 @@ def play_song(query: str) -> str:
                 ),
                 encoding="utf-8",
             )
+            os.replace(tmp, path)
         except Exception:
             pass
     else:
