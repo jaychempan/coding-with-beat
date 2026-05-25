@@ -847,12 +847,14 @@ end tell
             parts = line.split("\x1f")
             if len(parts) >= 3:
                 is_loved = len(parts) >= 4 and parts[3].strip().lower() == "true"
-                items.append({
-                    "title": parts[0],
-                    "artist": parts[1],
-                    "album": parts[2],
-                    "source": "loved" if is_loved else "library",
-                })
+                items.append(
+                    {
+                        "title": parts[0],
+                        "artist": parts[1],
+                        "album": parts[2],
+                        "source": "loved" if is_loved else "library",
+                    }
+                )
         # Fill remaining slots with Apple Music catalog results
         remaining = limit - len(items)
         if remaining > 0:
@@ -1028,6 +1030,7 @@ end tell
     def play_playlist(self, name: str) -> Optional["NowPlaying"]:
         """Play a playlist by exact name and return now_playing."""
         import time
+
         name_esc = name.replace('"', '\\"')
         script = f"""
 tell application "Music"
@@ -1167,11 +1170,13 @@ end tell"""
                 ts = now - _dt.timedelta(days=int(days_str))
             except ValueError:
                 ts = now
-            result.append({
-                "title": title,
-                "artist": artist,
-                "album": album,
-                "played_count": played_count,
-                "ts": ts,
-            })
+            result.append(
+                {
+                    "title": title,
+                    "artist": artist,
+                    "album": album,
+                    "played_count": played_count,
+                    "ts": ts,
+                }
+            )
         return result

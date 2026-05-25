@@ -718,11 +718,7 @@ async def history_search() -> str:
 
     # Angle 3: artists not heard recently
     if unheard:
-        unheard_artists = [
-            t.get("artist", "")
-            for t in unheard[:2]
-            if t.get("artist") and t.get("artist") != "?"
-        ]
+        unheard_artists = [t.get("artist", "") for t in unheard[:2] if t.get("artist") and t.get("artist") != "?"]
         if unheard_artists:
             queries.append(" ".join(unheard_artists) + " 经典")
 
@@ -749,8 +745,7 @@ async def list_loved(limit: int = 50) -> str:
     _write_queue_file("search", {"tracks": hits, "index": 0, "expected_title": ""})
     _write_active_mode(context="search", label="♥ Loved")
     return "\n".join(
-        f"{i + 1}. {h['title']} — {h.get('artist', '?')} · {h.get('album', '?')} [♥ 喜欢]"
-        for i, h in enumerate(hits)
+        f"{i + 1}. {h['title']} — {h.get('artist', '?')} · {h.get('album', '?')} [♥ 喜欢]" for i, h in enumerate(hits)
     )
 
 
@@ -772,8 +767,7 @@ async def search_loved(query: str, limit: int = 8) -> str:
     _write_queue_file("search", {"tracks": hits, "index": 0, "expected_title": ""})
     _write_active_mode(context="search", label=f"♥ {query[:22]}")
     return "\n".join(
-        f"{i + 1}. {h['title']} — {h.get('artist', '?')} · {h.get('album', '?')} [♥ 喜欢]"
-        for i, h in enumerate(hits)
+        f"{i + 1}. {h['title']} — {h.get('artist', '?')} · {h.get('album', '?')} [♥ 喜欢]" for i, h in enumerate(hits)
     )
 
 
@@ -844,7 +838,9 @@ async def search(query: str, limit: int = 8) -> str:
             has_catalog = True
         lines.append(f"{i + 1}. {h['title']} — {h.get('artist', '?')} · {h.get('album', '?')}{_source_tag(src)}")
     if has_catalog:
-        lines.append("\n💡 [Apple Music] 曲目需要先添加到资料库才能播放。如果想直接播放已下载的歌曲，跟我说「打开资料库」就行。")
+        lines.append(
+            "\n💡 [Apple Music] 曲目需要先添加到资料库才能播放。如果想直接播放已下载的歌曲，跟我说「打开资料库」就行。"
+        )
     return "\n".join(lines)
 
 
@@ -950,7 +946,9 @@ async def _multi_angle_search(queries: list[str], limit_per_query: int = 6, labe
         lines.append("")
 
     if has_catalog:
-        lines.append("💡 [Apple Music] 曲目需要先添加到资料库才能播放。如果想直接播放已下载的歌曲，跟我说「打开资料库」就行。")
+        lines.append(
+            "💡 [Apple Music] 曲目需要先添加到资料库才能播放。如果想直接播放已下载的歌曲，跟我说「打开资料库」就行。"
+        )
     lines.append("喜欢哪首？说编号我来播。")
 
     return "\n".join(lines).rstrip()
@@ -1044,7 +1042,9 @@ async def smart_search(
         tag = _source_tag(src)
         lines.append(f"{i + 1}. {h['title']} — {h.get('artist', '?')} · {h.get('album', '?')}{tag}")
     if has_catalog:
-        lines.append("\n💡 [Apple Music] 曲目需要先添加到资料库才能播放。如果想直接播放已下载的歌曲，跟我说「打开资料库」就行。")
+        lines.append(
+            "\n💡 [Apple Music] 曲目需要先添加到资料库才能播放。如果想直接播放已下载的歌曲，跟我说「打开资料库」就行。"
+        )
     return "\n".join(lines)
 
 
@@ -1286,10 +1286,11 @@ async def companion_check(trigger: str) -> str:
             all_loved = await asyncio.to_thread(fn, 30)
             if all_loved:
                 picks = _random.sample(all_loved, min(3, len(all_loved)))
-                loved_section = "♥ 从你的喜欢列表:\n" + "\n".join(
-                    f"  · {h['title']} — {h.get('artist', '?')} [♥ 喜欢]"
-                    for h in picks
-                ) + "\n直接说歌名播放，或选下面编号\n"
+                loved_section = (
+                    "♥ 从你的喜欢列表:\n"
+                    + "\n".join(f"  · {h['title']} — {h.get('artist', '?')} [♥ 喜欢]" for h in picks)
+                    + "\n直接说歌名播放，或选下面编号\n"
+                )
     except Exception:
         loved_section = ""
 

@@ -339,7 +339,9 @@ def cmd_smart_search() -> int:
             tag = ""
         lines.append(f"{i + 1}. {h['title']} — {h.get('artist', '?')} · {h.get('album', '?')}{tag}")
     if has_catalog:
-        lines.append("\n💡 [Apple Music] 曲目需要先添加到资料库才能播放。如果想直接播放已下载的歌曲，跟我说「打开资料库」就行。")
+        lines.append(
+            "\n💡 [Apple Music] 曲目需要先添加到资料库才能播放。如果想直接播放已下载的歌曲，跟我说「打开资料库」就行。"
+        )
     print("\n".join(lines))
     return 0
 
@@ -810,7 +812,6 @@ COMMANDS = {
     "play_playlist": cmd_play_playlist,
     "tips": cmd_tips,
     "能做什么": cmd_tips,
-    "帮助": cmd_tips,
     "search": cmd_search,
     "smart_search": cmd_smart_search,
     "play": cmd_play,
