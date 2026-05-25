@@ -14,7 +14,7 @@ from typing import Optional
 
 from mcp.server.fastmcp import FastMCP
 
-from . import dj, focus, state
+from . import dj, focus, history, state
 from .config import DATA_DIR
 from .lyrics_snapshot import current_text as current_lyrics_text
 from .lyrics_snapshot import track_key
@@ -272,6 +272,7 @@ def _wait_and_play_from_library(src, title: str, artist: str, timeout: int = 15,
 def _refresh_now_playing():
     st = state.load()
     old_key = track_key(st.track.source or st.source, st.track.artist, st.track.album, st.track.title)
+    prev_title = st.track.title
     src = get_source(st.source)
     np = src.now_playing()
     new_key = track_key(np.source or st.source, np.artist, np.album, np.title)
@@ -286,6 +287,8 @@ def _refresh_now_playing():
         if np.source:
             st.track.source = np.source
         if old_key != new_key:
+            if st.source != "apple_music" and prev_title:
+                history.write(np.title, np.artist, np.album)
             st.track.lyrics_key = ""
             st.track.lyrics_text = ""
             st.track.lyrics_pending = False
@@ -650,6 +653,88 @@ async def list_library(limit: int = 100) -> str:
 
 
 @mcp.tool()
+async def list_history(limit: int = 20) -> str:
+    """List recently played tracks from play history.
+    For Apple Music: reads native played date / play count (covers all listening).
+    For other sources: reads ~/.coding-with-beat/history.log."""
+    import asyncio as _asyncio
+
+    st = state.load()
+    if st.source == "apple_music":
+        src = get_source("apple_music")
+        fn = getattr(src, "play_history", None)
+        if not callable(fn):
+            return "(list_history not supported for this Apple Music version)"
+        tracks = await _asyncio.to_thread(fn, 30, limit)
+    else:
+        tracks = history.read(limit=limit)
+
+    if not tracks:
+        return "(还没有播放历史，多听一会儿再来试试吧 🎵)"
+
+    lines = [f"最近播放（{len(tracks)} 首）："]
+    for i, t in enumerate(tracks):
+        title = t.get("title", "?")
+        artist = t.get("artist", "?")
+        album = t.get("album", "?")
+        pc = t.get("played_count", 0)
+        suffix = f" · {pc}次播放" if pc else ""
+        lines.append(f"{i + 1}. {title} — {artist} · {album}{suffix}")
+    return "\n".join(lines)
+
+
+@mcp.tool()
+async def history_search() -> str:
+    """Recommend music based on your play history.
+    Analyses what you've been listening to and suggests:
+    - More of the same style/artist
+    - Artists you haven't heard in a while
+    Results are numbered — use play_number() to play."""
+    import asyncio as _asyncio
+
+    st = state.load()
+    if st.source == "apple_music":
+        src = get_source("apple_music")
+        fn = getattr(src, "play_history", None)
+        if not callable(fn):
+            return "(history_search not supported for this Apple Music version)"
+        tracks = await _asyncio.to_thread(fn, 90, 100)
+    else:
+        tracks = history.read(limit=100)
+
+    if not tracks:
+        return "(还没有播放历史，多听一会儿再来试试吧 🎵)"
+
+    summary = history.summarize(tracks, window_days=14)
+    top_artists = summary["top_artists"]
+    style_tags = summary["style_tags"]
+    unheard = summary["unheard_candidates"]
+
+    queries: list[str] = []
+
+    # Angle 1: style tags from recent listening
+    if style_tags:
+        queries.append(" ".join(style_tags[:2]) + " instrumental")
+    elif top_artists:
+        queries.append(f"{top_artists[0][0]} 风格 类似推荐")
+
+    # Angle 2: similar to top artist
+    if top_artists:
+        queries.append(f"{top_artists[0][0]} 类似 推荐")
+
+    # Angle 3: artists not heard recently
+    if unheard:
+        unheard_artists = [t.get("artist", "") for t in unheard[:2] if t.get("artist") and t.get("artist") != "?"]
+        if unheard_artists:
+            queries.append(" ".join(unheard_artists) + " 经典")
+
+    if not queries:
+        return "(历史数据不足，多听几首再试试吧)"
+
+    return await _multi_angle_search(queries, label="History · 为你推荐")
+
+
+@mcp.tool()
 async def list_loved(limit: int = 50) -> str:
     """List all loved/hearted tracks in the current source's library.
     Returns a numbered list tagged [♥ 喜欢]. Use play_number() to play."""
@@ -690,6 +775,51 @@ async def search_loved(query: str, limit: int = 8) -> str:
     return "\n".join(
         f"{i + 1}. {h['title']} — {h.get('artist', '?')} · {h.get('album', '?')} [♥ 喜欢]" for i, h in enumerate(hits)
     )
+
+
+@mcp.tool()
+async def list_playlists() -> str:
+    """List all user-visible playlists (user-created + Apple Music subscription playlists).
+    Returns a numbered list. Use play_playlist() to play one by name."""
+    import asyncio
+
+    st = state.load()
+    src = get_source(st.source)
+    fn = getattr(src, "list_playlists", None)
+    if not callable(fn):
+        return f"(list_playlists not supported for source={st.source})"
+    playlists = await asyncio.to_thread(fn)
+    if not playlists:
+        return "(no playlists found)"
+    lines = []
+    for i, pl in enumerate(playlists):
+        kind_tag = f"[{pl['kind']}]" if pl.get("kind") else ""
+        lines.append(f"{i + 1}. {pl['name']} {kind_tag} — {pl['count']} 首")
+    return "\n".join(lines)
+
+
+@mcp.tool()
+async def play_playlist(name: str) -> str:
+    """Play an Apple Music playlist by its exact name.
+    Call list_playlists() first if you need to discover available playlist names."""
+    import asyncio
+
+    st = state.load()
+    src = get_source(st.source)
+    fn = getattr(src, "play_playlist", None)
+    if not callable(fn):
+        return f"(play_playlist not supported for source={st.source})"
+    np = await asyncio.to_thread(fn, name)
+    if np is None:
+        return f"(playlist '{name}' not found or failed to play)"
+    tracks_fn = getattr(src, "get_playlist_tracks", None)
+    if callable(tracks_fn):
+        tracks = await asyncio.to_thread(tracks_fn, name)
+        if tracks:
+            label = name[:30]
+            _write_queue_file("search", {"tracks": tracks, "index": 0, "expected_title": np.title})
+            _write_active_mode(context="search", label=f"♬ {label}")
+    return f"▶ now playing playlist '{name}': {np.title} — {np.artist or '—'}  source={np.source}"
 
 
 @mcp.tool()
