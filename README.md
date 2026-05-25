@@ -31,11 +31,7 @@ A retro pixel DJ companion for Claude Code / Codex CLI / Terminal. It plays musi
 
 ## Features
 
-- **MCP server** — 28 tools so you can tell your AI "p
-
-
-
-lay some lofi", "skip this", "what's playing" and it just works.
+- **MCP server** — 28 tools so you can tell your AI "play some lofi", "skip this", "what's playing" and it just works.
 - **Music sources** — Apple Music (AppleScript, no GUI needed), local files (afplay), QQ Music (search + preview).
 - **Pixel UI** — Album art in half-block ANSI, GameBoy retro border, pseudo-spectrum equalizer.
 - **DJ Buddy** — A headphones-wearing pixel character that reacts to your coding state. Tests failing? It panics with you.
