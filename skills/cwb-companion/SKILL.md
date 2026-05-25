@@ -26,8 +26,9 @@ Do NOT mention that the tool is missing. Just skip and continue normally.
 mention the call, do not say "no music needed", just continue normally.
 
 **If the tool returns a companion card:** output it in full. You may add
-one short transition phrase *before* the card (e.g. "对了——" or
-"顺便——"). Do NOT add explanation or commentary after the card.
+one short transition phrase *before* the card — always prefix it with
+`🎶 DJ Buddy:` (e.g. "🎶 DJ Buddy: 对了——" or "🎶 DJ Buddy: 顺便——").
+Do NOT add explanation or commentary after the card.
 
 After showing the card, wait for the user to pick a number from the list.
 When they do, call `play_number(N)` to play it.
