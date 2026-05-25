@@ -778,6 +778,51 @@ async def search_loved(query: str, limit: int = 8) -> str:
 
 
 @mcp.tool()
+async def list_playlists() -> str:
+    """List all user-visible playlists (user-created + Apple Music subscription playlists).
+    Returns a numbered list. Use play_playlist() to play one by name."""
+    import asyncio
+
+    st = state.load()
+    src = get_source(st.source)
+    fn = getattr(src, "list_playlists", None)
+    if not callable(fn):
+        return f"(list_playlists not supported for source={st.source})"
+    playlists = await asyncio.to_thread(fn)
+    if not playlists:
+        return "(no playlists found)"
+    lines = []
+    for i, pl in enumerate(playlists):
+        kind_tag = f"[{pl['kind']}]" if pl.get("kind") else ""
+        lines.append(f"{i + 1}. {pl['name']} {kind_tag} — {pl['count']} 首")
+    return "\n".join(lines)
+
+
+@mcp.tool()
+async def play_playlist(name: str) -> str:
+    """Play an Apple Music playlist by its exact name.
+    Call list_playlists() first if you need to discover available playlist names."""
+    import asyncio
+
+    st = state.load()
+    src = get_source(st.source)
+    fn = getattr(src, "play_playlist", None)
+    if not callable(fn):
+        return f"(play_playlist not supported for source={st.source})"
+    np = await asyncio.to_thread(fn, name)
+    if np is None:
+        return f"(playlist '{name}' not found or failed to play)"
+    tracks_fn = getattr(src, "get_playlist_tracks", None)
+    if callable(tracks_fn):
+        tracks = await asyncio.to_thread(tracks_fn, name)
+        if tracks:
+            label = name[:30]
+            _write_queue_file("search", {"tracks": tracks, "index": 0, "expected_title": np.title})
+            _write_active_mode(context="search", label=f"♬ {label}")
+    return f"▶ now playing playlist '{name}': {np.title} — {np.artist or '—'}  source={np.source}"
+
+
+@mcp.tool()
 async def search(query: str, limit: int = 8) -> str:
     """Search the current source for tracks matching the query. Returns a
     numbered list. Does NOT affect current playback. Only call play_number

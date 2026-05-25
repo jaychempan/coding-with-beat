@@ -947,6 +947,101 @@ end tell
                 items.append({"title": parts[0], "artist": parts[1], "album": parts[2], "source": "loved"})
         return items
 
+    def list_playlists(self) -> List[dict]:
+        """Return all user-visible playlists (user + subscription), excluding system items."""
+        script = """
+tell application "Music"
+    set SEP to (ASCII character 31)
+    set out to ""
+    set allPlaylists to every playlist
+    repeat with pl in allPlaylists
+        set plClass to class of pl as string
+        if plClass is "library playlist" then
+        else if plClass is "user playlist" and name of pl is "音乐" then
+        else
+            try
+                set cnt to count of tracks of pl
+            on error
+                set cnt to 0
+            end try
+            set out to out & (name of pl as string) & SEP & plClass & SEP & cnt & linefeed
+        end if
+    end repeat
+    return out
+end tell
+"""
+        try:
+            raw = _osa(script)
+        except Exception:
+            return []
+        items = []
+        for line in raw.splitlines():
+            if not line.strip():
+                continue
+            parts = line.split("\x1f")
+            if len(parts) >= 3:
+                kind_raw = parts[1].strip()
+                if kind_raw == "subscription playlist":
+                    kind = "订阅"
+                elif kind_raw == "user playlist":
+                    kind = "用户"
+                else:
+                    kind = kind_raw
+                try:
+                    count = int(parts[2].strip())
+                except ValueError:
+                    count = 0
+                items.append({"name": parts[0].strip(), "kind": kind, "count": count})
+        return items
+
+    def get_playlist_tracks(self, name: str, limit: int = 200) -> List[dict]:
+        """Return all tracks in a named playlist."""
+        name_esc = name.replace('"', '\\"')
+        script = f"""
+tell application "Music"
+    set SEP to (ASCII character 31)
+    set out to ""
+    set pl to first playlist whose name is "{name_esc}"
+    set allTracks to every track of pl
+    set n to count of allTracks
+    if n > {limit} then set n to {limit}
+    repeat with i from 1 to n
+        set t to item i of allTracks
+        set out to out & (name of t as string) & SEP & (artist of t as string) & SEP & (album of t as string) & linefeed
+    end repeat
+    return out
+end tell
+"""
+        try:
+            raw = _osa(script)
+        except Exception:
+            return []
+        items = []
+        for line in raw.splitlines():
+            if not line.strip():
+                continue
+            parts = line.split("\x1f")
+            if len(parts) >= 3:
+                items.append({"title": parts[0], "artist": parts[1], "album": parts[2]})
+        return items
+
+    def play_playlist(self, name: str) -> Optional["NowPlaying"]:
+        """Play a playlist by exact name and return now_playing."""
+        import time
+        name_esc = name.replace('"', '\\"')
+        script = f"""
+tell application "Music"
+    set matchedPl to first playlist whose name is "{name_esc}"
+    play matchedPl
+end tell
+"""
+        try:
+            _osa(script)
+        except Exception:
+            return None
+        time.sleep(1.5)
+        return self.now_playing()
+
     def lyrics(self) -> Optional[str]:
         """Static lyrics for the current track via AppleScript. Synced timing
         isn't reliably exposed, so callers should estimate the current line

@@ -212,6 +212,20 @@ def cmd_loved() -> int:
     return _mcp_print("list_loved", {"limit": limit})
 
 
+def cmd_playlists() -> int:
+    """playlists — list all user playlists (user-created + subscription)."""
+    return _mcp_print("list_playlists", {})
+
+
+def cmd_play_playlist() -> int:
+    """play_playlist <name> — play a playlist by name."""
+    name = " ".join(sys.argv[2:]).strip()
+    if not name:
+        print("error: usage: play_playlist <playlist name>")
+        return 2
+    return _mcp_print("play_playlist", {"name": name})
+
+
 def cmd_tips() -> int:
     """tips — show a card of natural-language phrases you can say."""
     return _mcp_print("tips")
@@ -490,6 +504,8 @@ def cmd_help() -> int:
             row("list [n]", "列出资料库所有歌曲（默认100首）"),
             row("loved [n]", "列出喜欢列表（默认50首）"),
             row("search_loved <q>", "在喜欢列表里搜索"),
+            row("playlists", "列出所有歌单"),
+            row("play_playlist <名称>", "播放指定歌单"),
             row("pause / 暂停", "暂停"),
             row("next  / 下一首", "下一首"),
             row("prev  / 上一首", "上一首"),
@@ -531,6 +547,8 @@ def cmd_help() -> int:
             row("list [n]", "List all library tracks (default 100)"),
             row("loved [n]", "List all loved/hearted tracks (default 50)"),
             row("search_loved <q>", "Search within loved tracks only"),
+            row("playlists", "List all playlists (user + subscription)"),
+            row("play_playlist <name>", "Play a playlist by name"),
             row("pause", "Pause playback"),
             row("next", "Skip to next track"),
             row("prev", "Go to previous track"),
@@ -788,6 +806,8 @@ COMMANDS = {
     "list": cmd_list,
     "loved": cmd_loved,
     "search_loved": cmd_search_loved,
+    "playlists": cmd_playlists,
+    "play_playlist": cmd_play_playlist,
     "tips": cmd_tips,
     "能做什么": cmd_tips,
     "帮助": cmd_tips,
@@ -823,6 +843,9 @@ COMMANDS = {
     "喜欢列表": cmd_loved,
     "收藏列表": cmd_loved,
     "搜索喜欢": cmd_search_loved,
+    "歌单": cmd_playlists,
+    "我的歌单": cmd_playlists,
+    "播放歌单": cmd_play_playlist,
     "收藏": cmd_like,
     "歌词": cmd_lyrics,
     "播放器": cmd_player,
