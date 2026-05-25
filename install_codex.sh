@@ -373,19 +373,7 @@ PY
 
   local domain
   domain="gui/$(id -u)"
-  # Skip restart if the server is already responding at the configured URL
-  if "$VENV_PY" - "$host" "$port" 2>/dev/null <<'PY'
-import socket, sys
-try:
-    with socket.create_connection((sys.argv[1], int(sys.argv[2])), timeout=0.5):
-        raise SystemExit(0)
-except OSError:
-    raise SystemExit(1)
-PY
-  then
-    ok "MCP server already running at $MCP_URL"
-    return 0
-  fi
+  # Always restart so newly installed code is picked up.
   launchctl bootout "$domain" "$plist" >/dev/null 2>&1 || true
   if launchctl bootstrap "$domain" "$plist" >/dev/null 2>&1; then
     launchctl kickstart -k "$domain/$label" >/dev/null 2>&1 || true
