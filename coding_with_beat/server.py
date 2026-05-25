@@ -14,7 +14,7 @@ from typing import Optional
 
 from mcp.server.fastmcp import FastMCP
 
-from . import dj, focus, state
+from . import dj, focus, history, state
 from .config import DATA_DIR
 from .lyrics_snapshot import current_text as current_lyrics_text
 from .lyrics_snapshot import track_key
@@ -266,6 +266,7 @@ def _wait_and_play_from_library(src, title: str, artist: str, timeout: int = 15,
 def _refresh_now_playing():
     st = state.load()
     old_key = track_key(st.track.source or st.source, st.track.artist, st.track.album, st.track.title)
+    prev_title = st.track.title
     src = get_source(st.source)
     np = src.now_playing()
     new_key = track_key(np.source or st.source, np.artist, np.album, np.title)
@@ -280,6 +281,8 @@ def _refresh_now_playing():
         if np.source:
             st.track.source = np.source
         if old_key != new_key:
+            if st.source != "apple_music" and prev_title:
+                history.write(np.title, np.artist, np.album)
             st.track.lyrics_key = ""
             st.track.lyrics_text = ""
             st.track.lyrics_pending = False

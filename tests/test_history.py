@@ -161,3 +161,81 @@ def test_play_history_returns_empty_on_applescript_error():
         result = src.play_history()
 
     assert result == []
+
+
+# ── server._refresh_now_playing writes history for non-AM ─────────────────────
+
+def test_refresh_now_playing_writes_history_for_non_am_source(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    from unittest.mock import MagicMock, patch
+
+    monkeypatch.setattr(history, "_LOG_FILE", tmp_path / "history.log")
+    monkeypatch.setattr(history, "ensure_dirs", lambda: None)
+
+    fake_np = SimpleNamespace(
+        title="New Song", artist="Artist", album="Album",
+        duration=180.0, position=0.0, playing=True,
+        artwork_path=None, source="qq_music", unsupported_reason=None,
+    )
+    fake_state = SimpleNamespace(
+        source="qq_music",
+        track=SimpleNamespace(
+            title="Old Song", artist="Old Artist", album="Old Album",
+            duration=200.0, position=0.0, artwork_path=None,
+            source="qq_music", lyrics_key="", lyrics_text="",
+            lyrics_pending=False, position_sampled_at=0.0,
+        ),
+        playing=False,
+    )
+
+    with (
+        patch("coding_with_beat.server.state.load", return_value=fake_state),
+        patch("coding_with_beat.server.state.save"),
+        patch("coding_with_beat.server.get_source") as mock_gs,
+    ):
+        src = MagicMock()
+        src.now_playing.return_value = fake_np
+        mock_gs.return_value = src
+        from coding_with_beat.server import _refresh_now_playing
+        _refresh_now_playing()
+
+    entries = history.read()
+    assert len(entries) == 1
+    assert entries[0]["title"] == "New Song"
+
+
+def test_refresh_now_playing_skips_history_for_apple_music(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    from unittest.mock import MagicMock, patch
+
+    monkeypatch.setattr(history, "_LOG_FILE", tmp_path / "history.log")
+    monkeypatch.setattr(history, "ensure_dirs", lambda: None)
+
+    fake_np = SimpleNamespace(
+        title="New Song", artist="Artist", album="Album",
+        duration=180.0, position=0.0, playing=True,
+        artwork_path=None, source="apple_music", unsupported_reason=None,
+    )
+    fake_state = SimpleNamespace(
+        source="apple_music",
+        track=SimpleNamespace(
+            title="Old Song", artist="Old Artist", album="Old Album",
+            duration=200.0, position=0.0, artwork_path=None,
+            source="apple_music", lyrics_key="", lyrics_text="",
+            lyrics_pending=False, position_sampled_at=0.0,
+        ),
+        playing=False,
+    )
+
+    with (
+        patch("coding_with_beat.server.state.load", return_value=fake_state),
+        patch("coding_with_beat.server.state.save"),
+        patch("coding_with_beat.server.get_source") as mock_gs,
+    ):
+        src = MagicMock()
+        src.now_playing.return_value = fake_np
+        mock_gs.return_value = src
+        from coding_with_beat.server import _refresh_now_playing
+        _refresh_now_playing()
+
+    assert not (tmp_path / "history.log").exists()
