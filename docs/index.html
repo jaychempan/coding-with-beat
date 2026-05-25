@@ -71,6 +71,9 @@
     .nav-right { display: flex; align-items: center; gap: 14px; }
     .gh-link { color: var(--dim); font-size: 12px; transition: color .2s; }
     .gh-link:hover { color: var(--text); }
+    .nav-paper { color: var(--dim); font-size: 12px; transition: color .2s; display: flex; align-items: center; gap: 4px; }
+    .nav-paper:hover { color: var(--purple-lt); }
+    .nav-paper-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; }
     .nav-survey {
       font-family: 'JetBrains Mono', monospace;
       font-size: 11px; font-weight: 600; letter-spacing: .04em;
@@ -485,6 +488,7 @@
       .nav-right { gap: 8px; }
       .gh-link { font-size: 11px; }
       .gh-link .gh-label { display: none; }
+      .nav-paper-label { display: none; }
       .nav-survey { font-size: 10px; padding: 4px 8px; }
       .nav-survey .survey-label { display: none; }
       .hero-title { font-size: 34px; }
@@ -512,6 +516,10 @@
   <div class="nav-right">
     <a class="gh-link" href="https://github.com/jaychempan/coding-with-beat" target="_blank" rel="noopener">
       <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" style="vertical-align:middle;margin-right:4px"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg><span class="gh-label">GitHub</span>
+    </a>
+    <a class="nav-paper" href="#" title="Technical Report — coming soon">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M4 0a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V5.5L9.5 0H4zm5 1v4h4L9 1zM4 7h8v1H4V7zm0 2h8v1H4V9zm0 2h5v1H4v-1z"/></svg>
+      <span class="nav-paper-label" data-i18n="nav-paper">Paper</span>
     </a>
     <a class="nav-survey" href="#survey">
       <span class="survey-label" data-i18n="nav-survey">User Survey</span><span>✦</span>
@@ -908,6 +916,7 @@
       'stag3': '💬 Companion Mode', 'stag4': '⭐ Overall Rating',
       'survey-btn':  'Take the Survey →',
       'survey-meta': '~8 min · Anonymous · 37 questions',
+      'nav-paper':   'Paper',
       'nav-survey':  'User Survey ✦',
       'footer-t1':     'Your workflow. Your vibe.',
       'footer-t2':     'Your beat.',
@@ -963,6 +972,7 @@
       'stag3': '💬 陪伴模式', 'stag4': '⭐ 整体评价',
       'survey-btn':  '填写问卷 →',
       'survey-meta': '约 8 分钟 · 匿名 · 37 题',
+      'nav-paper':   '论文',
       'nav-survey':  '用户问卷 ✦',
       'footer-t1':     '你的工作流，你的氛围，',
       'footer-t2':     '你的节拍',
