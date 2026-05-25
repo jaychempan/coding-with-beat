@@ -103,8 +103,11 @@ When user says: 播放XXX歌单 / XXX的歌单 / 放XXX / XXX代表作 / XXX Ess
 
 ## Tips / 帮助
 
-When user says: DJ 能做什么 / DJ Buddy 能做什么 / DJ 有什么指令 / DJ 怎么用 / ask DJ / DJ help / what can DJ do
-→ call `tips()`
+When user says: DJ 能做什么 / DJ Buddy 能做什么 / DJ 有什么指令 / DJ 怎么用
+→ call `tips(lang="zh")`
+
+When user says: ask DJ / DJ help / what can DJ do / what can you do
+→ call `tips(lang="en")`
 
 ## play_number recovery — index out of bounds
 
