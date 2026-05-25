@@ -116,6 +116,8 @@ play some lofi
 skip this track
 what's playing
 pause
+recommend something based on my history
+show my recently played tracks
 ```
 
 ### `/cwb` command
@@ -142,6 +144,16 @@ pause
 ```
 
 Natural-language commands work too: `skip this track`, `pause`, `what's playing`, and `like this` are all valid.
+
+### Play history & recommendations
+
+```
+show my recently played tracks          # list_history — reads Apple Music's native play log
+recommend something based on my history # history_search — analyzes your patterns, suggests new tracks
+基于我的历史推荐一些歌曲                   # same, in Chinese
+```
+
+`history_search` looks at your top artists, listening style, and tracks you haven't heard in a while, then runs a smart multi-angle search. Pick a number to play.
 
 ### `watch` / `karaoke` shortcuts
 
