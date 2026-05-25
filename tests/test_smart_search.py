@@ -15,15 +15,15 @@ def _run(coro):
 
 
 def test_source_tag_loved():
-    assert _source_tag("loved") == " [♥ 喜欢]"
+    assert _source_tag("loved") == " [♥ Loved]"
 
 
 def test_source_tag_library():
-    assert _source_tag("library") == " [资料库]"
+    assert _source_tag("library") == " [Library]"
 
 
 def test_source_tag_local():
-    assert _source_tag("local") == " [本地]"
+    assert _source_tag("local") == " [Local]"
 
 
 def test_source_tag_apple_music():
@@ -73,11 +73,11 @@ def test_smart_search_annotates_sources(mock_gs, mock_state, mock_wqf, mock_wam)
     result = _run(server.smart_search("something chill for late night coding"))
 
     assert "雨的印记" in result
-    assert "[资料库]" in result
+    assert "[Library]" in result
     assert "Quiet Library" in result
     assert "[Apple Music]" in result
     assert "lofi study" in result
-    assert "[本地]" in result
+    assert "[Local]" in result
 
 
 @mock.patch("coding_with_beat.server._write_active_mode")
@@ -336,8 +336,8 @@ def test_smart_search_loved_ranked_first_and_tagged(mock_gs, mock_state, mock_wq
 
     lines = [line for line in result.splitlines() if line.startswith(("1.", "2.", "3."))]
     assert lines[0].startswith("1.") and "Loved Song" in lines[0]
-    assert "[♥ 喜欢]" in lines[0]
-    assert "[资料库]" in lines[1]
+    assert "[♥ Loved]" in lines[0]
+    assert "[Library]" in lines[1]
     assert "[Apple Music]" in lines[2]
 
 
@@ -357,7 +357,7 @@ def test_list_loved_returns_numbered_loved_tracks(mock_gs, mock_state, mock_wqf,
     result = _run(server.list_loved())
 
     assert "1. Heart Song" in result
-    assert "[♥ 喜欢]" in result
+    assert "[♥ Loved]" in result
     assert "2. Fave Track" in result
 
 
@@ -376,7 +376,7 @@ def test_search_loved_returns_numbered_results(mock_gs, mock_state, mock_wqf, mo
     result = _run(server.search_loved("rain"))
 
     assert "1. Rain Song" in result
-    assert "[♥ 喜欢]" in result
+    assert "[♥ Loved]" in result
     src.search_loved.assert_called_once_with("rain", 8)
 
 
