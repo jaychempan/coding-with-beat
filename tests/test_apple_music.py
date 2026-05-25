@@ -162,10 +162,7 @@ class AppleMusicLovedSearchTest(unittest.TestCase):
     def test_search_marks_loved_tracks(self):
         """search() sets source='loved' for loved tracks, 'library' for others."""
         SEP = "\x1f"
-        raw = (
-            f"Loved Song{SEP}Artist A{SEP}Album X{SEP}true\n"
-            f"Normal Song{SEP}Artist B{SEP}Album Y{SEP}false\n"
-        )
+        raw = f"Loved Song{SEP}Artist A{SEP}Album X{SEP}true\nNormal Song{SEP}Artist B{SEP}Album Y{SEP}false\n"
         with mock.patch.object(am, "_osa", return_value=raw):
             with mock.patch.object(am, "_search_catalog_api", return_value=[]):
                 results = AppleMusic().search("song", limit=8)
@@ -178,10 +175,7 @@ class AppleMusicLovedSearchTest(unittest.TestCase):
 class AppleMusicListLovedTest(unittest.TestCase):
     def test_list_loved_returns_loved_tracks(self):
         SEP = "\x1f"
-        raw = (
-            f"Heart Song{SEP}DJ A{SEP}Vol 1\n"
-            f"Fave Track{SEP}DJ B{SEP}Vol 2\n"
-        )
+        raw = f"Heart Song{SEP}DJ A{SEP}Vol 1\nFave Track{SEP}DJ B{SEP}Vol 2\n"
         with mock.patch.object(am, "_osa", return_value=raw):
             results = AppleMusic().list_loved(limit=10)
         self.assertEqual(len(results), 2)
