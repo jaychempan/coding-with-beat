@@ -451,6 +451,43 @@
       .survey-left { display: none; }
     }
 
+    /* ── CHANGELOG ── */
+    .changelog-wrap { max-width: 860px; margin: 0 auto 72px; padding: 0 28px; }
+    .changelog-list { display: flex; flex-direction: column; gap: 0; position: relative; }
+    .changelog-list::before {
+      content: ''; position: absolute; left: 56px; top: 8px; bottom: 8px; width: 1px;
+      background: linear-gradient(to bottom, var(--purple-border), transparent);
+    }
+    .cl-entry { display: flex; gap: 20px; align-items: flex-start; padding: 14px 0; }
+    .cl-entry:not(:last-child) { border-bottom: 1px solid rgba(255,255,255,.04); }
+    .cl-left { flex-shrink: 0; width: 36px; display: flex; flex-direction: column; align-items: center; gap: 4px; padding-top: 2px; }
+    .cl-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--purple); border: 2px solid var(--bg);
+      box-shadow: 0 0 6px rgba(139,92,246,.5); flex-shrink: 0; margin-top: 4px;
+    }
+    .cl-entry.is-latest .cl-dot { background: var(--green); box-shadow: 0 0 8px rgba(155,188,15,.6); }
+    .cl-date { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--dim); white-space: nowrap; writing-mode: vertical-rl; transform: rotate(180deg); line-height: 1; padding: 6px 0; }
+    .cl-body { flex: 1; min-width: 0; }
+    .cl-header { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 5px; }
+    .cl-version {
+      font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700;
+      color: var(--purple-lt); background: var(--purple-bg);
+      border: 1px solid var(--purple-border); padding: 2px 8px; border-radius: 4px; flex-shrink: 0;
+    }
+    .cl-entry.is-latest .cl-version { color: var(--green); background: rgba(155,188,15,.1); border-color: rgba(155,188,15,.3); }
+    .cl-title { font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; color: var(--bright); }
+    .cl-latest-tag {
+      font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700; letter-spacing: .06em;
+      color: var(--green); background: rgba(155,188,15,.12); border: 1px solid rgba(155,188,15,.3);
+      padding: 1px 6px; border-radius: 3px; text-transform: uppercase;
+    }
+    .cl-bullets { list-style: none; display: flex; flex-direction: column; gap: 2px; }
+    .cl-bullets li { font-family: 'Inter', sans-serif; font-size: 12px; color: var(--dim); line-height: 1.5; padding-left: 12px; position: relative; }
+    .cl-bullets li::before { content: '·'; position: absolute; left: 2px; color: var(--purple); }
+    .cl-gh-link { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--dim); text-decoration: none; transition: color .2s; }
+    .cl-gh-link:hover { color: var(--purple-lt); }
+
     /* ── FOOTER BAR ── */
     .footer-bar {
       border-top: 1px solid var(--purple-border);
@@ -868,6 +905,159 @@
   </div>
 </div>
 
+<!-- CHANGELOG -->
+<div class="changelog-wrap">
+  <p class="section-head" data-i18n="cl-head">changelog</p>
+  <div class="changelog-list">
+
+    <div class="cl-entry is-latest">
+      <div class="cl-left"><div class="cl-dot"></div><span class="cl-date">2026-05-25</span></div>
+      <div class="cl-body">
+        <div class="cl-header">
+          <span class="cl-version">v0.3.7</span>
+          <span class="cl-title" data-i18n="cl37t">Play History &amp; Recommendations</span>
+          <span class="cl-latest-tag" data-i18n="cl-latest">latest</span>
+        </div>
+        <ul class="cl-bullets">
+          <li data-i18n="cl37-1">list_history — reads Apple Music native play log (played date + count), covers iPhone listening</li>
+          <li data-i18n="cl37-2">history_search — analyzes top artists, style tags, unheard candidates → smart recommendations</li>
+          <li data-i18n="cl37-3">history.py module with write / read / summarize and keyword-based style inference</li>
+        </ul>
+        <a class="cl-gh-link" href="https://github.com/jaychempan/coding-with-beat/releases/tag/v0.3.7" target="_blank" rel="noopener">release notes ↗</a>
+      </div>
+    </div>
+
+    <div class="cl-entry">
+      <div class="cl-left"><div class="cl-dot"></div><span class="cl-date">2026-05-24</span></div>
+      <div class="cl-body">
+        <div class="cl-header">
+          <span class="cl-version">v0.3.6</span>
+          <span class="cl-title" data-i18n="cl36t">Loved Tracks &amp; User Survey</span>
+        </div>
+        <ul class="cl-bullets">
+          <li data-i18n="cl36-1">list_loved and search_loved MCP tools — access Apple Music liked songs from Claude Code</li>
+          <li data-i18n="cl36-2">companion_check prioritises loved picks before falling back to search results</li>
+          <li data-i18n="cl36-3">User survey added to website for feedback collection</li>
+        </ul>
+        <a class="cl-gh-link" href="https://github.com/jaychempan/coding-with-beat/releases/tag/v0.3.6" target="_blank" rel="noopener">release notes ↗</a>
+      </div>
+    </div>
+
+    <div class="cl-entry">
+      <div class="cl-left"><div class="cl-dot"></div><span class="cl-date">2026-05-24</span></div>
+      <div class="cl-body">
+        <div class="cl-header">
+          <span class="cl-version">v0.3.5</span>
+          <span class="cl-title" data-i18n="cl35t">DJ Buddy Companion Mode</span>
+        </div>
+        <ul class="cl-bullets">
+          <li data-i18n="cl35-1">companion_check MCP tool — proactive check-ins at session start/end, debug struggles, victories</li>
+          <li data-i18n="cl35-2">Failure streak tracking: 3+ consecutive test failures triggers music suggestion</li>
+          <li data-i18n="cl35-3">Companion card transitions prefixed with 🎶 DJ Buddy branding</li>
+        </ul>
+        <a class="cl-gh-link" href="https://github.com/jaychempan/coding-with-beat/releases/tag/v0.3.5" target="_blank" rel="noopener">release notes ↗</a>
+      </div>
+    </div>
+
+    <div class="cl-entry">
+      <div class="cl-left"><div class="cl-dot"></div><span class="cl-date">2026-05-24</span></div>
+      <div class="cl-body">
+        <div class="cl-header">
+          <span class="cl-version">v0.3.0</span>
+          <span class="cl-title" data-i18n="cl30t">Smart Search &amp; Skills Auto-Install</span>
+        </div>
+        <ul class="cl-bullets">
+          <li data-i18n="cl30-1">smart_search accepts queries=[] — 2–3 angles in one call, globally numbered results</li>
+          <li data-i18n="cl30-2">/cwb skill auto-registered: mood → smart search, artist → catalog, "play 3" → play_number</li>
+          <li data-i18n="cl30-3">Playlist support: list_playlists and play_playlist MCP tools</li>
+        </ul>
+        <a class="cl-gh-link" href="https://github.com/jaychempan/coding-with-beat/releases/tag/v0.3.0" target="_blank" rel="noopener">release notes ↗</a>
+      </div>
+    </div>
+
+    <div class="cl-entry">
+      <div class="cl-left"><div class="cl-dot"></div><span class="cl-date">2026-05-23</span></div>
+      <div class="cl-body">
+        <div class="cl-header">
+          <span class="cl-version">v0.2.5</span>
+          <span class="cl-title" data-i18n="cl25t">Dual-Queue System &amp; Auto-Advance</span>
+        </div>
+        <ul class="cl-bullets">
+          <li data-i18n="cl25-1">Separate library_queue / search_queue — next/prev navigate the active queue</li>
+          <li data-i18n="cl25-2">Auto-advance plays next track when current ends naturally</li>
+          <li data-i18n="cl25-3">play_number resolves against the most recently loaded queue</li>
+        </ul>
+        <a class="cl-gh-link" href="https://github.com/jaychempan/coding-with-beat/releases/tag/v0.2.5" target="_blank" rel="noopener">release notes ↗</a>
+      </div>
+    </div>
+
+    <div class="cl-entry">
+      <div class="cl-left"><div class="cl-dot"></div><span class="cl-date">2026-05-23</span></div>
+      <div class="cl-body">
+        <div class="cl-header">
+          <span class="cl-version">v0.2.0</span>
+          <span class="cl-title" data-i18n="cl20t">Codex CLI Support</span>
+        </div>
+        <ul class="cl-bullets">
+          <li data-i18n="cl20-1">install_codex.sh — one-click installer for Codex CLI with MCP, hooks, and skill</li>
+          <li data-i18n="cl20-2">SSH remote mode: Apple Music on Mac, AI CLI on server via tunnel</li>
+          <li data-i18n="cl20-3">Focus mode: 25/5 Pomodoro timer in the statusline</li>
+        </ul>
+        <a class="cl-gh-link" href="https://github.com/jaychempan/coding-with-beat/releases/tag/v0.2.0" target="_blank" rel="noopener">release notes ↗</a>
+      </div>
+    </div>
+
+    <div class="cl-entry">
+      <div class="cl-left"><div class="cl-dot"></div><span class="cl-date">2026-05-22</span></div>
+      <div class="cl-body">
+        <div class="cl-header">
+          <span class="cl-version">v0.1.2</span>
+          <span class="cl-title" data-i18n="cl12t">Pixel DJ Animation Upgrade</span>
+        </div>
+        <ul class="cl-bullets">
+          <li data-i18n="cl12-1">Dual sine-wave locomotion — DJ walks with two incommensurable frequencies</li>
+          <li data-i18n="cl12-2">Vibe engine hooks: git commit → victory pose, test failure → panic mode</li>
+        </ul>
+        <a class="cl-gh-link" href="https://github.com/jaychempan/coding-with-beat/releases/tag/v0.1.2" target="_blank" rel="noopener">release notes ↗</a>
+      </div>
+    </div>
+
+    <div class="cl-entry">
+      <div class="cl-left"><div class="cl-dot"></div><span class="cl-date">2026-05-22</span></div>
+      <div class="cl-body">
+        <div class="cl-header">
+          <span class="cl-version">v0.1.1</span>
+          <span class="cl-title" data-i18n="cl11t">Search, List &amp; play_number</span>
+        </div>
+        <ul class="cl-bullets">
+          <li data-i18n="cl11-1">cwb search &lt;query&gt; — numbered results from library + Apple Music catalog</li>
+          <li data-i18n="cl11-2">cwb play &lt;n&gt; and cwb list commands added</li>
+        </ul>
+        <a class="cl-gh-link" href="https://github.com/jaychempan/coding-with-beat/releases/tag/v0.1.1" target="_blank" rel="noopener">release notes ↗</a>
+      </div>
+    </div>
+
+    <div class="cl-entry">
+      <div class="cl-left"><div class="cl-dot"></div><span class="cl-date">2026-05-21</span></div>
+      <div class="cl-body">
+        <div class="cl-header">
+          <span class="cl-version">v0.1.0</span>
+          <span class="cl-title" data-i18n="cl10t">Initial Release</span>
+        </div>
+        <ul class="cl-bullets">
+          <li data-i18n="cl10-1">MCP server with 21 tools — play, pause, skip, search, like via natural language</li>
+          <li data-i18n="cl10-2">Pixel DJ Buddy with ANSI art, album covers, pseudo-spectrum equalizer</li>
+          <li data-i18n="cl10-3">Apple Music AppleScript integration, local afplay, QQ Music 30s preview</li>
+        </ul>
+        <a class="cl-gh-link" href="https://github.com/jaychempan/coding-with-beat/releases/tag/v0.1.0" target="_blank" rel="noopener">release notes ↗</a>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<hr class="divider">
+
 <!-- FOOTER BAR -->
 <div class="footer-bar">
   <div class="footer-tagline">
@@ -947,6 +1137,41 @@
       'links-head': 'related projects',
       'link-ccf': 'Academic deadline tracker for CCF conferences.',
       'link-cit': 'Monitor citation counts for your papers in real time.',
+      'cl-head': 'changelog', 'cl-latest': 'latest',
+      cl37t: 'Play History & Recommendations',
+      'cl37-1': 'list_history — reads Apple Music native play log (played date + count), covers iPhone listening',
+      'cl37-2': 'history_search — analyzes top artists, style tags, unheard candidates → smart recommendations',
+      'cl37-3': 'history.py module with write / read / summarize and keyword-based style inference',
+      cl36t: 'Loved Tracks & User Survey',
+      'cl36-1': 'list_loved and search_loved MCP tools — access Apple Music liked songs from Claude Code',
+      'cl36-2': 'companion_check prioritises loved picks before falling back to search results',
+      'cl36-3': 'User survey added to website for feedback collection',
+      cl35t: 'DJ Buddy Companion Mode',
+      'cl35-1': 'companion_check MCP tool — proactive check-ins at session start/end, debug struggles, victories',
+      'cl35-2': 'Failure streak tracking: 3+ consecutive test failures triggers music suggestion',
+      'cl35-3': 'Companion card transitions prefixed with 🎶 DJ Buddy branding',
+      cl30t: 'Smart Search & Skills Auto-Install',
+      'cl30-1': 'smart_search accepts queries=[] — 2–3 angles in one call, globally numbered results',
+      'cl30-2': '/cwb skill auto-registered: mood → smart search, artist → catalog, "play 3" → play_number',
+      'cl30-3': 'Playlist support: list_playlists and play_playlist MCP tools',
+      cl25t: 'Dual-Queue System & Auto-Advance',
+      'cl25-1': 'Separate library_queue / search_queue — next/prev navigate the active queue',
+      'cl25-2': 'Auto-advance plays next track when current ends naturally',
+      'cl25-3': 'play_number resolves against the most recently loaded queue',
+      cl20t: 'Codex CLI Support',
+      'cl20-1': 'install_codex.sh — one-click installer for Codex CLI with MCP, hooks, and skill',
+      'cl20-2': 'SSH remote mode: Apple Music on Mac, AI CLI on server via tunnel',
+      'cl20-3': 'Focus mode: 25/5 Pomodoro timer in the statusline',
+      cl12t: 'Pixel DJ Animation Upgrade',
+      'cl12-1': 'Dual sine-wave locomotion — DJ walks with two incommensurable frequencies',
+      'cl12-2': 'Vibe engine hooks: git commit → victory pose, test failure → panic mode',
+      cl11t: 'Search, List & play_number',
+      'cl11-1': 'cwb search <query> — numbered results from library + Apple Music catalog',
+      'cl11-2': 'cwb play <n> and cwb list commands added',
+      cl10t: 'Initial Release',
+      'cl10-1': 'MCP server with 21 tools — play, pause, skip, search, like via natural language',
+      'cl10-2': 'Pixel DJ Buddy with ANSI art, album covers, pseudo-spectrum equalizer',
+      'cl10-3': 'Apple Music AppleScript integration, local afplay, QQ Music 30s preview',
       'survey-head':  'user research',
       'survey-title': 'Help Us Improve CWB',
       'survey-desc':  'Share your experience with DJ Buddy — how music matches your coding mood, whether the companion check-ins feel helpful, and what you\'d love to see next.',
@@ -1007,6 +1232,41 @@
       'links-head': '友情链接',
       'link-ccf': 'CCF 会议截稿日期追踪器',
       'link-cit': '实时监控论文引用数量',
+      'cl-head': '更新日志', 'cl-latest': '最新',
+      cl37t: '播放历史与推荐',
+      'cl37-1': 'list_history — 读取 Apple Music 原生播放记录（播放日期 + 次数），含 iPhone 收听记录',
+      'cl37-2': 'history_search — 分析常听艺人、风格标签、许久未听曲目，生成智能推荐',
+      'cl37-3': 'history.py 模块，提供 write / read / summarize，支持关键词风格推断',
+      cl36t: '收藏曲目 & 用户调研',
+      'cl36-1': 'list_loved 和 search_loved MCP 工具——在 Claude Code 中访问 Apple Music 喜欢列表',
+      'cl36-2': 'companion_check 优先推荐收藏曲目，再回退到搜索结果',
+      'cl36-3': '网页新增用户调研问卷',
+      cl35t: 'DJ Buddy 陪伴模式',
+      'cl35-1': 'companion_check MCP 工具——在会话开始/结束、调试挣扎、测试通过等关键时刻主动签到',
+      'cl35-2': '连续失败追踪：3 次以上测试失败自动触发音乐建议',
+      'cl35-3': '陪伴卡片过渡加入 🎶 DJ Buddy 署名',
+      cl30t: '智能搜索 & Skill 自动安装',
+      'cl30-1': 'smart_search 支持 queries=[]——一次调用传入 2–3 个角度，结果全局编号',
+      'cl30-2': '/cwb skill 自动注册：心情 → 智能搜索，艺人 → 曲库，"播放3" → play_number',
+      'cl30-3': '歌单支持：list_playlists 和 play_playlist MCP 工具',
+      cl25t: '双队列系统 & 自动切曲',
+      'cl25-1': '独立 library_queue / search_queue，next/prev 在当前活跃队列中导航',
+      'cl25-2': '当前曲目自然结束时自动播放下一首',
+      'cl25-3': 'play_number 基于最近加载的队列解析编号',
+      cl20t: 'Codex CLI 支持',
+      'cl20-1': 'install_codex.sh——一键安装 Codex CLI，自动配置 MCP、hooks 和 skill',
+      'cl20-2': 'SSH 远程模式：Mac 本地 Apple Music，服务器端 AI CLI 通过隧道控制',
+      'cl20-3': '专注模式：状态栏显示 25/5 番茄计时器',
+      cl12t: '像素 DJ 动画升级',
+      'cl12-1': '双正弦波运动——DJ 以两个不可公约频率行走',
+      'cl12-2': 'Vibe 引擎 hooks：git commit → 胜利姿势，测试失败 → 恐慌模式',
+      cl11t: '搜索、列表 & play_number',
+      'cl11-1': 'cwb search <query>——从曲库 + Apple Music 目录返回编号结果',
+      'cl11-2': '新增 cwb play <n> 和 cwb list 命令',
+      cl10t: '初始版本发布',
+      'cl10-1': 'MCP 服务器提供 21 个工具——通过自然语言播放、暂停、跳过、搜索、收藏',
+      'cl10-2': '像素 DJ Buddy，支持 ANSI 封面艺术与伪频谱均衡器',
+      'cl10-3': 'Apple Music AppleScript 集成，本地 afplay，QQ 音乐 30 秒试听',
       'survey-head':  '用户调研',
       'survey-title': '帮我们改进 CWB',
       'survey-desc':  '分享你与 DJ Buddy 的相处体验——音乐是否契合你的编码情绪、陪伴签到是否自然、以及你最想看到的改进。',
