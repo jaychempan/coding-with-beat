@@ -7,7 +7,7 @@
 ![Platform](https://img.shields.io/badge/platform-macOS-000000?style=flat-square&logo=apple&logoColor=white)
 ![Claude Code](https://img.shields.io/badge/Claude_Code-compatible-c85f41?style=flat-square)
 ![Codex CLI](https://img.shields.io/badge/Codex_CLI-compatible-10a37f?style=flat-square)
-![MCP](https://img.shields.io/badge/MCP-34_tools-7c5cbf?style=flat-square)
+![MCP](https://img.shields.io/badge/MCP-38_tools-7c5cbf?style=flat-square)
 ![Apple Music](https://img.shields.io/badge/Apple_Music-supported-FC3C44?style=flat-square)
 ![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)
 [![Website](https://img.shields.io/badge/website-codebeat.top-9bbc0f?style=flat-square)](https://codebeat.top)
@@ -33,7 +33,7 @@ A retro pixel DJ companion for Claude Code / Codex CLI / Terminal. It plays musi
 
 ## Features
 
-- **MCP server** — 34 tools so you can tell your AI "play some lofi", "skip this", "what's playing" and it just works.
+- **MCP server** — 38 tools so you can tell your AI "play some lofi", "skip this", "what's playing" and it just works.
 - **`/cwb` skill** — Auto-registered routing brain: mood/vibe → multi-angle smart search, specific song/artist → catalog lookup, "play 3" → `play_number`. The AI always calls the right tool.
 
   | Scene | Say… |
@@ -49,6 +49,8 @@ A retro pixel DJ companion for Claude Code / Codex CLI / Terminal. It plays musi
   | 🎉 Party | party · edm · 蹦迪 |
   | 🏮 Chinese | 国风 · 华语 · 古风 |
   | 🌙 Sleep | 助眠 · sleep · 白噪音 |
+- **Playlists** — List and play your Apple Music playlists (user-created + subscription) directly from the AI: "我有哪些歌单" → numbered list → "播放周杰伦代表作". Queue syncs to `cwb watch` automatically.
+- **Play history** — `cwb history` / `list_history` shows your recently played tracks sourced from Apple Music's native played date. `history_search` recommends new music based on your listening patterns.
 - **Music sources** — Apple Music (AppleScript, no GUI needed), local files (afplay), QQ Music (search + preview).
 - **Pixel UI** — Album art in half-block ANSI, GameBoy retro border, pseudo-spectrum equalizer.
 - **DJ Buddy** — A headphones-wearing pixel character that reacts to your coding state. Tests failing? It panics with you.
@@ -124,6 +126,10 @@ pause
 /cwb search "lofi beats"  # search library + Apple Music, show numbered list
 /cwb play 2               # play track #2 from last search / list results
 /cwb list                 # list all library tracks
+/cwb loved                # list loved/hearted tracks
+/cwb playlists            # list all playlists (user + subscription)
+/cwb play_playlist <name> # play a playlist by name
+/cwb history [n]          # recently played tracks
 /cwb next
 /cwb pause
 /cwb np                   # now playing
@@ -258,6 +264,9 @@ cwb play [query]        # search and play, or resume
 cwb play <n>            # play track #n from last search or list results
 cwb search <query>      # search library + Apple Music catalog (numbered list)
 cwb list [n]            # list all library tracks (default 100)
+cwb loved [n]           # list loved/hearted tracks (default 50)
+cwb playlists           # list all playlists (user + subscription)
+cwb play_playlist <name> # play a playlist by name
 cwb pause               # pause
 cwb next                # next track
 cwb prev                # previous track
@@ -292,6 +301,8 @@ cwb server              # MCP streamable HTTP server
 | Cover art | ✓ | ✓ | ✓ |
 | Full playback | ✓ subscription req. | ✓ | ✗ 30 s preview |
 | Play modes | ✓ | ✗ | ✓ |
+| Playlists | ✓ | ✗ | ✗ |
+| Play history | ✓ native | ✓ log-based | ✓ log-based |
 
 > QQ Music has no official API. Search metadata comes from public endpoints; audio is played as 30-second preview clips via afplay. Full tracks require the QQ Music desktop app.
 
