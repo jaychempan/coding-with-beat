@@ -678,6 +678,61 @@ async def list_history(limit: int = 20) -> str:
 
 
 @mcp.tool()
+async def history_search() -> str:
+    """Recommend music based on your play history.
+    Analyses what you've been listening to and suggests:
+    - More of the same style/artist
+    - Artists you haven't heard in a while
+    Results are numbered — use play_number() to play."""
+    import asyncio as _asyncio
+
+    st = state.load()
+    if st.source == "apple_music":
+        src = get_source("apple_music")
+        fn = getattr(src, "play_history", None)
+        if not callable(fn):
+            return "(history_search not supported for this Apple Music version)"
+        tracks = await _asyncio.to_thread(fn, 90, 100)
+    else:
+        tracks = history.read(limit=100)
+
+    if not tracks:
+        return "(还没有播放历史，多听一会儿再来试试吧 🎵)"
+
+    summary = history.summarize(tracks, window_days=14)
+    top_artists = summary["top_artists"]
+    style_tags = summary["style_tags"]
+    unheard = summary["unheard_candidates"]
+
+    queries: list[str] = []
+
+    # Angle 1: style tags from recent listening
+    if style_tags:
+        queries.append(" ".join(style_tags[:2]) + " instrumental")
+    elif top_artists:
+        queries.append(f"{top_artists[0][0]} 风格 类似推荐")
+
+    # Angle 2: similar to top artist
+    if top_artists:
+        queries.append(f"{top_artists[0][0]} 类似 推荐")
+
+    # Angle 3: artists not heard recently
+    if unheard:
+        unheard_artists = [
+            t.get("artist", "")
+            for t in unheard[:2]
+            if t.get("artist") and t.get("artist") != "?"
+        ]
+        if unheard_artists:
+            queries.append(" ".join(unheard_artists) + " 经典")
+
+    if not queries:
+        return "(历史数据不足，多听几首再试试吧)"
+
+    return await _multi_angle_search(queries, label="History · 为你推荐")
+
+
+@mcp.tool()
 async def list_loved(limit: int = 50) -> str:
     """List all loved/hearted tracks in the current source's library.
     Returns a numbered list tagged [♥ 喜欢]. Use play_number() to play."""

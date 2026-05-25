@@ -305,3 +305,57 @@ def test_list_history_non_am_reads_log(tmp_path, monkeypatch):
         result = asyncio.run(list_history())
 
     assert "Log Track" in result
+
+
+# ── history_search MCP tool ───────────────────────────────────────────────────
+
+def test_history_search_builds_queries_from_history():
+    import asyncio
+    import datetime
+    from types import SimpleNamespace
+    from unittest.mock import MagicMock, patch
+
+    recent_tracks = [
+        {"title": "Nocturne Op.9", "artist": "Chopin", "album": "Nocturnes", "ts": datetime.datetime.now()},
+        {"title": "Gymnopédie", "artist": "Satie", "album": "Classical Piano", "ts": datetime.datetime.now()},
+    ]
+
+    captured_queries: list = []
+
+    async def _fake_multi_angle(queries, **kwargs):
+        captured_queries.extend(queries)
+        return "1. Result Track — Artist"
+
+    with (
+        patch("coding_with_beat.server.state.load",
+              return_value=SimpleNamespace(source="apple_music")),
+        patch("coding_with_beat.server.get_source") as mock_gs,
+        patch("coding_with_beat.server._multi_angle_search", side_effect=_fake_multi_angle),
+    ):
+        src = MagicMock()
+        src.play_history.return_value = recent_tracks
+        mock_gs.return_value = src
+        from coding_with_beat.server import history_search
+        asyncio.run(history_search())
+
+    assert len(captured_queries) >= 1
+    assert any("classical" in q.lower() or "piano" in q.lower() for q in captured_queries)
+
+
+def test_history_search_empty_history_returns_message():
+    import asyncio
+    from types import SimpleNamespace
+    from unittest.mock import MagicMock, patch
+
+    with (
+        patch("coding_with_beat.server.state.load",
+              return_value=SimpleNamespace(source="apple_music")),
+        patch("coding_with_beat.server.get_source") as mock_gs,
+    ):
+        src = MagicMock()
+        src.play_history.return_value = []
+        mock_gs.return_value = src
+        from coding_with_beat.server import history_search
+        result = asyncio.run(history_search())
+
+    assert "还没有" in result
