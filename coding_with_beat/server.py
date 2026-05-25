@@ -1371,43 +1371,76 @@ def session_intro() -> str:
     return "\n".join(parts)
 
 
-@mcp.tool()
-def tips() -> str:
-    """Return a card of natural-language phrases the user can say to control music."""
-    return """\
-🎵 What you can say / 你可以对我说：
+_TIPS_EN = """\
+🎵 What you can say:
 
-▸ Mood / 按心情找歌
-  · "play some late-night lofi" / 「来首深夜写代码的」
-  · "focus music, no lyrics" / 「放点专注的背景音乐」
+▸ Mood
+  · "play some late-night lofi"
+  · "focus music, no lyrics"
   · "jazz / lofi / classical / synthwave"
-  · "I want to relax" / 「我想放松一下」
+  · "I want to relax"
 
-▸ Playlists / 歌单
-  · "show my playlists" / 「我有哪些歌单」
-  · "play the Jay Chou playlist" / 「播放周杰伦代表作」
+▸ Playlists
+  · "show my playlists"
+  · "play the Jay Chou playlist"
 
-▸ Loved tracks / 喜欢的歌
-  · "show loved tracks" / 「喜欢列表」
-  · "search Jay Chou in loved" / 「从喜欢里找周杰伦」
-  · "like this" / 「我喜欢这首」
+▸ Loved tracks
+  · "show loved tracks" · "like this"
+  · "search Jay Chou in loved"
 
-▸ History & recommendations / 历史与推荐
-  · "show my recently played" / 「最近播放」
-  · "recommend based on my history" / 「根据我的历史推荐」
+▸ History & recommendations
+  · "show my recently played"
+  · "recommend based on my history"
 
-▸ Playback / 播放控制
-  · "next" "pause" "resume" / 「下一首」「暂停」「继续」
-  · "louder" "quieter" / 「大声一点」「小声一点」
-  · "play #3" / 「播放第3首」
+▸ Playback
+  · "next" · "pause" · "resume"
+  · "louder" · "quieter" · "play #3"
 
-▸ Status / 查看状态
-  · "what's playing" / 「现在播的是什么」
-  · "show player" / 「显示播放器」
+▸ Status
+  · "what's playing" · "show player"
 
-💡 Run 'cwb watch' in another terminal for a live player with lyrics and progress.
-💡 Apple Music tracks: if a popup appears, click 'Add to Library', then say 'play it' again.
+💡 Run 'cwb watch' in another terminal for live lyrics & progress.
+💡 Apple Music: if a popup appears, click 'Add to Library', then say 'play it' again.
 """
+
+_TIPS_ZH = """\
+🎵 你可以对我说：
+
+▸ 按心情找歌
+  · 「来首深夜写代码的」
+  · 「放点专注的背景音乐」
+  · 「来点爵士/lofi/古典/电子」
+  · 「我想放松一下」
+
+▸ 歌单
+  · 「我有哪些歌单」
+  · 「播放周杰伦代表作」
+
+▸ 喜欢的歌
+  · 「喜欢列表」·「我喜欢这首」
+  · 「从喜欢里找周杰伦」
+
+▸ 历史与推荐
+  · 「最近播放」
+  · 「根据我的历史推荐」
+
+▸ 播放控制
+  · 「下一首」·「暂停」·「继续」
+  · 「大声一点」·「小声一点」·「播放第3首」
+
+▸ 查看状态
+  · 「现在播的是什么」·「显示播放器」
+
+💡 推荐在另一个终端运行 cwb watch，实时查看歌词和进度。
+💡 Apple Music 曲目首次播放会弹窗，点击「加入资料库」后再说一次播放就好。
+"""
+
+
+@mcp.tool()
+def tips(lang: str = "zh") -> str:
+    """Return a card of natural-language phrases the user can say to control music.
+    lang: 'en' for English, 'zh' for Chinese (default). Detect from user's message language."""
+    return _TIPS_EN if lang == "en" else _TIPS_ZH
 
 
 @mcp.tool()
