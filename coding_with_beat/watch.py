@@ -427,11 +427,10 @@ def run(width: int = 0) -> int:
         exit_alt_screen()
         sys.exit(0)
 
+    _pending_resize = [False]
+
     def _resize(*_):
-        sz[0] = shutil.get_terminal_size((80, 24))
-        _width[0] = sz[0].columns
-        sys.stdout.write(CLEAR)
-        sys.stdout.flush()
+        _pending_resize[0] = True
 
     signal.signal(signal.SIGINT, _quit)
     signal.signal(signal.SIGTERM, _quit)
@@ -623,6 +622,13 @@ def run(width: int = 0) -> int:
                 sys.stdout.write("".join(out))
                 sys.stdout.flush()
                 last_render = now
+
+            if _pending_resize[0]:
+                _pending_resize[0] = False
+                sz[0] = shutil.get_terminal_size((80, 24))
+                _width[0] = sz[0].columns
+                sys.stdout.write(CLEAR)
+                sys.stdout.flush()
 
             time.sleep(0.02)
     finally:
