@@ -792,7 +792,6 @@ COMMANDS = {
     "search_loved": cmd_search_loved,
     "tips": cmd_tips,
     "能做什么": cmd_tips,
-    "帮助": cmd_tips,
     "search": cmd_search,
     "smart_search": cmd_smart_search,
     "play": cmd_play,

@@ -334,7 +334,7 @@ def test_smart_search_loved_ranked_first_and_tagged(mock_gs, mock_state, mock_wq
 
     result = _run(server.smart_search("late night chill"))
 
-    lines = [l for l in result.splitlines() if l.startswith(("1.", "2.", "3."))]
+    lines = [line for line in result.splitlines() if line.startswith(("1.", "2.", "3."))]
     assert lines[0].startswith("1.") and "Loved Song" in lines[0]
     assert "[♥ 喜欢]" in lines[0]
     assert "[资料库]" in lines[1]
