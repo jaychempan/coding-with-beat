@@ -116,9 +116,9 @@
     .hero-tagline {
       font-family: 'JetBrains Mono', monospace;
       font-size: 17px; font-weight: 500; color: var(--text);
-      margin-bottom: 28px;
+      line-height: 1.4; margin-bottom: 28px;
     }
-    .hero-tagline .hl-purple { color: var(--purple-lt); font-weight: 700; }
+    .hero-tagline .hl-purple { color: var(--purple-lt); font-weight: 500; vertical-align: baseline; }
     .flow-steps {
       display: flex; align-items: center;
       font-family: 'JetBrains Mono', monospace;
@@ -268,6 +268,33 @@
     .feat-card-desc {
       font-family: 'Inter', sans-serif; font-size: 11px; color: var(--dim); line-height: 1.5;
     }
+
+    /* ── PLATFORMS ── */
+    .platforms-wrap { max-width: 860px; margin: 0 auto 72px; padding: 0 28px; }
+    .platforms-row { display: flex; gap: 20px; justify-content: center; }
+    .platform-card {
+      flex: 1; max-width: 380px;
+      background: var(--bg2); border: 1px solid var(--purple-border); border-radius: 12px;
+      padding: 28px 28px 24px; display: flex; flex-direction: column; gap: 14px;
+      transition: border-color .2s, transform .2s;
+    }
+    .platform-card:hover { border-color: rgba(139,92,246,.4); transform: translateY(-2px); }
+    .platform-card-top { display: flex; align-items: center; gap: 14px; }
+    .platform-logo {
+      width: 44px; height: 44px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .platform-logo.cc-logo { background: #c85f41; }
+    .platform-logo.codex-logo { background: #10a37f; }
+    .platform-card-name { font-family: 'JetBrains Mono', monospace; font-size: 15px; font-weight: 700; color: var(--bright); }
+    .platform-card-sub  { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--dim); margin-top: 2px; letter-spacing: .04em; }
+    .platform-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+    .platform-tag {
+      font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: .04em;
+      padding: 3px 9px; border-radius: 4px;
+      background: rgba(139,92,246,.1); color: var(--purple-lt); border: 1px solid rgba(139,92,246,.2);
+    }
+    @media (max-width: 640px) { .platforms-row { flex-direction: column; align-items: center; } }
 
     /* ── INSTALL ── */
     .install-wrap { width: 100%; max-width: 860px; margin: 0 auto 72px; padding: 0 28px; }
@@ -702,6 +729,56 @@
 
 <hr class="divider">
 
+<!-- PLATFORMS -->
+<div class="platforms-wrap">
+  <p class="section-head" data-i18n="platforms-head">works with</p>
+  <div class="platforms-row">
+    <div class="platform-card">
+      <div class="platform-card-top">
+        <div class="platform-logo cc-logo">
+          <!-- Anthropic / Claude Code logo -->
+          <svg width="26" height="26" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M299.1 65.2L387.3 446.8H330.7L307.4 345.2H204.6L181.3 446.8H124.7L212.9 65.2H299.1ZM256 142.4L216.3 297.6H295.7L256 142.4Z" fill="white"/>
+          </svg>
+        </div>
+        <div>
+          <div class="platform-card-name">Claude Code</div>
+          <div class="platform-card-sub">by Anthropic</div>
+        </div>
+      </div>
+      <div class="platform-tags">
+        <span class="platform-tag">MCP Server</span>
+        <span class="platform-tag">Hooks</span>
+        <span class="platform-tag">Statusline</span>
+        <span class="platform-tag">Slash Commands</span>
+        <span class="platform-tag">Skills</span>
+      </div>
+    </div>
+    <div class="platform-card">
+      <div class="platform-card-top">
+        <div class="platform-logo codex-logo">
+          <!-- OpenAI / Codex CLI logo -->
+          <svg width="26" height="26" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M256 48C141.1 48 48 141.1 48 256s93.1 208 208 208 208-93.1 208-208S370.9 48 256 48zm0 52c41.7 0 79.7 15.6 108.7 41.3L149.3 364.7C123.6 335.7 108 297.7 108 256c0-81.6 66.4-156 148-156zm0 312c-41.7 0-79.7-15.6-108.7-41.3l215.4-222.4C388.4 176.3 404 214.3 404 256c0 81.6-66.4 156-148 156z" fill="white"/>
+          </svg>
+        </div>
+        <div>
+          <div class="platform-card-name">Codex CLI</div>
+          <div class="platform-card-sub">by OpenAI</div>
+        </div>
+      </div>
+      <div class="platform-tags">
+        <span class="platform-tag">MCP Server</span>
+        <span class="platform-tag">Hooks</span>
+        <span class="platform-tag">Skills</span>
+        <span class="platform-tag">Proxy-Aware</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr class="divider">
+
 <!-- INSTALL -->
 <div class="install-wrap">
   <div class="install-tabs">
@@ -1102,6 +1179,7 @@
       fc5t: 'Native Integration',  fc5d: 'Built as MCP tools for Claude Code & Codex CLI',
       'or-prefix':   'Or:',
       manual:        'manual install →',
+      'platforms-head': 'works with',
       'usage-head':  'ask anything',
       q1: 'put on something chill',
       q2: "what's on right now?",
@@ -1199,6 +1277,7 @@
       fc5t: '原生集成',     fc5d: '以 MCP 工具形式构建，适配 Claude Code 和 Codex CLI',
       'or-prefix':   '或：',
       manual:        '手动安装 →',
+      'platforms-head': '兼容平台',
       'usage-head':  '你可以这样问',
       q1: '来点轻松的音乐',
       q2: '现在在放什么？',
