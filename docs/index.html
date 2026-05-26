@@ -269,32 +269,15 @@
       font-family: 'Inter', sans-serif; font-size: 11px; color: var(--dim); line-height: 1.5;
     }
 
-    /* ── PLATFORMS ── */
-    .platforms-wrap { max-width: 860px; margin: 0 auto 72px; padding: 0 28px; }
-    .platforms-row { display: flex; gap: 20px; justify-content: center; }
-    .platform-card {
-      flex: 1; max-width: 380px;
-      background: var(--bg2); border: 1px solid var(--purple-border); border-radius: 12px;
-      padding: 28px 28px 24px; display: flex; flex-direction: column; gap: 14px;
-      transition: border-color .2s, transform .2s;
-    }
-    .platform-card:hover { border-color: rgba(139,92,246,.4); transform: translateY(-2px); }
-    .platform-card-top { display: flex; align-items: center; gap: 14px; }
-    .platform-logo {
-      width: 44px; height: 44px; border-radius: 10px;
-      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-    }
-    .platform-logo.cc-logo { background: #c85f41; }
-    .platform-logo.codex-logo { background: #10a37f; }
-    .platform-card-name { font-family: 'JetBrains Mono', monospace; font-size: 15px; font-weight: 700; color: var(--bright); }
-    .platform-card-sub  { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--dim); margin-top: 2px; letter-spacing: .04em; }
-    .platform-tags { display: flex; flex-wrap: wrap; gap: 6px; }
-    .platform-tag {
-      font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600; letter-spacing: .04em;
-      padding: 3px 9px; border-radius: 4px;
-      background: rgba(139,92,246,.1); color: var(--purple-lt); border: 1px solid rgba(139,92,246,.2);
-    }
-    @media (max-width: 640px) { .platforms-row { flex-direction: column; align-items: center; } }
+    /* ── PLATFORM BADGES (inline) ── */
+    .platforms-inline { display: flex; align-items: center; gap: 12px; margin-top: 28px; flex-wrap: wrap; }
+    .pi-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .16em; color: var(--dim); text-transform: uppercase; flex-shrink: 0; margin-right: 2px; }
+    .pi-badge { display: inline-flex; align-items: center; gap: 7px; padding: 5px 13px 5px 7px; border: 1px solid var(--purple-border); border-radius: 20px; background: var(--bg2); transition: border-color .2s; }
+    .pi-badge:hover { border-color: rgba(139,92,246,.4); }
+    .pi-logo { width: 20px; height: 20px; border-radius: 5px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .pi-logo.cc-logo  { background: #c85f41; }
+    .pi-logo.cx-logo  { background: #10a37f; }
+    .pi-name { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; color: var(--bright); }
 
     /* ── INSTALL ── */
     .install-wrap { width: 100%; max-width: 860px; margin: 0 auto 72px; padding: 0 28px; }
@@ -305,9 +288,9 @@
     .term-bar { background: var(--bg3); padding: 9px 14px; display: flex; align-items: center; gap: 7px; }
     .term-label { color: var(--dim); font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .06em; margin-left: auto; }
     .term-body { padding: 20px 20px 16px; }
-    .cmd-row { display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px; }
+    .cmd-row { display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px; overflow-x: auto; }
     .prompt { color: var(--green); font-weight: 700; font-family: 'JetBrains Mono', monospace; flex-shrink: 0; }
-    .cmd    { color: var(--bright); font-family: 'JetBrains Mono', monospace; font-size: 12px; word-break: break-all; }
+    .cmd    { color: var(--bright); font-family: 'JetBrains Mono', monospace; font-size: 12px; white-space: nowrap; }
     .cursor-blink { display: inline-block; color: var(--green); animation: cur 1s step-end infinite; margin-left: 2px; }
     @keyframes cur { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
     .copy-btn {
@@ -616,7 +599,7 @@
     </svg>
   </div>
   <h1 class="hero-title"><span style="color:var(--purple-lt)">Coding</span> with Beat</h1>
-  <p class="hero-tagline" data-i18n="tagline">Ambient Music. Context-Aware. <span class="hl-purple">Flow-Boosting.</span></p>
+  <p class="hero-tagline" data-i18n="tagline">Ambient Music · Context-Aware · <span class="hl-purple">Flow-Boosting</span></p>
   <div class="flow-steps">
     <span class="flow-step" data-i18n="flow1">AI Coding in Flow</span>
     <span class="flow-arrow">→</span>
@@ -725,54 +708,24 @@
       <div class="feat-card-desc"  data-i18n="fc5d">Built as MCP tools for Claude Code &amp; Codex CLI</div>
     </div>
   </div>
-</div>
-
-<hr class="divider">
-
-<!-- PLATFORMS -->
-<div class="platforms-wrap">
-  <p class="section-head" data-i18n="platforms-head">works with</p>
-  <div class="platforms-row">
-    <div class="platform-card">
-      <div class="platform-card-top">
-        <div class="platform-logo cc-logo">
-          <!-- Anthropic / Claude Code logo -->
-          <svg width="26" height="26" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M299.1 65.2L387.3 446.8H330.7L307.4 345.2H204.6L181.3 446.8H124.7L212.9 65.2H299.1ZM256 142.4L216.3 297.6H295.7L256 142.4Z" fill="white"/>
-          </svg>
-        </div>
-        <div>
-          <div class="platform-card-name">Claude Code</div>
-          <div class="platform-card-sub">by Anthropic</div>
-        </div>
+  <!-- inline platform badges -->
+  <div class="platforms-inline">
+    <span class="pi-label" data-i18n="platforms-head">works with</span>
+    <div class="pi-badge">
+      <div class="pi-logo cc-logo">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="white" xmlns="http://www.w3.org/2000/svg">
+          <path d="M9.218 2h2.402L16 12.987h-2.402zM4.379 2h2.512l4.38 10.987H8.82l-.895-2.308h-4.58l-.896 2.307H0L4.38 2.001zm2.755 6.64L5.635 4.777 4.137 8.64z"/>
+        </svg>
       </div>
-      <div class="platform-tags">
-        <span class="platform-tag">MCP Server</span>
-        <span class="platform-tag">Hooks</span>
-        <span class="platform-tag">Statusline</span>
-        <span class="platform-tag">Slash Commands</span>
-        <span class="platform-tag">Skills</span>
-      </div>
+      <span class="pi-name">Claude Code</span>
     </div>
-    <div class="platform-card">
-      <div class="platform-card-top">
-        <div class="platform-logo codex-logo">
-          <!-- OpenAI / Codex CLI logo -->
-          <svg width="26" height="26" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M256 48C141.1 48 48 141.1 48 256s93.1 208 208 208 208-93.1 208-208S370.9 48 256 48zm0 52c41.7 0 79.7 15.6 108.7 41.3L149.3 364.7C123.6 335.7 108 297.7 108 256c0-81.6 66.4-156 148-156zm0 312c-41.7 0-79.7-15.6-108.7-41.3l215.4-222.4C388.4 176.3 404 214.3 404 256c0 81.6-66.4 156-148 156z" fill="white"/>
-          </svg>
-        </div>
-        <div>
-          <div class="platform-card-name">Codex CLI</div>
-          <div class="platform-card-sub">by OpenAI</div>
-        </div>
+    <div class="pi-badge">
+      <div class="pi-logo cx-logo">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="white" xmlns="http://www.w3.org/2000/svg">
+          <path d="M14.949 6.547a3.94 3.94 0 0 0-.348-3.273 4.11 4.11 0 0 0-4.4-1.934 4.1 4.1 0 0 0-1.778-.14 4.15 4.15 0 0 0-2.118.114 4.1 4.1 0 0 0-1.891.948 4.04 4.04 0 0 0-1.158 1.753 4.1 4.1 0 0 0-1.563.679 4 4 0 0 0-1.14 1.253 3.99 3.99 0 0 0 .502 4.731 3.94 3.94 0 0 0 .346 3.274 4.11 4.11 0 0 0 4.402 1.933c.382.425.852.764 1.377.995.526.231 1.095.35 1.67.346 1.78.002 3.358-1.132 3.901-2.804a4.1 4.1 0 0 0 1.563-.68 4 4 0 0 0 1.14-1.253 3.99 3.99 0 0 0-.506-4.716m-6.097 8.406a3.05 3.05 0 0 1-1.945-.694l.096-.054 3.23-1.838a.53.53 0 0 0 .265-.455v-4.49l1.366.778q.02.011.025.035v3.722c-.003 1.653-1.361 2.992-3.037 2.996m-6.53-2.75a2.95 2.95 0 0 1-.36-2.01l.095.057L5.29 12.09a.53.53 0 0 0 .527 0l3.949-2.246v1.555a.05.05 0 0 1-.022.041L6.473 13.3c-1.454.826-3.311.335-4.15-1.098m-.85-6.94A3.02 3.02 0 0 1 3.07 3.949v3.785a.51.51 0 0 0 .262.451l3.93 2.237-1.366.779a.05.05 0 0 1-.048 0L2.585 9.342a2.98 2.98 0 0 1-1.113-4.094zm11.216 2.571L8.747 5.576l1.362-.776a.05.05 0 0 1 .048 0l3.265 1.86a3 3 0 0 1 1.173 1.207 2.96 2.96 0 0 1-.27 3.2 3.05 3.05 0 0 1-1.36.997V8.279a.52.52 0 0 0-.276-.445m1.36-2.015-.097-.057-3.226-1.855a.53.53 0 0 0-.53 0L6.249 6.153V4.598a.04.04 0 0 1 .019-.04L9.533 2.7a3.07 3.07 0 0 1 3.257.139c.474.325.843.778 1.066 1.303.223.526.289 1.103.191 1.664zM5.503 8.575 4.139 7.8a.05.05 0 0 1-.026-.037V4.049c0-.57.166-1.127.476-1.607s.752-.864 1.275-1.105a3.08 3.08 0 0 1 3.234.41l-.096.054-3.23 1.838a.53.53 0 0 0-.265.455zm.742-1.577 1.758-1 1.762 1v2l-1.755 1-1.762-1z"/>
+        </svg>
       </div>
-      <div class="platform-tags">
-        <span class="platform-tag">MCP Server</span>
-        <span class="platform-tag">Hooks</span>
-        <span class="platform-tag">Skills</span>
-        <span class="platform-tag">Proxy-Aware</span>
-      </div>
+      <span class="pi-name">Codex CLI</span>
     </div>
   </div>
 </div>
@@ -1161,7 +1114,7 @@
 <script>
   const I18N = {
     en: {
-      tagline:        'Ambient Music. Context-Aware. Flow-Boosting.',
+      tagline:        'Ambient Music · Context-Aware · Flow-Boosting',
       flow1:          'AI Coding in Flow',
       flow2:          'Mood Managed',
       flow3:          'Productivity Elevated',
@@ -1374,7 +1327,7 @@
         if (k === 'tagline') {
           el.innerHTML = lang === 'zh'
             ? '氛围音乐 · 感知上下文 · <span class="hl-purple">增强心流</span>'
-            : 'Ambient Music. Context-Aware. <span class="hl-purple">Flow-Boosting.</span>';
+            : 'Ambient Music · Context-Aware · <span class="hl-purple">Flow-Boosting</span>';
         } else {
           el.textContent = I18N[lang][k];
         }
