@@ -458,6 +458,49 @@
       .survey-left { display: none; }
     }
 
+    /* ── ACK BANNER ── */
+    .ack-banner {
+      margin-top: 16px;
+      background: rgba(255,190,50,.06);
+      border: 1px solid rgba(255,190,50,.28);
+      border-radius: 10px;
+      padding: 18px 22px;
+      display: flex; align-items: center; gap: 18px;
+      transition: border-color .2s;
+    }
+    .ack-banner:hover { border-color: rgba(255,190,50,.55); }
+    .ack-icon {
+      flex-shrink: 0; width: 36px; height: 36px;
+      background: rgba(255,190,50,.12); border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .ack-body { flex: 1; min-width: 0; }
+    .ack-title {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px; font-weight: 700; color: #ffe284;
+      margin-bottom: 5px;
+    }
+    .ack-desc {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px; color: var(--dim); line-height: 1.65;
+    }
+    .ack-desc em { color: #ffe284; font-style: normal; }
+    .ack-cta-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 10px; }
+    .ack-btn {
+      display: inline-block;
+      background: rgba(255,190,50,.15); color: #ffe284;
+      border: 1px solid rgba(255,190,50,.35);
+      font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; letter-spacing: .05em;
+      padding: 7px 16px; border-radius: 6px; text-decoration: none;
+      transition: background .2s, border-color .2s;
+    }
+    .ack-btn:hover { background: rgba(255,190,50,.28); border-color: rgba(255,190,50,.6); }
+    .ack-meta { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--dim); }
+    @media (max-width: 520px) {
+      .ack-banner { flex-direction: column; align-items: flex-start; gap: 12px; }
+      .ack-icon { display: none; }
+    }
+
     /* ── CHANGELOG ── */
     .changelog-wrap { max-width: 860px; margin: 0 auto 72px; padding: 0 28px; }
     .changelog-list { display: flex; flex-direction: column; gap: 0; position: relative; }
@@ -1080,6 +1123,24 @@
       </div>
     </div>
   </div>
+
+  <div class="ack-banner">
+    <div class="ack-icon">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="3" y="1.5" width="12" height="15" rx="1.5" stroke="#ffe284" stroke-width="1.2"/>
+        <path d="M6 5.5h6M6 8.5h6M6 11.5h4" stroke="#ffe284" stroke-width="1.1" stroke-linecap="round"/>
+        <path d="M10.5 14.5l1.5-1 1.5 1-.5-1.8 1.3-1-1.8-.1L12 10l-.5 1.6-1.8.1 1.3 1-.5 1.8z" fill="#ffe284"/>
+      </svg>
+    </div>
+    <div class="ack-body">
+      <div class="ack-title" data-i18n="ack-title">Your Ideas → Acknowledged in Our Technical Report</div>
+      <div class="ack-desc" data-i18n="ack-desc">Submit a feature suggestion or research insight via GitHub Issues. Contributors whose ideas <em>meaningfully shape the study</em> may be named in the acknowledgements of our technical report.</div>
+      <div class="ack-cta-row">
+        <a class="ack-btn" href="https://github.com/jaychempan/coding-with-beat/issues/new" target="_blank" rel="noopener" data-i18n="ack-btn">Submit a Suggestion →</a>
+        <span class="ack-meta" data-i18n="ack-meta">GitHub Issues · Open to everyone · Technical Report</span>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- CHANGELOG -->
@@ -1378,6 +1439,10 @@
       'stag3': 'Companion Mode', 'stag4': 'Overall Rating',
       'survey-btn':  'Take the Survey →',
       'survey-meta': '~8 min · Anonymous · 37 questions',
+      'ack-title': 'Your Ideas → Acknowledged in Our Technical Report',
+      'ack-desc':  'Submit a feature suggestion or research insight via GitHub Issues. Contributors whose ideas meaningfully shape the study may be named in the acknowledgements of our technical report.',
+      'ack-btn':   'Submit a Suggestion →',
+      'ack-meta':  'GitHub Issues · Open to everyone · Technical Report',
       'nav-paper':   'Technical Report',
       'nav-survey':  'User Survey ✦',
       'footer-t1':     'Your workflow. Your vibe.',
@@ -1477,6 +1542,10 @@
       'stag3': '陪伴模式', 'stag4': '整体评价',
       'survey-btn':  '填写问卷 →',
       'survey-meta': '约 8 分钟 · 匿名 · 37 题',
+      'ack-title': '你的建议 → 留名技术报告致谢',
+      'ack-desc':  '通过 GitHub Issues 提交使用建议或研究见解。对研究有实质影响的贡献者，可能被列入技术报告的致谢部分。',
+      'ack-btn':   '提交建议 →',
+      'ack-meta':  'GitHub Issues · 向所有人开放 · 技术报告',
       'nav-paper':   '技术报告',
       'nav-survey':  '用户问卷 ✦',
       'footer-t1':     '你的工作流，你的氛围，',

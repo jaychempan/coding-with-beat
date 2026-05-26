@@ -91,7 +91,11 @@ play some lofi
 skip this track
 what's playing
 pause
+基于我的历史推荐一些歌曲    # history_search — 分析你的收听习惯，推荐新歌
+show my recently played tracks  # list_history — 读取 Apple Music 原生播放记录
 ```
+
+`history_search` 会分析你最常听的歌手、收听风格以及很久没听的歌曲，然后做多角度智能搜索。选一个编号即可播放。
 
 ### `/cwb` 命令
 
