@@ -19,9 +19,9 @@
 
 ![](assets/welcome_log.png)
 
-**Your coding soundtrack, now inside the terminal.** Smart music selection, mood-aware playback, and a pixel DJ that vibes with every keystroke — built for Claude Code & Codex CLI.
+**Your coding soundtrack, now inside the terminal.** Smart music selection, mood-aware playback, and a pixel DJ that vibes with every keystroke — works with Claude Code, Codex CLI, and any AI-powered terminal.
 
-A retro pixel DJ companion for Claude Code / Codex CLI / Terminal. It plays music, shows lyrics, celebrates when you commit, and panics with you when tests fail.
+A retro pixel DJ companion for AI coding sessions. It plays music, shows lyrics, celebrates when you commit, and panics with you when tests fail.
 
 [中文文档](README_CN.md) ／ [日本語](README_JP.md)
 
