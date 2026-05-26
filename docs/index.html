@@ -312,6 +312,12 @@
     .chat-bar { background: var(--bg3); padding: 9px 14px; display: flex; align-items: center; gap: 7px; border-bottom: 1px solid var(--purple-border); }
     .chat-bar-label { color: var(--dim); font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .06em; margin-left: auto; }
     .chat-body { padding: 20px 20px 16px; display: flex; flex-direction: column; gap: 14px; }
+    .chat-statusline {
+      border-top: 1px solid var(--purple-border); background: var(--bg3);
+      padding: 7px 14px; font-family: 'JetBrains Mono', monospace; font-size: 11.5px;
+      color: var(--bright); white-space: nowrap; overflow-x: auto; letter-spacing: .01em;
+      opacity: 0; animation: fadein-up .4s ease forwards; animation-delay: .9s;
+    }
     .chat-row { display: flex; flex-direction: column; gap: 6px; opacity: 0; animation: fadein-up .4s ease forwards; }
     .chat-row:nth-child(1) { animation-delay: .05s; }
     .chat-row:nth-child(2) { animation-delay: .25s; }
@@ -361,12 +367,6 @@
     .fi-desc  { color: var(--dim);    font-family: 'JetBrains Mono', monospace; font-size: 11px; }
 
     /* ── STATUSLINE ── */
-    .status-wrap { max-width: 860px; margin: 0 auto 72px; padding: 0 28px; }
-    .status-preview {
-      background: var(--bg2); border: 1px solid var(--purple-border); border-radius: 6px;
-      padding: 18px 24px; font-family: 'JetBrains Mono', monospace; font-size: 13px;
-      color: var(--bright); white-space: nowrap; overflow-x: auto;
-    }
     .sp-face  { color: #e6dcc8; } .sp-bolt  { color: var(--yellow); } .sp-play  { color: var(--green); }
     .sp-track { color: var(--bright); } .sp-bar-f { color: var(--green); } .sp-bar-e { color: var(--dim); }
     .sp-vibe  { color: var(--amber); } .sp-wave  { color: var(--ltgrn); } .sp-pipe  { color: var(--dim); }
@@ -495,7 +495,7 @@
     /* ── FOOTER BAR ── */
     .footer-bar {
       border-top: 1px solid var(--purple-border);
-      padding: 16px 40px;
+      padding: 14px 40px;
       display: flex; align-items: center; justify-content: space-between; gap: 20px;
       background: rgba(8,8,16,.7); flex-wrap: wrap;
     }
@@ -504,19 +504,9 @@
       display: flex; align-items: center; gap: 8px;
     }
     .footer-tagline .hl-purple { color: var(--purple-lt); }
-    .footer-sources { display: flex; align-items: center; gap: 20px; }
-    .footer-src { display: flex; align-items: center; gap: 7px; font-family: 'Inter', sans-serif; font-size: 12px; color: var(--dim); }
-    .src-icon { width: 26px; height: 26px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; }
-    .src-icon.apple { background: linear-gradient(135deg, #fc3c44, #c2185b); }
-    .src-icon.qq    { background: linear-gradient(135deg, #1db954, #148a3a); }
-    .src-icon.local { background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
-    .footer-slogan { font-family: 'Inter', sans-serif; font-size: 13px; color: var(--purple-lt); font-style: italic; }
-
     .footer-meta {
-      border-top: 1px solid rgba(255,255,255,.04);
-      padding: 12px 40px; text-align: center;
+      display: flex; align-items: center; flex-wrap: wrap; gap: 0;
       color: var(--dim); font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .04em;
-      display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 0;
     }
     .footer-meta a { color: var(--dim); border-bottom: 1px solid transparent; transition: color .2s, border-color .2s; }
     .footer-meta a:hover { color: var(--text); border-color: var(--dim); }
@@ -762,22 +752,17 @@
         <div class="chat-resp"><span class="chat-avatar">♪</span><div class="chat-bubble-resp"><span class="yw">🕺</span> Victory mode! <span class="hi">▶</span> <span class="am">Eye of the Tiger — Survivor</span></div></div>
       </div>
     </div>
-  </div>
-</div>
-
-<!-- STATUSLINE PREVIEW -->
-<div class="status-wrap">
-  <p class="section-head" data-i18n="status-head">statusline preview</p>
-  <div class="status-preview">
-    <span class="sp-face">(•_•)</span>&nbsp;
-    <span class="sp-bolt">⚡</span>&nbsp;&nbsp;
-    <span class="sp-play">▶</span>&nbsp;
-    <span class="sp-track">雨爱 — 杨丞琳</span>&nbsp;&nbsp;
-    <span class="sp-bar-f">██████</span><span class="sp-bar-e">░░░░░░░░</span>&nbsp;&nbsp;
-    <span class="sp-vibe">[build]</span>&nbsp;&nbsp;
-    <span class="sp-wave">▃▆█▆▃</span>&nbsp;&nbsp;
-    <span class="sp-pipe">│</span>&nbsp;
-    <span class="sp-lyric">♪ 不忍揭曉的劇情</span>
+    <div class="chat-statusline">
+      <span class="sp-face">(•_•)</span>&nbsp;
+      <span class="sp-bolt">⚡</span>&nbsp;&nbsp;
+      <span class="sp-play">▶</span>&nbsp;
+      <span class="sp-track">雨爱 — 杨丞琳</span>&nbsp;&nbsp;
+      <span class="sp-bar-f">██████</span><span class="sp-bar-e">░░░░░░░░</span>&nbsp;&nbsp;
+      <span class="sp-vibe">[build]</span>&nbsp;&nbsp;
+      <span class="sp-wave">▃▆█▆▃</span>&nbsp;&nbsp;
+      <span class="sp-pipe">│</span>&nbsp;
+      <span class="sp-lyric">♪ 不忍揭曉的劇情</span>
+    </div>
   </div>
 </div>
 
@@ -1081,24 +1066,18 @@
     <span data-i18n="footer-t1">Your workflow. Your vibe.</span>
     <span class="hl-purple" data-i18n="footer-t2">Your beat.</span>
   </div>
-  <div class="footer-sources">
-    <div class="footer-src"><div class="src-icon"><img src="assets/apple_music.png" alt="Apple Music"></div><span>Apple Music</span></div>
-    <div class="footer-src"><div class="src-icon"><img src="assets/qqmusic_logo.png" alt="QQ Music"></div><span>QQ Music</span></div>
-    <div class="footer-src"><div class="src-icon">📁</div><span data-i18n="footer-local">Local Library</span></div>
+  <div class="footer-meta">
+    <span>MIT License</span><span class="sep">·</span>
+    <a href="https://github.com/jaychempan/coding-with-beat" target="_blank" rel="noopener">GitHub</a><span class="sep">·</span>
+    <a href="https://github.com/jaychempan/coding-with-beat/blob/main/README.md" target="_blank" rel="noopener" data-i18n="docs">Docs</a><span class="sep">·</span>
+    <span data-i18n="made">Claude Code · Codex CLI · Terminal</span><span class="sep">·</span>
+    <span class="visit-count">
+      <span class="visit-icon">◉</span>
+      <span id="busuanzi_container_site_uv"><span data-i18n="visitors">visitors</span>&nbsp;<span id="busuanzi_value_site_uv" class="visit-num">—</span></span>
+      <span class="sep">·</span>
+      <span id="busuanzi_container_site_pv"><span data-i18n="views">views</span>&nbsp;<span id="busuanzi_value_site_pv" class="visit-num">—</span></span>
+    </span>
   </div>
-  <div class="footer-slogan" data-i18n="footer-slogan">Unified. Seamless. Yours.</div>
-</div>
-<div class="footer-meta">
-  <span>MIT License</span><span class="sep">·</span>
-  <a href="https://github.com/jaychempan/coding-with-beat" target="_blank" rel="noopener">GitHub</a><span class="sep">·</span>
-  <a href="https://github.com/jaychempan/coding-with-beat/blob/main/README.md" target="_blank" rel="noopener" data-i18n="docs">Docs</a><span class="sep">·</span>
-  <span data-i18n="made">Claude Code · Codex CLI · Terminal</span><span class="sep">·</span>
-  <span class="visit-count">
-    <span class="visit-icon">◉</span>
-    <span id="busuanzi_container_site_uv"><span data-i18n="visitors">visitors</span>&nbsp;<span id="busuanzi_value_site_uv" class="visit-num">—</span></span>
-    <span class="sep">·</span>
-    <span id="busuanzi_container_site_pv"><span data-i18n="views">views</span>&nbsp;<span id="busuanzi_value_site_pv" class="visit-num">—</span></span>
-  </span>
 </div>
 
 <script>
