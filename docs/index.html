@@ -265,6 +265,10 @@
     .pi-logo.cc-logo   { background: #c85f41; }
     .pi-logo.cx-logo   { background: #10a37f; }
     .pi-logo.term-logo { background: #3a3a52; }
+    .pi-logo.am-logo   { background: #fc3c44; }
+    .pi-logo.qq-logo   { background: #1eb67b; }
+    .pi-logo.lo-logo   { background: #3a3a52; }
+    .pi-sep { width: 1px; height: 16px; background: rgba(139,92,246,.2); flex-shrink: 0; margin: 0 2px; }
     .pi-name { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; color: var(--bright); }
 
     /* ── INSTALL ── */
@@ -782,6 +786,39 @@
       </div>
       <span class="pi-name">Any Terminal</span>
     </div>
+    <span class="pi-sep"></span>
+    <span class="pi-label" data-i18n="music-src-head">music sources</span>
+    <div class="pi-badge">
+      <div class="pi-logo am-logo">
+        <!-- Apple Music: music note -->
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M6 12.5V7L13 5.5v5" stroke="white" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="5.5" cy="12.5" r="1.5" fill="white"/>
+          <circle cx="12.5" cy="10.5" r="1.5" fill="white"/>
+        </svg>
+      </div>
+      <span class="pi-name">Apple Music</span>
+    </div>
+    <div class="pi-badge">
+      <div class="pi-logo qq-logo">
+        <!-- QQ Music: sine wave -->
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M1.5 8 C3 5 4.5 5 6 8 C7.5 11 9 11 10.5 8 C12 5 13.5 5 14.5 8" stroke="white" stroke-width="1.4" stroke-linecap="round" fill="none"/>
+          <line x1="1.5" y1="12" x2="14.5" y2="12" stroke="white" stroke-width="1.2" stroke-linecap="round" opacity=".45"/>
+        </svg>
+      </div>
+      <span class="pi-name">QQ Music</span>
+    </div>
+    <div class="pi-badge">
+      <div class="pi-logo lo-logo">
+        <!-- Local files: folder -->
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M1.5 5.5h13v7a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1v-7z" stroke="white" stroke-width="1.2" fill="rgba(255,255,255,.15)"/>
+          <path d="M1.5 5.5V4a1 1 0 0 1 1-1h3.5l1.5 1.5h5.5a1 1 0 0 1 1 1v0" stroke="white" stroke-width="1.2"/>
+        </svg>
+      </div>
+      <span class="pi-name">Local Files</span>
+    </div>
   </div>
 </div>
 
@@ -1213,6 +1250,7 @@
       'or-prefix':   'Or:',
       manual:        'manual install →',
       'platforms-head': 'works with',
+      'music-src-head': 'music sources',
       'usage-head':  'ask anything',
       q1: 'put on something chill',
       q2: "what's on right now?",
@@ -1311,6 +1349,7 @@
       'or-prefix':   '或：',
       manual:        '手动安装 →',
       'platforms-head': '兼容平台',
+      'music-src-head': '音乐来源',
       'usage-head':  '你可以这样问',
       q1: '来点轻松的音乐',
       q2: '现在在放什么？',
