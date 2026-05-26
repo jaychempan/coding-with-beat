@@ -19,6 +19,41 @@ TAG = "coding-with-beat"
 DEFAULT_MCP_URL = "http://127.0.0.1:8765/mcp"
 HOOK_TIMEOUT = 180  # UserPromptSubmit (/cwb) may spawn a child claude process
 
+# All MCP tools exposed by the coding-with-beat server.
+_CWB_TOOLS = [
+    "banner", "companion_check", "current_source", "dj_say",
+    "focus_start", "focus_status", "focus_stop", "history_search",
+    "like_current", "list_history", "list_library", "list_loved",
+    "list_playlists", "next_track", "now_playing", "now_playing_snapshot",
+    "pause", "play", "play_number", "play_playlist", "play_song",
+    "prev_track", "resume", "search", "search_loved", "seek",
+    "session_intro", "set_play_mode", "set_source", "set_volume",
+    "show_cover", "show_lyrics", "show_player", "smart_search",
+    "status", "tips", "toggle", "vibe_set",
+]
+
+_TOOL_APPROVALS_BEGIN = "# >>> cwb-tool-approvals >>>"
+_TOOL_APPROVALS_END = "# <<< cwb-tool-approvals <<<"
+
+_TOOL_APPROVALS_RE = re.compile(
+    r"# >>> cwb-tool-approvals >>>.*?# <<< cwb-tool-approvals <<<\n?",
+    re.DOTALL,
+)
+
+# Also matches old-style individual tool entries written before marker blocks existed.
+_INDIVIDUAL_TOOL_RE = re.compile(
+    r'\[mcp_servers\.coding-with-beat\.tools\.[^\]]+\]\napproval_mode = "approve"\n?',
+)
+
+
+def _tool_approvals_block() -> str:
+    lines = [_TOOL_APPROVALS_BEGIN]
+    for tool in _CWB_TOOLS:
+        lines.append(f"\n[mcp_servers.coding-with-beat.tools.{tool}]")
+        lines.append('approval_mode = "approve"')
+    lines.append(_TOOL_APPROVALS_END)
+    return "\n".join(lines) + "\n"
+
 
 # ── TOML patcher (no external deps) ──────────────────────────────────────────
 
@@ -35,12 +70,24 @@ def _mcp_section(url: str) -> str:
 def patch_config_toml(path: Path, mcp_url: str) -> None:
     content = path.read_text(encoding="utf-8") if path.exists() else ""
 
+    # Remove old individually-written tool entries (no markers) so they don't duplicate.
+    content = _INDIVIDUAL_TOOL_RE.sub("", content)
+
     if _MCP_SECTION_RE.search(content):
         content = _MCP_SECTION_RE.sub(_mcp_section(mcp_url), content)
     else:
         if content and not content.endswith("\n"):
             content += "\n"
         content += f"\n{_mcp_section(mcp_url)}"
+
+    # Write / refresh the marked tool-approvals block.
+    block = _tool_approvals_block()
+    if _TOOL_APPROVALS_RE.search(content):
+        content = _TOOL_APPROVALS_RE.sub(block, content)
+    else:
+        if not content.endswith("\n"):
+            content += "\n"
+        content += f"\n{block}"
 
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(content, encoding="utf-8")
@@ -50,8 +97,12 @@ def remove_config_toml(path: Path) -> None:
     if not path.exists():
         return
     content = path.read_text(encoding="utf-8")
-    content = _MCP_SECTION_RE.sub("", content).strip() + "\n"
-    path.write_text(content, encoding="utf-8")
+    # Remove tool-approvals block first so its begin-marker isn't consumed by
+    # the MCP section regex (which matches everything up to the next '[').
+    content = _TOOL_APPROVALS_RE.sub("", content)
+    content = _MCP_SECTION_RE.sub("", content)
+    content = _INDIVIDUAL_TOOL_RE.sub("", content)
+    path.write_text(content.strip() + "\n", encoding="utf-8")
 
 
 # ── hooks.json patcher ────────────────────────────────────────────────────────
