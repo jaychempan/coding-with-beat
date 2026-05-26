@@ -504,6 +504,7 @@
       display: flex; align-items: center; gap: 8px;
     }
     .footer-tagline .hl-purple { color: var(--purple-lt); }
+    .footer-slogan { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--purple-lt); font-style: italic; white-space: nowrap; }
     .footer-meta {
       display: flex; align-items: center; flex-wrap: wrap; gap: 0;
       color: var(--dim); font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .04em;
@@ -846,25 +847,6 @@
 
 <hr class="divider">
 
-<!-- LINKS -->
-<div class="links-wrap">
-  <p class="section-head" data-i18n="links-head">related projects</p>
-  <div class="links-grid">
-    <a class="link-card" href="https://jianchengpan.space/ccf-ddl-tracker/" target="_blank" rel="noopener noreferrer">
-      <span class="lc-icon">▸</span>
-      <div class="lc-body"><span class="lc-title">CCF DDL Tracker</span><span class="lc-desc" data-i18n="link-ccf">Academic deadline tracker for CCF conferences.</span></div>
-      <span class="lc-arrow">↗</span>
-    </a>
-    <a class="link-card" href="https://jianchengpan.space/citation-tracker/" target="_blank" rel="noopener noreferrer">
-      <span class="lc-icon">▸</span>
-      <div class="lc-body"><span class="lc-title">Citation Tracker</span><span class="lc-desc" data-i18n="link-cit">Monitor citation counts for your papers in real time.</span></div>
-      <span class="lc-arrow">↗</span>
-    </a>
-  </div>
-</div>
-
-<hr class="divider">
-
 <!-- SURVEY -->
 <div class="survey-wrap" id="survey">
   <p class="section-head" data-i18n="survey-head">user research</p>
@@ -1053,6 +1035,25 @@
 
 <hr class="divider">
 
+<!-- LINKS -->
+<div class="links-wrap">
+  <p class="section-head" data-i18n="links-head">related projects</p>
+  <div class="links-grid">
+    <a class="link-card" href="https://jianchengpan.space/ccf-ddl-tracker/" target="_blank" rel="noopener noreferrer">
+      <span class="lc-icon">▸</span>
+      <div class="lc-body"><span class="lc-title">CCF DDL Tracker</span><span class="lc-desc" data-i18n="link-ccf">Academic deadline tracker for CCF conferences.</span></div>
+      <span class="lc-arrow">↗</span>
+    </a>
+    <a class="link-card" href="https://jianchengpan.space/citation-tracker/" target="_blank" rel="noopener noreferrer">
+      <span class="lc-icon">▸</span>
+      <div class="lc-body"><span class="lc-title">Citation Tracker</span><span class="lc-desc" data-i18n="link-cit">Monitor citation counts for your papers in real time.</span></div>
+      <span class="lc-arrow">↗</span>
+    </a>
+  </div>
+</div>
+
+<hr class="divider">
+
 <!-- FOOTER BAR -->
 <div class="footer-bar">
   <div class="footer-tagline">
@@ -1070,7 +1071,6 @@
     <span>MIT License</span><span class="sep">·</span>
     <a href="https://github.com/jaychempan/coding-with-beat" target="_blank" rel="noopener">GitHub</a><span class="sep">·</span>
     <a href="https://github.com/jaychempan/coding-with-beat/blob/main/README.md" target="_blank" rel="noopener" data-i18n="docs">Docs</a><span class="sep">·</span>
-    <span data-i18n="made">Claude Code · Codex CLI · Terminal</span><span class="sep">·</span>
     <span class="visit-count">
       <span class="visit-icon">◉</span>
       <span id="busuanzi_container_site_uv"><span data-i18n="visitors">visitors</span>&nbsp;<span id="busuanzi_value_site_uv" class="visit-num">—</span></span>
@@ -1078,6 +1078,7 @@
       <span id="busuanzi_container_site_pv"><span data-i18n="views">views</span>&nbsp;<span id="busuanzi_value_site_pv" class="visit-num">—</span></span>
     </span>
   </div>
+  <div class="footer-slogan" data-i18n="footer-slogan">Unified. Seamless. Yours.</div>
 </div>
 
 <script>
