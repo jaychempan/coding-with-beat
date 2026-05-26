@@ -431,10 +431,12 @@
     .survey-tags { display: flex; gap: 6px; flex-wrap: wrap; }
     .stag {
       font-family: 'JetBrains Mono', monospace; font-size: 10px;
-      padding: 3px 9px; border-radius: 999px;
+      padding: 3px 10px 3px 8px; border-radius: 999px;
       background: var(--purple-bg); border: 1px solid var(--purple-border);
       color: var(--purple-lt); white-space: nowrap;
+      display: inline-flex; align-items: center; gap: 5px;
     }
+    .stag-icon { flex-shrink: 0; }
     .survey-cta-row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-top: 4px; }
     .survey-btn {
       display: inline-block;
@@ -947,10 +949,35 @@
       <div class="survey-title" data-i18n="survey-title">Help Us Improve CWB</div>
       <div class="survey-desc" data-i18n="survey-desc">Share your experience with DJ Buddy — how music matches your coding mood, whether the companion check-ins feel helpful, and what you'd love to see next.</div>
       <div class="survey-tags">
-        <span class="stag" data-i18n="stag1">🎵 Music Quality</span>
-        <span class="stag" data-i18n="stag2">🧠 Flow & Focus</span>
-        <span class="stag" data-i18n="stag3">💬 Companion Mode</span>
-        <span class="stag" data-i18n="stag4">⭐ Overall Rating</span>
+        <span class="stag">
+          <svg class="stag-icon" width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M4 8V4.5L9 3.5V7" stroke="#a78bfa" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="3.5" cy="8.2" r="1" fill="#a78bfa"/>
+            <circle cx="8.5" cy="7.2" r="1" fill="#a78bfa"/>
+          </svg>
+          <span data-i18n="stag1">Music Quality</span>
+        </span>
+        <span class="stag">
+          <svg class="stag-icon" width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M7 1.5L3 7h4L5 10.5 10.5 5H6.5L7 1.5z" fill="#ffe650" stroke="#d6be32" stroke-width=".6" stroke-linejoin="round"/>
+          </svg>
+          <span data-i18n="stag2">Flow & Focus</span>
+        </span>
+        <span class="stag">
+          <svg class="stag-icon" width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M1.5 2h9a.8.8 0 0 1 .8.8V7a.8.8 0 0 1-.8.8H5.8L3.5 10V7.8H1.5A.8.8 0 0 1 .7 7V2.8A.8.8 0 0 1 1.5 2z" fill="rgba(155,188,15,.15)" stroke="#9bbc0f" stroke-width="1"/>
+            <circle cx="4" cy="5" r=".8" fill="#9bbc0f"/>
+            <circle cx="6" cy="5" r=".8" fill="#9bbc0f"/>
+            <circle cx="8" cy="5" r=".8" fill="#9bbc0f"/>
+          </svg>
+          <span data-i18n="stag3">Companion Mode</span>
+        </span>
+        <span class="stag">
+          <svg class="stag-icon" width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M6 1.5 7.2 4.2l2.9.4-2.1 2 .5 2.9L6 8.2 3.5 9.5 4 6.6 1.9 4.6l2.9-.4L6 1.5z" fill="#ffe650" stroke="#d6be32" stroke-width=".6" stroke-linejoin="round"/>
+          </svg>
+          <span data-i18n="stag4">Overall Rating</span>
+        </span>
       </div>
       <div class="survey-cta-row">
         <a class="survey-btn" href="survey/" target="_blank" rel="noopener" data-i18n="survey-btn">Take the Survey →</a>
@@ -1251,8 +1278,8 @@
       'survey-head':  'user research',
       'survey-title': 'Help Us Improve CWB',
       'survey-desc':  'Share your experience with DJ Buddy — how music matches your coding mood, whether the companion check-ins feel helpful, and what you\'d love to see next.',
-      'stag1': '🎵 Music Quality', 'stag2': '🧠 Flow & Focus',
-      'stag3': '💬 Companion Mode', 'stag4': '⭐ Overall Rating',
+      'stag1': 'Music Quality', 'stag2': 'Flow & Focus',
+      'stag3': 'Companion Mode', 'stag4': 'Overall Rating',
       'survey-btn':  'Take the Survey →',
       'survey-meta': '~8 min · Anonymous · 37 questions',
       'nav-paper':   'Technical Report',
@@ -1349,8 +1376,8 @@
       'survey-head':  '用户调研',
       'survey-title': '帮我们改进 CWB',
       'survey-desc':  '分享你与 DJ 伙伴的相处体验——音乐是否契合你的编码情绪、陪伴签到是否自然、以及你最想看到的改进。',
-      'stag1': '🎵 音乐质量', 'stag2': '🧠 心流与专注',
-      'stag3': '💬 陪伴模式', 'stag4': '⭐ 整体评价',
+      'stag1': '音乐质量', 'stag2': '心流与专注',
+      'stag3': '陪伴模式', 'stag4': '整体评价',
       'survey-btn':  '填写问卷 →',
       'survey-meta': '约 8 分钟 · 匿名 · 37 题',
       'nav-paper':   '技术报告',
