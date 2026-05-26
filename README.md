@@ -28,9 +28,16 @@ A retro pixel DJ companion for AI coding sessions. It plays music, shows lyrics,
 
 <video src="https://github.com/user-attachments/assets/c51dcac1-115e-4d30-b87f-b1e7043d1347" controls autoplay loop muted width="100%"></video>
 
-![](assets/demo.png)
+![](assets/demo_2.png)
+
+<details>
+<summary>More screenshots</summary>
 
 ![](assets/demo_1.png)
+
+![](assets/demo.png)
+
+</details>
 
 > 💬 **We'd love your feedback!**
 > Using Coding with Beat? Tell us what you think — features you want, bugs you've hit, or just how it's changed your coding sessions.
