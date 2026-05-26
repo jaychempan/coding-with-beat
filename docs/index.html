@@ -237,38 +237,24 @@
 
     /* ── FEATURE CARDS ── */
     .feat-cards-section {
-      max-width: 900px; margin: 0 auto 72px; padding: 0 28px;
+      max-width: 1000px; margin: 0 auto 56px; padding: 0 28px;
     }
     .feat-cards-grid {
-      display: flex; flex-wrap: wrap; gap: 14px; justify-content: center;
+      display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px;
     }
     .feat-card {
-      width: calc(33.333% - 10px);
       background: var(--bg2); border: 1px solid var(--purple-border);
-      border-radius: 16px; padding: 28px 20px 22px;
-      display: flex; flex-direction: column; align-items: center; text-align: center; gap: 10px;
-      transition: border-color .2s, transform .18s, box-shadow .2s;
-      position: relative; overflow: hidden;
+      border-radius: 12px; padding: 18px 12px 14px;
+      display: flex; flex-direction: column; align-items: center; text-align: center; gap: 7px;
+      transition: border-color .2s, transform .15s;
     }
-    .feat-card::after {
-      content: ''; position: absolute; top: 0; left: 15%; right: 15%; height: 1px;
-      background: linear-gradient(90deg, transparent, var(--purple-lt), transparent);
-      opacity: 0; transition: opacity .25s;
-    }
-    .feat-card:hover {
-      border-color: rgba(139,92,246,.45);
-      transform: translateY(-3px);
-      box-shadow: 0 10px 32px rgba(139,92,246,.1);
-    }
-    .feat-card:hover::after { opacity: 1; }
-    .feat-card-icon { font-size: 30px; line-height: 1; margin-bottom: 4px; }
+    .feat-card:hover { border-color: rgba(139,92,246,.45); transform: translateY(-2px); }
+    .feat-card-icon { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; }
     .feat-card-title {
-      font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700;
-      color: var(--bright); line-height: 1.3; letter-spacing: .03em;
+      font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700;
+      color: var(--bright); line-height: 1.3; letter-spacing: .02em;
     }
-    .feat-card-desc {
-      font-family: 'Inter', sans-serif; font-size: 11px; color: var(--dim); line-height: 1.55;
-    }
+    .feat-card-desc { display: none; }
 
     /* ── PLATFORM BADGES (inline) ── */
     .platforms-inline { display: flex; align-items: center; gap: 12px; margin-top: 28px; flex-wrap: wrap; }
@@ -276,8 +262,9 @@
     .pi-badge { display: inline-flex; align-items: center; gap: 7px; padding: 5px 13px 5px 7px; border: 1px solid var(--purple-border); border-radius: 20px; background: var(--bg2); transition: border-color .2s; }
     .pi-badge:hover { border-color: rgba(139,92,246,.4); }
     .pi-logo { width: 20px; height: 20px; border-radius: 5px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-    .pi-logo.cc-logo  { background: #c85f41; }
-    .pi-logo.cx-logo  { background: #10a37f; }
+    .pi-logo.cc-logo   { background: #c85f41; }
+    .pi-logo.cx-logo   { background: #10a37f; }
+    .pi-logo.term-logo { background: #3a3a52; }
     .pi-name { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; color: var(--bright); }
 
     /* ── INSTALL ── */
@@ -535,7 +522,8 @@
       .comparison-section { grid-template-columns: 1fr; gap: 24px; }
       .vs-col { padding-top: 0; }
       .vs-badge { font-size: 18px; }
-      .feat-card { width: calc(50% - 7px); }
+      .feat-cards-section { overflow-x: auto; }
+      .feat-cards-grid { min-width: 560px; }
       .footer-bar { flex-direction: column; text-align: center; }
     }
     @media (max-width: 640px) {
@@ -550,7 +538,7 @@
       .hero-title { font-size: 34px; }
       .hero-tagline { font-size: 15px; }
       .flow-steps { flex-direction: column; gap: 6px; }
-      .feat-card { width: 100%; }
+      .feat-cards-grid { gap: 8px; }
       .source-grid { grid-template-columns: 1fr; }
       .screens-grid { grid-template-columns: 1fr; }
       .links-grid { grid-template-columns: 1fr; }
@@ -684,27 +672,66 @@
 <div class="feat-cards-section">
   <div class="feat-cards-grid">
     <div class="feat-card">
-      <div class="feat-card-icon">♪</div>
+      <div class="feat-card-icon">
+        <!-- music note in terminal -->
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="2" y="4" width="20" height="16" rx="2" fill="rgba(139,92,246,.1)" stroke="#8b5cf6" stroke-width="1.4"/>
+          <circle cx="5.5" cy="8.5" r=".8" fill="#a78bfa" opacity=".5"/>
+          <circle cx="8" cy="8.5" r=".8" fill="#a78bfa" opacity=".5"/>
+          <path d="M12.5 15.5V10" stroke="#a78bfa" stroke-width="1.4" stroke-linecap="round"/>
+          <path d="M12.5 10 C14.5 9.2 15.5 10.8 13.5 12" stroke="#a78bfa" stroke-width="1.2" stroke-linecap="round" fill="none"/>
+          <ellipse cx="11.5" cy="15.8" rx="1.3" ry="1" transform="rotate(-10 11.5 15.8)" fill="#a78bfa"/>
+        </svg>
+      </div>
       <div class="feat-card-title" data-i18n="fc1t">Music in Terminal</div>
       <div class="feat-card-desc"  data-i18n="fc1d">Control &amp; play music without leaving your flow</div>
     </div>
     <div class="feat-card">
-      <div class="feat-card-icon">🧠</div>
+      <div class="feat-card-icon">
+        <!-- context / radar waves -->
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="15" r="2" fill="#8b5cf6"/>
+          <path d="M8 11.5a5.66 5.66 0 0 1 8 0" stroke="#a78bfa" stroke-width="1.4" stroke-linecap="round" opacity=".75"/>
+          <path d="M5 8a10 10 0 0 1 14 0" stroke="#a78bfa" stroke-width="1.4" stroke-linecap="round" opacity=".35"/>
+        </svg>
+      </div>
       <div class="feat-card-title" data-i18n="fc2t">Context-Aware</div>
       <div class="feat-card-desc"  data-i18n="fc2d">Vibe engine maps your coding state to the right music</div>
     </div>
     <div class="feat-card">
-      <div class="feat-card-icon">⚡</div>
+      <div class="feat-card-icon">
+        <!-- lightning bolt -->
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M14 3L5.5 14h7.5L9.5 21 20 10h-7.5L14 3z" fill="#ffe650" stroke="#d6be32" stroke-width=".9" stroke-linejoin="round"/>
+        </svg>
+      </div>
       <div class="feat-card-title" data-i18n="fc3t">Boost Productivity</div>
       <div class="feat-card-desc"  data-i18n="fc3d">The right music for the right moment</div>
     </div>
     <div class="feat-card">
-      <div class="feat-card-icon">🎧</div>
+      <div class="feat-card-icon">
+        <!-- headphones -->
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M6 13V11a6 6 0 0 1 12 0v2" stroke="#c85f41" stroke-width="1.5" stroke-linecap="round"/>
+          <rect x="3.5" y="12" width="4" height="6" rx="2" fill="#c85f41"/>
+          <rect x="16.5" y="12" width="4" height="6" rx="2" fill="#c85f41"/>
+        </svg>
+      </div>
       <div class="feat-card-title" data-i18n="fc4t">DJ Buddy</div>
       <div class="feat-card-desc"  data-i18n="fc4d">Affective companion that understands you</div>
     </div>
     <div class="feat-card">
-      <div class="feat-card-icon">⌨</div>
+      <div class="feat-card-icon">
+        <!-- two connected blocks (MCP integration) -->
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="1.5" y="7" width="8" height="10" rx="1.5" stroke="#9bbc0f" stroke-width="1.4" fill="rgba(155,188,15,.1)"/>
+          <path d="M4 10.5L5.5 12 4 13.5" stroke="#9bbc0f" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M9.5 12h5" stroke="#8b5cf6" stroke-width="1.4" stroke-linecap="round" stroke-dasharray="1.5 1.5"/>
+          <rect x="14.5" y="7" width="8" height="10" rx="1.5" stroke="#8b5cf6" stroke-width="1.4" fill="rgba(139,92,246,.1)"/>
+          <circle cx="18.5" cy="10.5" r=".85" fill="#8b5cf6"/>
+          <circle cx="18.5" cy="13.5" r=".85" fill="#8b5cf6"/>
+        </svg>
+      </div>
       <div class="feat-card-title" data-i18n="fc5t">Native Integration</div>
       <div class="feat-card-desc"  data-i18n="fc5d">Built as MCP tools for Claude Code &amp; Codex CLI</div>
     </div>
@@ -727,6 +754,16 @@
         </svg>
       </div>
       <span class="pi-name">Codex CLI</span>
+    </div>
+    <div class="pi-badge">
+      <div class="pi-logo term-logo">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="1" y="2.5" width="14" height="11" rx="1.8" stroke="white" stroke-width="1.2" fill="none"/>
+          <path d="M3.5 6.5L5.5 8.5 3.5 10.5" stroke="white" stroke-width="1.1" stroke-linecap="round" stroke-linejoin="round"/>
+          <line x1="7.5" y1="10.5" x2="12" y2="10.5" stroke="white" stroke-width="1.1" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <span class="pi-name">Any Terminal</span>
     </div>
   </div>
 </div>
