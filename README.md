@@ -30,9 +30,11 @@ A retro pixel DJ companion for AI coding sessions. It plays music, shows lyrics,
 
 ![](assets/demo.png)
 
+![](assets/demo_1.png)
+
 > 💬 **We'd love your feedback!**
 > Using Coding with Beat? Tell us what you think — features you want, bugs you've hit, or just how it's changed your coding sessions.
-> **[→ Take the 3-min survey](https://codebeat.top/survey/)** (EN / 中文 both supported)
+> **[→ Take the 7-min survey](https://codebeat.top/survey/)** (EN / 中文 both supported)
 
 ---
 
