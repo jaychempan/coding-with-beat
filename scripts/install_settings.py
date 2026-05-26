@@ -140,6 +140,13 @@ def merge(
     lst[:] = [e for e in lst if not _owned(e)]
     lst.append(cwb_expansion_hook_entry(python, repo))
 
+    # permissions.allow — auto-approve all CWB MCP tools so users aren't prompted
+    perms = settings.setdefault("permissions", {})
+    allow = perms.setdefault("allow", [])
+    cwb_pattern = "mcp__coding-with-beat__*"
+    if cwb_pattern not in allow:
+        allow.append(cwb_pattern)
+
     return settings
 
 
@@ -163,6 +170,18 @@ def remove(settings: dict) -> dict:
                 hooks.pop(event)
     if not hooks:
         settings.pop("hooks", None)
+
+    # permissions.allow — remove our CWB wildcard
+    perms = settings.get("permissions", {})
+    allow = perms.get("allow", [])
+    cwb_pattern = "mcp__coding-with-beat__*"
+    if cwb_pattern in allow:
+        allow.remove(cwb_pattern)
+    if not allow:
+        perms.pop("allow", None)
+    if not perms:
+        settings.pop("permissions", None)
+
     return settings
 
 
