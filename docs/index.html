@@ -535,24 +535,74 @@
       .feat-cards-grid { min-width: 560px; }
       .footer-bar { flex-direction: column; text-align: center; }
     }
+    .nav-actions { display: flex; align-items: center; gap: 8px; }
+    /* hamburger — hidden on desktop */
+    .nav-hamburger {
+      display: none;
+      background: none;
+      border: 1px solid var(--purple-border);
+      border-radius: 4px;
+      padding: 5px 7px;
+      color: var(--dim);
+      cursor: pointer;
+      align-items: center;
+      justify-content: center;
+      transition: border-color .2s, color .2s;
+      flex-shrink: 0;
+    }
+    .nav-hamburger:hover { border-color: rgba(139,92,246,.4); color: var(--purple-lt); }
+    .nav-hamburger .close-icon { display: none; }
+    nav.nav-open .nav-hamburger .ham-icon  { display: none; }
+    nav.nav-open .nav-hamburger .close-icon { display: block; }
+
     @media (max-width: 640px) {
-      nav { padding: 10px 16px; }
+      nav { padding: 10px 16px; flex-wrap: wrap; }
+      .nav-tagline { display: none; }
       .nav-logo { font-size: 11px; }
-      .nav-right { gap: 8px; }
-      .gh-link { font-size: 11px; }
-      .gh-link .gh-label { display: none; }
-      .nav-paper-label { display: none; }
-      .nav-survey { font-size: 10px; padding: 4px 8px; }
-      .nav-survey .survey-label { display: none; }
+      .nav-right {
+        display: none;
+        width: 100%;
+        flex-direction: column;
+        gap: 0;
+        padding: 6px 0 4px;
+        margin-top: 8px;
+        border-top: 1px solid var(--purple-border);
+      }
+      nav.nav-open .nav-right { display: flex; }
+      .nav-hamburger { display: flex; }
+      /* dropdown items */
+      .gh-link, .nav-paper {
+        padding: 11px 4px;
+        font-size: 12px;
+        border-bottom: 1px solid var(--purple-border);
+        gap: 8px;
+      }
+      .gh-link .gh-label, .nav-paper-label { display: inline; }
+      .nav-survey {
+        margin-top: 10px;
+        margin-bottom: 4px;
+        text-align: center;
+        justify-content: center;
+        font-size: 11px;
+        padding: 8px 12px;
+        align-self: stretch;
+      }
+      /* rest of page */
       .hero-title { font-size: 34px; }
       .hero-tagline { font-size: 15px; }
       .flow-steps { flex-direction: column; gap: 6px; }
-      .feat-cards-grid { gap: 8px; }
+      .feat-cards-section { overflow-x: visible; }
+      .feat-cards-grid { grid-template-columns: repeat(2, 1fr); min-width: unset; gap: 10px; }
+      .platforms-inline { flex-wrap: wrap; gap: 10px; }
       .source-grid { grid-template-columns: 1fr; }
       .screens-grid { grid-template-columns: 1fr; }
       .links-grid { grid-template-columns: 1fr; }
       .scene-grid { grid-template-columns: repeat(2, 1fr); }
       .comp-buddy-pre { display: none; }
+      .footer-bar { padding: 20px 20px; flex-direction: column; align-items: center; text-align: center; gap: 14px; }
+      .footer-meta { justify-content: center; }
+      .footer-tagline { font-size: 13px; }
+      .footer-slogan { font-size: 10px; }
     }
   </style>
 </head>
@@ -573,15 +623,28 @@
     </a>
     <a class="nav-paper" href="#" title="Technical Report — coming soon">
       <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M4 0a2 2 0 00-2 2v12a2 2 0 002 2h8a2 2 0 002-2V5.5L9.5 0H4zm5 1v4h4L9 1zM4 7h8v1H4V7zm0 2h8v1H4V9zm0 2h5v1H4v-1z"/></svg>
-      <span class="nav-paper-label" data-i18n="nav-paper">Paper</span>
+      <span class="nav-paper-label" data-i18n="nav-paper">技术报告</span>
     </a>
     <a class="nav-survey" href="#survey">
       <span class="survey-label" data-i18n="nav-survey">User Survey</span><span>✦</span>
     </a>
+  </div>
+  <div class="nav-actions">
     <div class="lang-toggle">
       <button class="lang-btn active" onclick="setLang('en')">EN</button>
       <button class="lang-btn" onclick="setLang('zh')">中文</button>
     </div>
+    <button class="nav-hamburger" onclick="toggleNav()" aria-label="Menu">
+      <svg class="ham-icon" width="15" height="15" viewBox="0 0 15 15" fill="currentColor">
+        <rect y="2"    width="15" height="1.5" rx=".75"/>
+        <rect y="6.75" width="15" height="1.5" rx=".75"/>
+        <rect y="11.5" width="15" height="1.5" rx=".75"/>
+      </svg>
+      <svg class="close-icon" width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round">
+        <line x1="2" y1="2" x2="13" y2="13"/>
+        <line x1="13" y1="2" x2="2" y2="13"/>
+      </svg>
+    </button>
   </div>
 </nav>
 
@@ -1424,6 +1487,21 @@
   };
 
   let currentLang = 'en';
+
+  function toggleNav() {
+    document.querySelector('nav').classList.toggle('nav-open');
+  }
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('nav')) {
+      document.querySelector('nav').classList.remove('nav-open');
+    }
+  });
+  // close menu on nav link click
+  document.querySelectorAll('.nav-right a').forEach(function(a) {
+    a.addEventListener('click', function() {
+      document.querySelector('nav').classList.remove('nav-open');
+    });
+  });
 
   function setLang(lang) {
     currentLang = lang;
