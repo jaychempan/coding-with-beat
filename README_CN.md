@@ -1,6 +1,8 @@
-# Coding with Beat
-
-<div align="center"><p>将音乐搬进AI终端 · 打造Coding专属智能DJ · 听歌新范式 · 交互式音乐</p></div>
+<div align="center">
+  <img src="assets/logo_icon.png" width="128" alt="Coding with Beat"/>
+  <h1>Coding with Beat</h1>
+  <p>将音乐搬进AI终端 · 打造Coding专属智能DJ · 听歌新范式 · 交互式音乐</p>
+</div>
 
 ![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=flat-square&logo=python&logoColor=white)
 ![Platform](https://img.shields.io/badge/platform-macOS-000000?style=flat-square&logo=apple&logoColor=white)
