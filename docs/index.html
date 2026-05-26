@@ -276,7 +276,8 @@
     .term-bar { background: var(--bg3); padding: 9px 14px; display: flex; align-items: center; gap: 7px; }
     .term-label { color: var(--dim); font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: .06em; margin-left: auto; }
     .term-body { padding: 20px 20px 16px; }
-    .cmd-row { display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px; overflow-x: auto; }
+    .cmd-row { display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px; overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none; }
+    .cmd-row::-webkit-scrollbar { display: none; }
     .prompt { color: var(--green); font-weight: 700; font-family: 'JetBrains Mono', monospace; flex-shrink: 0; }
     .cmd    { color: var(--bright); font-family: 'JetBrains Mono', monospace; font-size: 12px; white-space: nowrap; }
     .cursor-blink { display: inline-block; color: var(--green); animation: cur 1s step-end infinite; margin-left: 2px; }
@@ -420,8 +421,8 @@
     }
     .survey-right { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
     .survey-title {
-      font-family: 'Inter', sans-serif;
-      font-size: 18px; font-weight: 700; color: var(--bright);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 17px; font-weight: 700; color: var(--bright);
     }
     .survey-desc {
       font-family: 'Inter', sans-serif;
@@ -478,7 +479,7 @@
     .cl-older-toggle { list-style: none; cursor: pointer; font-size: 11px; color: var(--dim); padding: 10px 0 6px; letter-spacing: .04em; user-select: none; }
     .cl-older-toggle::-webkit-details-marker { display: none; }
     .cl-older-toggle:hover { color: var(--fg); }
-    .cl-title { font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; color: var(--bright); }
+    .cl-title { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; color: var(--bright); }
     .cl-latest-tag {
       font-family: 'JetBrains Mono', monospace; font-size: 9px; font-weight: 700; letter-spacing: .06em;
       color: var(--green); background: rgba(155,188,15,.12); border: 1px solid rgba(155,188,15,.3);
@@ -1254,7 +1255,7 @@
       'stag3': '💬 Companion Mode', 'stag4': '⭐ Overall Rating',
       'survey-btn':  'Take the Survey →',
       'survey-meta': '~8 min · Anonymous · 37 questions',
-      'nav-paper':   'Paper',
+      'nav-paper':   'Technical Report',
       'nav-survey':  'User Survey ✦',
       'footer-t1':     'Your workflow. Your vibe.',
       'footer-t2':     'Your beat.',
@@ -1313,14 +1314,14 @@
       'cl-older-open':   '收起早期版本 ▴',
       cl37t: '播放历史与推荐',
       'cl37-1': '查看完整的听歌记录，包括在 iPhone 上播放的曲目',
-      'cl37-2': '让 DJ Buddy 根据你的真实听歌习惯推荐新歌',
+      'cl37-2': '让 DJ 伙伴根据你的真实听歌习惯推荐新歌',
       'cl37-3': '久未播放的曲目也会被重新推荐出来',
       cl36t: '收藏曲目 & 用户调研',
       'cl36-1': '播放你在 Apple Music 收藏的歌曲——直接说「从喜欢里找」就好',
-      'cl36-2': 'DJ Buddy 会记住你的收藏，优先推荐给你',
+      'cl36-2': 'DJ 伙伴会记住你的收藏，优先推荐给你',
       'cl36-3': '新增问卷，欢迎分享你的体验，帮助我们改进',
-      cl35t: 'DJ Buddy 陪伴模式',
-      'cl35-1': 'DJ Buddy 在关键时刻主动关心你——开始编码、测试一直失败、或成功提交时',
+      cl35t: 'DJ 伙伴陪伴模式',
+      'cl35-1': 'DJ 伙伴在关键时刻主动关心你——开始编码、测试一直失败、或成功提交时',
       'cl35-2': '测试一直过不了？DJ 会建议换首歌，帮你重整状态',
       'cl35-3': '每次签到都像是来自乐队伙伴的消息，而不是系统通知',
       cl30t: '智能搜索 & 歌单支持',
@@ -1336,29 +1337,29 @@
       'cl20-2': '通过 SSH 在远程服务器上控制 Mac 的 Apple Music',
       'cl20-3': '内置番茄计时器，在状态栏直接显示工作进度',
       cl12t: '像素 DJ 动画升级',
-      'cl12-1': 'DJ Buddy 走路动画更自然、更流畅',
+      'cl12-1': 'DJ 伙伴走路动画更自然、更流畅',
       'cl12-2': 'git commit 触发胜利舞步，测试失败让 DJ 进入恐慌模式',
       cl11t: '搜索 & 按编号播放',
       'cl11-1': '搜索曲库和 Apple Music，获得编号列表，说「播放3」即可',
       'cl11-2': '新增按编号播放与列出所有曲目的命令',
       cl10t: '初始版本发布',
       'cl10-1': '用自然语言控制音乐——播放、暂停、跳过、搜索、收藏，全在终端完成',
-      'cl10-2': '认识 DJ Buddy：住在状态栏里的像素小人',
+      'cl10-2': '认识 DJ 伙伴：住在状态栏里的像素小人',
       'cl10-3': '首发即支持 Apple Music、本地文件和 QQ 音乐',
       'survey-head':  '用户调研',
       'survey-title': '帮我们改进 CWB',
-      'survey-desc':  '分享你与 DJ Buddy 的相处体验——音乐是否契合你的编码情绪、陪伴签到是否自然、以及你最想看到的改进。',
+      'survey-desc':  '分享你与 DJ 伙伴的相处体验——音乐是否契合你的编码情绪、陪伴签到是否自然、以及你最想看到的改进。',
       'stag1': '🎵 音乐质量', 'stag2': '🧠 心流与专注',
       'stag3': '💬 陪伴模式', 'stag4': '⭐ 整体评价',
       'survey-btn':  '填写问卷 →',
       'survey-meta': '约 8 分钟 · 匿名 · 37 题',
-      'nav-paper':   '论文',
+      'nav-paper':   '技术报告',
       'nav-survey':  '用户问卷 ✦',
       'footer-t1':     '你的工作流，你的氛围，',
       'footer-t2':     '你的节拍',
       'footer-local':  '本地音乐库',
       'footer-slogan': '统一 · 无缝 · 属于你',
-      docs: '文档', made: 'Claude Code · Codex CLI · Terminal', visitors: '访客', views: '浏览量',
+      docs: '文档', made: 'Claude Code · Codex CLI · 终端', visitors: '访客', views: '浏览量',
       copy: '复制命令',
     }
   };
