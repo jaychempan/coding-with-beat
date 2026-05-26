@@ -338,6 +338,22 @@ cwb server              # MCP streamable HTTP server
 
 ---
 
+## Citation
+
+If you use Coding with Beat in your research or project, please cite:
+
+```bibtex
+@misc{pan2025codingwithbeat,
+  author       = {Jiancheng Pan et al.},
+  title        = {Coding with Beat: Staying in Flow with Context-Aware Music in AI Coding Sessions},
+  year         = {2025},
+  howpublished = {\url{https://github.com/jaychempan/coding-with-beat}},
+  note         = {Website: \url{https://codebeat.top}}
+}
+```
+
+---
+
 ## License
 
 MIT License — see [LICENSE](LICENSE) for details.
