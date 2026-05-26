@@ -55,7 +55,7 @@
     /* ── NAV ── */
     nav {
       position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-      display: flex; align-items: center; justify-content: space-between;
+      display: flex; align-items: center;
       padding: 14px 32px;
       background: rgba(8,8,16,.9);
       backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
@@ -69,7 +69,7 @@
     }
     .nav-logo span { color: var(--purple-lt); }
     .nav-tagline { font-size: 10px; font-weight: 400; letter-spacing: .08em; color: var(--dim); margin-left: 10px; white-space: nowrap; }
-    .nav-right { display: flex; align-items: center; gap: 14px; }
+    .nav-right { display: flex; align-items: center; gap: 14px; margin-left: auto; }
     .gh-link { color: var(--dim); font-family: 'JetBrains Mono', monospace; font-size: 11px; transition: color .2s; display: flex; align-items: center; gap: 4px; }
     .gh-link:hover { color: var(--text); }
     .nav-paper { color: var(--dim); font-size: 11px; transition: color .2s; display: flex; align-items: center; gap: 4px; }
@@ -535,7 +535,7 @@
       .feat-cards-grid { min-width: 560px; }
       .footer-bar { flex-direction: column; text-align: center; }
     }
-    .nav-actions { display: flex; align-items: center; gap: 8px; }
+    .nav-actions { display: flex; align-items: center; gap: 8px; margin-left: 14px; }
     /* hamburger — hidden on desktop */
     .nav-hamburger {
       display: none;
@@ -559,6 +559,7 @@
       nav { padding: 10px 16px; flex-wrap: wrap; }
       .nav-tagline { display: none; }
       .nav-logo { font-size: 11px; }
+      .nav-actions { margin-left: auto; }
       .nav-right {
         display: none;
         width: 100%;
