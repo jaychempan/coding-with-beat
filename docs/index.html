@@ -638,7 +638,7 @@
       .flow-steps { flex-direction: column; gap: 6px; }
       .feat-cards-section { overflow-x: visible; }
       .feat-cards-grid { grid-template-columns: repeat(2, 1fr); min-width: unset; gap: 10px; }
-      .feat-card:last-child:nth-child(odd) { grid-column: 1 / -1; max-width: calc(50% - 5px); justify-self: center; }
+      .feat-card:last-child:nth-child(odd) { grid-column: 1 / -1; max-width: unset; justify-self: unset; }
       .platforms-inline { flex-wrap: wrap; gap: 10px; }
       .source-grid { grid-template-columns: 1fr; }
       .screens-grid { grid-template-columns: 1fr; }
@@ -647,7 +647,8 @@
       .comp-buddy-pre { display: none; }
       .footer-bar { padding: 20px 20px; flex-direction: column; align-items: center; text-align: center; gap: 14px; }
       .footer-meta { justify-content: center; }
-      .footer-tagline { font-size: 13px; }
+      .footer-tagline { font-size: 13px; flex-wrap: wrap; justify-content: center; }
+      .footer-tagline > span { white-space: nowrap; }
       .footer-slogan { font-size: 10px; }
     }
   </style>
