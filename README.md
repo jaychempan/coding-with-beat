@@ -29,6 +29,10 @@ A retro pixel DJ companion for Claude Code / Codex CLI / Terminal. It plays musi
 
 ![](assets/demo.png)
 
+> 💬 **We'd love your feedback!**
+> Using Coding with Beat? Tell us what you think — features you want, bugs you've hit, or just how it's changed your coding sessions.
+> **[→ Take the 3-min survey](https://codebeat.top/survey/)** (EN / 中文 both supported)
+
 ---
 
 ## Features
