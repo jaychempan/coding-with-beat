@@ -206,7 +206,7 @@
     }
     .comp-result.bad  { color: #8080a0; font-size: 15px; font-weight: 600; }
     .comp-result.good { color: var(--purple-lt); font-size: 15px; font-weight: 600; }
-    .result-emoji { font-size: 22px; }
+    .result-emoji { width: 26px; height: 26px; flex-shrink: 0; }
 
     .vs-col { display: flex; align-items: center; justify-content: center; padding-top: 120px; }
     .vs-badge {
@@ -620,7 +620,15 @@
       </div>
     </div>
     <div class="comp-result bad">
-      <span class="result-emoji">😟</span>
+      <!-- pixel sad face -->
+      <svg class="result-emoji" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="2" y="2" width="20" height="20" rx="4" fill="rgba(128,128,160,.1)" stroke="#8080a0" stroke-width="1.4"/>
+        <rect x="7" y="8.5" width="2.5" height="2.5" rx=".6" fill="#8080a0"/>
+        <rect x="14.5" y="8.5" width="2.5" height="2.5" rx=".6" fill="#8080a0"/>
+        <path d="M7.5 16 Q12 13 16.5 16" stroke="#8080a0" stroke-width="1.4" stroke-linecap="round" fill="none"/>
+        <path d="M7.5 7.5 Q9 6 10.5 7.5" stroke="#8080a0" stroke-width="1.1" stroke-linecap="round" fill="none" opacity=".6"/>
+        <path d="M13.5 7.5 Q15 6 16.5 7.5" stroke="#8080a0" stroke-width="1.1" stroke-linecap="round" fill="none" opacity=".6"/>
+      </svg>
       <span data-i18n="lose-focus">Lose Focus. Lose Momentum.</span>
       <span class="ctx-switch-inline">
         <span class="ctx-terminal-badge">&gt;_</span>
@@ -661,7 +669,13 @@
 <span class="c-dim"> ╱</span><span class="c-green">█  █</span><span class="c-dim">╲</span></pre>
     </div>
     <div class="comp-result good">
-      <span class="result-emoji">😊</span>
+      <!-- pixel happy face -->
+      <svg class="result-emoji" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="2" y="2" width="20" height="20" rx="4" fill="rgba(139,92,246,.1)" stroke="#a78bfa" stroke-width="1.4"/>
+        <path d="M7.5 9.5 Q9 7.5 10.5 9.5" stroke="#a78bfa" stroke-width="1.3" stroke-linecap="round" fill="none"/>
+        <path d="M13.5 9.5 Q15 7.5 16.5 9.5" stroke="#a78bfa" stroke-width="1.3" stroke-linecap="round" fill="none"/>
+        <path d="M7.5 14.5 Q12 18 16.5 14.5" stroke="#a78bfa" stroke-width="1.4" stroke-linecap="round" fill="none"/>
+      </svg>
       <span data-i18n="stay-focused">Stay Focused. Code Better.</span>
     </div>
   </div>
@@ -1256,7 +1270,7 @@
       flow3:          '专注力提升',
       'without-label':   '没有终端音乐时',
       'without-heading': '心流中断',
-      'with-label':      '使用 CODING WITH BEAT',
+      'with-label':      '使用 Coding with Beat',
       'with-heading':    '保持心流',
       'ctx-switch':      '上下文切换',
       'lose-focus':      '失去专注，失去动力',
@@ -1264,7 +1278,7 @@
       fc1t: '终端音乐',     fc1d: '不离开工作流即可控制和播放音乐',
       fc2t: '感知上下文',   fc2d: '氛围引擎将你的编码状态映射为合适的音乐',
       fc3t: '提升效率',     fc3d: '在正确的时刻播放正确的音乐',
-      fc4t: 'DJ Buddy',     fc4d: '能理解你的情感化伴侣',
+      fc4t: 'DJ 伙伴',      fc4d: '能理解你情绪的编码伴侣',
       fc5t: '原生集成',     fc5d: '以 MCP 工具形式构建，适配 Claude Code 和 Codex CLI',
       'or-prefix':   '或：',
       manual:        '手动安装 →',
