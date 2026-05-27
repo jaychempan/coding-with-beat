@@ -484,6 +484,7 @@ def cmd_profile() -> int:
         from .config import DATA_DIR
         html = _profile.build_html_report(prof)
         out_path = DATA_DIR / f"report_{period}_{prof['generated_at'].strftime('%Y%m%d')}.html"
+        out_path.parent.mkdir(parents=True, exist_ok=True)
         out_path.write_text(html, encoding="utf-8")
         print(f"报告已生成：{out_path}")
         subprocess.run(["open", str(out_path)], check=False)
