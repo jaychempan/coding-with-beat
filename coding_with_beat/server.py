@@ -14,7 +14,7 @@ from typing import Optional
 
 from mcp.server.fastmcp import FastMCP
 
-from . import dj, focus, history, state
+from . import dj, focus, history, profile, state
 from .config import DATA_DIR
 from .lyrics_snapshot import current_text as current_lyrics_text
 from .lyrics_snapshot import track_key
@@ -732,6 +732,49 @@ async def history_search() -> str:
         return "(历史数据不足，多听几首再试试吧)"
 
     return await _multi_angle_search(queries, label="History · 为你推荐")
+
+
+@mcp.tool()
+async def generate_profile(
+    period: str = "weekly",
+    context: str = "",
+) -> str:
+    """Generate a personal music listening report with profile analysis and recommendations.
+
+    Analyses play history and search patterns to produce:
+    - Listening statistics: top artists, genres, language preference
+    - Preference trends: rising, stable, and declining genres
+    - Time-of-day listening patterns
+    - 2–3 personalised smart_search query strings ready to play
+
+    After displaying the report, offer to call smart_search(queries=[...])
+    with the returned recommendation queries.
+
+    Args:
+        period: Report time window — daily | weekly | monthly | yearly (default: weekly)
+        context: Optional scene or mood hint to tune recommendations
+                 e.g. "写代码", "跑步", "放松"
+    """
+    import asyncio as _asyncio
+
+    if period not in ("daily", "weekly", "monthly", "yearly"):
+        period = "weekly"
+
+    try:
+        prof = await _asyncio.to_thread(profile.build_profile, period)
+    except ValueError:
+        return "（听歌记录不足 5 首，多听一会儿再来生成报告吧 🎵）"
+
+    report_text = profile.build_report(prof)
+    queries = profile.build_recommendation_queries(prof, context)
+
+    rec_lines = ["", "─" * 40, "🎵 个性化推荐（可用 smart_search 播放）："]
+    for i, q in enumerate(queries, 1):
+        rec_lines.append(f"  {i}. {q}")
+    rec_lines.append("")
+    rec_lines.append('想播放推荐吗？说"播放推荐"或"play 1"即可。')
+
+    return report_text + "\n" + "\n".join(rec_lines)
 
 
 @mcp.tool()
