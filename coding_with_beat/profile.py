@@ -20,6 +20,8 @@ _PERIOD_DAYS: dict[str, int] = {
     "yearly": 365,
 }
 
+_AVG_TRACK_MIN: float = 3.5  # assumed average track duration in minutes
+
 _INSTRUMENTAL_KEYWORDS = frozenset([
     "instrumental", "无人声", "pure music", "纯音乐", "bgm", "ost",
     "soundtrack", "piano solo", "guitar instrumental",
@@ -263,11 +265,11 @@ def build_profile(period: str = "weekly", source: str | None = None) -> dict:
 
     # ── New computed fields ────────────────────────────────────────────────────
     unique_artist_count = len(artist_counter)
-    estimated_hours = round(len(period_tracks) * 3.5 / 60, 1)
+    estimated_hours = round(len(period_tracks) * _AVG_TRACK_MIN / 60, 1)
 
     band_track_counts: Counter = Counter()
-    for _t in period_tracks:
-        band_track_counts[_time_band(_t["ts"].hour)] += 1
+    for t_ in period_tracks:
+        band_track_counts[_time_band(t_["ts"].hour)] += 1
 
     peak_band = band_track_counts.most_common(1)[0][0] if band_track_counts else "night"
     night_plays = band_track_counts.get("night", 0)
@@ -278,18 +280,18 @@ def build_profile(period: str = "weekly", source: str | None = None) -> dict:
     )
 
     if period == "daily":
-        _dp: Counter = Counter()
-        for _t in period_tracks:
-            _dp[_t["ts"].strftime("%H")] += 1
+        plays_ctr: Counter = Counter()
+        for t_ in period_tracks:
+            plays_ctr[t_["ts"].strftime("%H")] += 1
     elif period == "yearly":
-        _dp = Counter()
-        for _t in period_tracks:
-            _dp[_t["ts"].strftime("%Y-%m")] += 1
+        plays_ctr = Counter()
+        for t_ in period_tracks:
+            plays_ctr[t_["ts"].strftime("%Y-%m")] += 1
     else:  # weekly / monthly
-        _dp = Counter()
-        for _t in period_tracks:
-            _dp[_t["ts"].strftime("%Y-%m-%d")] += 1
-    daily_plays = dict(sorted(_dp.items()))
+        plays_ctr = Counter()
+        for t_ in period_tracks:
+            plays_ctr[t_["ts"].strftime("%Y-%m-%d")] += 1
+    daily_plays = dict(sorted(plays_ctr.items()))
 
     trend_detail: dict[str, tuple[int, int]] = {
         g: (first_genres.get(g, 0), second_genres.get(g, 0))
@@ -473,7 +475,7 @@ def _personality_scores(
 
     return {
         "focus":     _clamp(instrumental * 60 + genre_conc * 40),
-        "explore":   _clamp(unique_artist_count / max(play_count, 1) * 500),
+        "explore":   _clamp(unique_artist_count / max(play_count, 1) * 500),  # 500: hits 100 when ~1 in 5 plays is a new artist
         "mood":      _clamp(len(genre_counter) / 5 * 100),
         "night_owl": _clamp(night_plays / max(play_count, 1) * 100),
         "loyalty":   _clamp(top3_plays / max(play_count, 1) * 100),
