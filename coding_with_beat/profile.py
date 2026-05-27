@@ -153,7 +153,8 @@ def build_profile(period: str = "weekly", source: str | None = None) -> dict:
     top_artists = artist_counter.most_common(5)
 
     # ── Top genres ────────────────────────────────────────────────────────────
-    top_genres = _genre_counter(period_tracks).most_common(5)
+    genre_counter_all = _genre_counter(period_tracks)
+    top_genres = genre_counter_all.most_common(5)
 
     # ── Language preference ───────────────────────────────────────────────────
     lang_counter: Counter = Counter()
@@ -260,6 +261,41 @@ def build_profile(period: str = "weekly", source: str | None = None) -> dict:
                 break
         tracks_by_genre[genre] = g_list
 
+    # ── New computed fields ────────────────────────────────────────────────────
+    unique_artist_count = len(artist_counter)
+    estimated_hours = round(len(period_tracks) * 3.5 / 60, 1)
+
+    band_track_counts: Counter = Counter()
+    for _t in period_tracks:
+        band_track_counts[_time_band(_t["ts"].hour)] += 1
+
+    peak_band = band_track_counts.most_common(1)[0][0] if band_track_counts else "night"
+    night_plays = band_track_counts.get("night", 0)
+
+    personality_scores = _personality_scores(
+        language_pref, genre_counter_all, unique_artist_count,
+        len(period_tracks), night_plays, top_artists,
+    )
+
+    if period == "daily":
+        _dp: Counter = Counter()
+        for _t in period_tracks:
+            _dp[_t["ts"].strftime("%H")] += 1
+    elif period == "yearly":
+        _dp = Counter()
+        for _t in period_tracks:
+            _dp[_t["ts"].strftime("%Y-%m")] += 1
+    else:  # weekly / monthly
+        _dp = Counter()
+        for _t in period_tracks:
+            _dp[_t["ts"].strftime("%Y-%m-%d")] += 1
+    daily_plays = dict(sorted(_dp.items()))
+
+    trend_detail: dict[str, tuple[int, int]] = {
+        g: (first_genres.get(g, 0), second_genres.get(g, 0))
+        for g in all_genre_keys
+    }
+
     return {
         "period": period,
         "generated_at": now,
@@ -275,6 +311,13 @@ def build_profile(period: str = "weekly", source: str | None = None) -> dict:
         "time_pattern": time_pattern,
         "tracks_by_artist": tracks_by_artist,
         "tracks_by_genre": tracks_by_genre,
+        "unique_artist_count": unique_artist_count,
+        "estimated_hours": estimated_hours,
+        "peak_band": peak_band,
+        "band_track_counts": dict(band_track_counts),
+        "daily_plays": daily_plays,
+        "personality_scores": personality_scores,
+        "trend_detail": trend_detail,
     }
 
 
@@ -408,6 +451,33 @@ def build_recommendation_queries(profile: dict, context: str = "") -> list[str]:
         queries.append(f"{top_genres[0][0]} instrumental")
 
     return queries[:3]
+
+
+def _personality_scores(
+    language_pref: dict,
+    genre_counter: Counter,
+    unique_artist_count: int,
+    play_count: int,
+    night_plays: int,
+    top_artists: list,
+) -> dict[str, int]:
+    def _clamp(v: float) -> int:
+        return int(min(100, max(0, v)))
+
+    instrumental = language_pref.get("instrumental", 0.0)
+    genre_total = sum(genre_counter.values()) or 1
+    top2_genre_plays = sum(v for _, v in genre_counter.most_common(2))
+    genre_conc = top2_genre_plays / genre_total
+
+    top3_plays = sum(c for _, c in top_artists[:3])
+
+    return {
+        "focus":     _clamp(instrumental * 60 + genre_conc * 40),
+        "explore":   _clamp(unique_artist_count / max(play_count, 1) * 500),
+        "mood":      _clamp(len(genre_counter) / 5 * 100),
+        "night_owl": _clamp(night_plays / max(play_count, 1) * 100),
+        "loyalty":   _clamp(top3_plays / max(play_count, 1) * 100),
+    }
 
 
 def _music_personality(profile: dict) -> tuple[str, str, str]:

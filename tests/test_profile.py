@@ -257,3 +257,76 @@ def test_build_html_report_contains_recommendation_query():
     html = profile.build_html_report(_make_profile())
     # stable_pref=["lofi","ambient"] → slot 1 contains "lofi"
     assert "lofi" in html
+
+
+def test_build_profile_new_fields_present(monkeypatch):
+    monkeypatch.setattr(history, "read", lambda limit=500: _weekly_tracks())
+    monkeypatch.setattr(history, "read_search", lambda limit=500: [])
+    with mock.patch("coding_with_beat.profile.get_source", side_effect=Exception("no AM")):
+        prof = profile.build_profile("weekly")
+    new_fields = {
+        "unique_artist_count", "estimated_hours", "peak_band",
+        "band_track_counts", "daily_plays", "personality_scores", "trend_detail",
+    }
+    assert new_fields.issubset(prof.keys())
+
+
+def test_build_profile_unique_artist_count(monkeypatch):
+    monkeypatch.setattr(history, "read", lambda limit=500: _weekly_tracks())
+    monkeypatch.setattr(history, "read_search", lambda limit=500: [])
+    with mock.patch("coding_with_beat.profile.get_source", side_effect=Exception("no AM")):
+        prof = profile.build_profile("weekly")
+    # _weekly_tracks() has 5 distinct artists
+    assert prof["unique_artist_count"] == 5
+
+
+def test_build_profile_estimated_hours(monkeypatch):
+    monkeypatch.setattr(history, "read", lambda limit=500: _weekly_tracks())
+    monkeypatch.setattr(history, "read_search", lambda limit=500: [])
+    with mock.patch("coding_with_beat.profile.get_source", side_effect=Exception("no AM")):
+        prof = profile.build_profile("weekly")
+    # 10 tracks * 3.5 / 60 = 0.583 → rounds to 0.6
+    assert prof["estimated_hours"] == pytest.approx(0.6, abs=0.1)
+
+
+def test_build_profile_peak_band(monkeypatch):
+    monkeypatch.setattr(history, "read", lambda limit=500: _weekly_tracks())
+    monkeypatch.setattr(history, "read_search", lambda limit=500: [])
+    with mock.patch("coding_with_beat.profile.get_source", side_effect=Exception("no AM")):
+        prof = profile.build_profile("weekly")
+    assert prof["peak_band"] in {"morning", "afternoon", "evening", "night"}
+
+
+def test_build_profile_daily_plays_weekly_keys(monkeypatch):
+    monkeypatch.setattr(history, "read", lambda limit=500: _weekly_tracks())
+    monkeypatch.setattr(history, "read_search", lambda limit=500: [])
+    with mock.patch("coding_with_beat.profile.get_source", side_effect=Exception("no AM")):
+        prof = profile.build_profile("weekly")
+    # weekly → YYYY-MM-DD keys, sorted, totals equal play_count
+    assert all(len(k) == 10 for k in prof["daily_plays"])
+    assert sum(prof["daily_plays"].values()) == prof["play_count"]
+
+
+def _daily_tracks():
+    """10 tracks all within the last 20 hours, for daily period tests."""
+    return [_track(f"DTrack {i}", f"Artist {i % 3}", i * 1, "") for i in range(1, 11)]
+
+
+def test_build_profile_daily_plays_daily_period(monkeypatch):
+    monkeypatch.setattr(history, "read", lambda limit=500: _daily_tracks())
+    monkeypatch.setattr(history, "read_search", lambda limit=500: [])
+    with mock.patch("coding_with_beat.profile.get_source", side_effect=Exception("no AM")):
+        prof = profile.build_profile("daily")
+    # daily → "HH" keys (2 chars)
+    assert all(len(k) == 2 for k in prof["daily_plays"])
+
+
+def test_build_profile_personality_scores_in_range(monkeypatch):
+    monkeypatch.setattr(history, "read", lambda limit=500: _weekly_tracks())
+    monkeypatch.setattr(history, "read_search", lambda limit=500: [])
+    with mock.patch("coding_with_beat.profile.get_source", side_effect=Exception("no AM")):
+        prof = profile.build_profile("weekly")
+    scores = prof["personality_scores"]
+    for key in ("focus", "explore", "mood", "night_owl", "loyalty"):
+        assert key in scores
+        assert 0 <= scores[key] <= 100
