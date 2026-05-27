@@ -1010,6 +1010,13 @@ async def smart_search(
     """
     import asyncio
 
+    # Capture queries for search history profile
+    if queries:
+        for _q in queries:
+            history.write_search(_q)
+    elif description:
+        history.write_search(description)
+
     if queries:
         _q0 = queries[0][:22] + ("…" if len(queries[0]) > 22 else "")
         return await _multi_angle_search(queries, limit_per_query=min(limit, 6), label=f"Search · {_q0}")
