@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime
+import html
 import math
 import re
 from collections import Counter
@@ -391,12 +392,12 @@ def build_html_report(profile: dict) -> str:
 
     summary_parts: list[str] = []
     if top_genres:
-        top2 = " 和 ".join(g for g, _ in top_genres[:2])
+        top2 = " 和 ".join(html.escape(g) for g, _ in top_genres[:2])
         summary_parts.append(f"这{_PERIOD_ZH.get(period, '周')}你的音乐偏好明显偏向 {top2}")
     if declining_pref:
-        summary_parts.append(f"{'、'.join(declining_pref[:2])} 播放次数有所下降")
+        summary_parts.append(f"{'、'.join(html.escape(x) for x in declining_pref[:2])} 播放次数有所下降")
     if recent_trend:
-        summary_parts.append(f"{'、'.join(recent_trend[:2])} 开始走高")
+        summary_parts.append(f"{'、'.join(html.escape(x) for x in recent_trend[:2])} 开始走高")
     summary = "，".join(summary_parts) + "。" if summary_parts else f"本{_PERIOD_ZH.get(period, '周')}共播放 {play_count} 首，继续保持！"
 
     def _bar_svg(items: list, max_items: int = 5) -> str:
@@ -409,7 +410,7 @@ def build_html_report(profile: dict) -> str:
         for i, (name, count) in enumerate(items):
             y = i * (BAR_H + GAP)
             bw = max(4, int((count / max_val) * (W - LW - 36)))
-            nm = (name[:9] + "…") if len(name) > 9 else name
+            nm = html.escape((name[:9] + "…") if len(name) > 9 else name)
             rows += [
                 f'<text x="0" y="{y+13}" fill="#cec8bc" font-size="12">{nm}</text>',
                 f'<rect x="{LW}" y="{y+2}" width="{bw}" height="{BAR_H-4}" rx="3" fill="#8b5cf6" opacity=".8"/>',
@@ -464,7 +465,7 @@ def build_html_report(profile: dict) -> str:
             return '<span style="color:#68687a;font-size:12px">—</span>'
         return "".join(
             f'<span style="background:{color};color:#fff;padding:2px 8px;border-radius:10px;'
-            f'font-size:12px;font-family:monospace;display:inline-block;margin:2px">{item}</span>'
+            f'font-size:12px;font-family:monospace;display:inline-block;margin:2px">{html.escape(item)}</span>'
             for item in items[:4]
         )
 
@@ -472,14 +473,14 @@ def build_html_report(profile: dict) -> str:
     time_rows = "".join(
         f'<div class="time-row">'
         f'<span class="time-label">{band_labels[band]}</span>'
-        + "".join(f'<span class="gpill">{g}</span>' for g in genres[:3])
+        + "".join(f'<span class="gpill">{html.escape(g)}</span>' for g in genres[:3])
         + "</div>"
         for band in ("morning", "afternoon", "evening", "night")
         if (genres := time_pattern.get(band, []))
     )
 
     rec_cards = "".join(
-        f'<div class="rec-card"><span class="rec-n">{i}</span><span class="rec-q">{q}</span></div>'
+        f'<div class="rec-card"><span class="rec-n">{i}</span><span class="rec-q">{html.escape(q)}</span></div>'
         for i, q in enumerate(queries, 1)
     )
 
