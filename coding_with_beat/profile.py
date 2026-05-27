@@ -405,11 +405,11 @@ def build_html_report(profile: dict) -> str:
         if not items:
             return '<p style="color:#68687a;font-size:12px;margin:0">暂无数据</p>'
         max_val = max(c for _, c in items) or 1
-        W, BAR_H, GAP, LW = 240, 18, 10, 82
+        W, BAR_H, GAP, LW = 170, 18, 10, 76
         rows = []
         for i, (name, count) in enumerate(items):
             y = i * (BAR_H + GAP)
-            bw = max(4, int((count / max_val) * (W - LW - 36)))
+            bw = max(4, int((count / max_val) * (W - LW - 24)))
             nm = html.escape((name[:9] + "…") if len(name) > 9 else name)
             rows += [
                 f'<text x="0" y="{y+13}" fill="#cec8bc" font-size="12">{nm}</text>',
@@ -417,7 +417,7 @@ def build_html_report(profile: dict) -> str:
                 f'<text x="{LW+bw+5}" y="{y+13}" fill="#68687a" font-size="11">{count}</text>',
             ]
         h = len(items) * (BAR_H + GAP)
-        return f'<svg width="{W}" height="{h}" style="overflow:visible;font-family:monospace">{"".join(rows)}</svg>'
+        return f'<svg width="{W}" height="{h}" style="overflow:hidden;font-family:monospace">{"".join(rows)}</svg>'
 
     def _donut_svg(lang_pref: dict) -> str:
         COLORS = {"zh": "#8b5cf6", "en": "#a78bfa", "instrumental": "#6d7fd4"}
@@ -517,7 +517,7 @@ body{{background:#080810;color:#cec8bc;font-family:'JetBrains Mono',monospace,sa
 .big-num{{font-size:56px;font-weight:700;color:#a78bfa;line-height:1;margin-bottom:4px}}
 .big-label{{font-size:12px;color:#68687a;letter-spacing:.1em}}
 .cards{{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:16px;margin:24px 0}}
-.card{{background:#0f0f1a;border:1px solid rgba(139,92,246,.25);border-radius:10px;padding:20px}}
+.card{{background:#0f0f1a;border:1px solid rgba(139,92,246,.25);border-radius:10px;padding:20px;overflow:hidden}}
 .ctitle{{font-size:11px;letter-spacing:.1em;color:#68687a;margin-bottom:14px;text-transform:uppercase}}
 .section{{margin:0 0 24px}}
 .stitle{{font-size:11px;letter-spacing:.1em;color:#68687a;text-transform:uppercase;margin-bottom:12px}}
