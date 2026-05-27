@@ -378,7 +378,7 @@ def test_write_search_and_read_round_trip(tmp_path, monkeypatch):
     # most-recent first
     assert records[0]["query"] == "synthwave night drive neon"
     assert records[1]["query"] == "lofi jazz coding instrumental focus"
-    assert isinstance(records[0]["ts"], __import__("datetime").datetime)
+    assert isinstance(records[0]["ts"], datetime.datetime)
 
 
 def test_write_search_skips_empty_query(tmp_path, monkeypatch):

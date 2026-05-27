@@ -161,7 +161,7 @@ def read_search(limit: int = 500) -> list[dict]:
     result: list[dict] = []
     for line in reversed(lines):
         parts = line.split(" | ", 2)
-        if len(parts) < 2:
+        if len(parts) < 3:
             continue
         ts_str, query = parts[0], parts[1]
         try:
