@@ -1438,11 +1438,11 @@ def session_intro() -> str:
 _TIPS_EN = """\
 🎵 What you can say:
 
-▸ Mood
+▸ Mood / Scene
   · "play some late-night lofi"
   · "focus music, no lyrics"
-  · "jazz / lofi / classical / synthwave"
-  · "I want to relax"
+  · "jazz / lofi / classical / synthwave / sad / hype"
+  · "I want to relax" · "something for a drive"
 
 ▸ Playlists
   · "show my playlists"
@@ -1452,16 +1452,30 @@ _TIPS_EN = """\
   · "show loved tracks" · "like this"
   · "search Jay Chou in loved"
 
-▸ History & recommendations
+▸ Music profile & report
+  · "generate my weekly listening report"
+  · "show my music profile for this month"
+  · "what have I been listening to?"
+
+▸ Focus mode (Pomodoro)
+  · "start a focus session" · "stop focus"
+  · "how much focus time left?"
+
+▸ Lyrics & visuals
+  · "show lyrics" · "show cover art"
+  · "show player"
+
+▸ History
   · "show my recently played"
-  · "recommend based on my history"
+  · "search my history for lofi"
 
 ▸ Playback
   · "next" · "pause" · "resume"
   · "louder" · "quieter" · "play #3"
+  · "shuffle" · "repeat" · "seek to 1:30"
 
-▸ Status
-  · "what's playing" · "show player"
+▸ DJ mode
+  · "say something DJ" · "set vibe to chill"
 
 💡 Run 'cwb watch' in another terminal for live lyrics & progress.
 💡 Apple Music: if a popup appears, click 'Add to Library', then say 'play it' again.
@@ -1473,8 +1487,8 @@ _TIPS_ZH = """\
 ▸ 按心情找歌
   · 「来首深夜写代码的」
   · 「放点专注的背景音乐」
-  · 「来点爵士/lofi/古典/电子」
-  · 「我想放松一下」
+  · 「来点爵士/lofi/古典/电子/悲伤/充能」
+  · 「我想放松一下」·「适合夜驾的」
 
 ▸ 歌单
   · 「我有哪些歌单」
@@ -1484,16 +1498,30 @@ _TIPS_ZH = """\
   · 「喜欢列表」·「我喜欢这首」
   · 「从喜欢里找周杰伦」
 
-▸ 历史与推荐
+▸ 音乐画像与听歌报告
+  · 「生成我的本周听歌报告」
+  · 「这个月的音乐画像」
+  · 「我最近都在听什么」
+
+▸ 专注模式（番茄钟）
+  · 「开始专注」·「停止专注」
+  · 「专注还剩多久」
+
+▸ 歌词与视觉
+  · 「显示歌词」·「显示封面」
+  · 「显示播放器」
+
+▸ 历史记录
   · 「最近播放」
-  · 「根据我的历史推荐」
+  · 「历史里有没有lofi的」
 
 ▸ 播放控制
   · 「下一首」·「暂停」·「继续」
   · 「大声一点」·「小声一点」·「播放第3首」
+  · 「随机播放」·「单曲循环」·「跳到1分30秒」
 
-▸ 查看状态
-  · 「现在播的是什么」·「显示播放器」
+▸ DJ 互动
+  · 「DJ说点什么」·「氛围调成 chill」
 
 💡 推荐在另一个终端运行 cwb watch，实时查看歌词和进度。
 💡 Apple Music 曲目首次播放会弹窗，点击「加入资料库」后再说一次播放就好。
