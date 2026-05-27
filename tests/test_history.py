@@ -359,3 +359,38 @@ def test_history_search_empty_history_returns_message():
         result = asyncio.run(history_search())
 
     assert "还没有" in result
+
+
+# ── write_search / read_search ────────────────────────────────────────────────
+
+def test_read_search_returns_empty_when_no_log(tmp_path, monkeypatch):
+    monkeypatch.setattr(history, "_SEARCH_LOG_FILE", tmp_path / "search_history.log")
+    assert history.read_search() == []
+
+
+def test_write_search_and_read_round_trip(tmp_path, monkeypatch):
+    monkeypatch.setattr(history, "_SEARCH_LOG_FILE", tmp_path / "search_history.log")
+    monkeypatch.setattr(history, "ensure_dirs", lambda: None)
+    history.write_search("lofi jazz coding instrumental focus")
+    history.write_search("synthwave night drive neon")
+    records = history.read_search()
+    assert len(records) == 2
+    # most-recent first
+    assert records[0]["query"] == "synthwave night drive neon"
+    assert records[1]["query"] == "lofi jazz coding instrumental focus"
+    assert isinstance(records[0]["ts"], __import__("datetime").datetime)
+
+
+def test_write_search_skips_empty_query(tmp_path, monkeypatch):
+    monkeypatch.setattr(history, "_SEARCH_LOG_FILE", tmp_path / "search_history.log")
+    monkeypatch.setattr(history, "ensure_dirs", lambda: None)
+    history.write_search("")
+    assert not (tmp_path / "search_history.log").exists()
+
+
+def test_read_search_respects_limit(tmp_path, monkeypatch):
+    monkeypatch.setattr(history, "_SEARCH_LOG_FILE", tmp_path / "search_history.log")
+    monkeypatch.setattr(history, "ensure_dirs", lambda: None)
+    for i in range(10):
+        history.write_search(f"query {i}")
+    assert len(history.read_search(limit=3)) == 3
