@@ -460,6 +460,31 @@ def cmd_history() -> int:
     return 0
 
 
+def cmd_profile() -> int:
+    from . import profile as _profile
+
+    valid = {"daily", "weekly", "monthly", "yearly"}
+    period = sys.argv[2] if len(sys.argv) > 2 else "weekly"
+    if period not in valid:
+        print(f"error: period must be one of: {', '.join(sorted(valid))}")
+        return 2
+
+    try:
+        prof = _profile.build_profile(period)
+    except ValueError:
+        print("（听歌记录不足 5 首，多听一会儿再来生成报告吧 🎵）")
+        return 0
+
+    print(_profile.build_report(prof))
+    print()
+    queries = _profile.build_recommendation_queries(prof)
+    if queries:
+        print("🎵 个性化推荐 queries：")
+        for i, q in enumerate(queries, 1):
+            print(f"  {i}. {q}")
+    return 0
+
+
 def cmd_mode() -> int:
     mode = sys.argv[2] if len(sys.argv) > 2 else ""
     if not mode:
@@ -827,6 +852,7 @@ COMMANDS = {
     "volume": cmd_volume,
     "seek": cmd_seek,
     "history": cmd_history,
+    "profile": cmd_profile,
     "bar": cmd_bar,
     "help": cmd_help,
     # ── Chinese aliases ────────────────────────────────────────────────────
@@ -852,6 +878,9 @@ COMMANDS = {
     "播放器": cmd_player,
     "状态": cmd_status,
     "历史": cmd_history,
+    "画像": cmd_profile,
+    "音乐画像": cmd_profile,
+    "听歌报告": cmd_profile,
     "状态栏": cmd_bar,
     "音量": cmd_volume,
     "模式": cmd_mode,
