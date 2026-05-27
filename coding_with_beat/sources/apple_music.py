@@ -110,12 +110,12 @@ end tell
 """
 
 
-def _osa(script: str) -> str:
+def _osa(script: str, timeout: int = 8) -> str:
     p = subprocess.run(
         ["osascript", "-e", script],
         capture_output=True,
         text=True,
-        timeout=8,
+        timeout=timeout,
     )
     if p.returncode != 0:
         raise RuntimeError(f"AppleScript failed: {p.stderr.strip()}")
@@ -1168,9 +1168,16 @@ end tell
     end repeat
     return output
 end tell"""
-        try:
-            raw = _osa(script)
-        except Exception:
+        raw = ""
+        for _attempt in range(2):
+            try:
+                raw = _osa(script, timeout=30)
+                break
+            except Exception:
+                if _attempt == 0:
+                    import time as _time
+                    _time.sleep(1)
+        if not raw:
             return []
 
         now = _dt.datetime.now()
