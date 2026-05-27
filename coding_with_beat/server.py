@@ -768,13 +768,27 @@ async def generate_profile(
     report_text = profile.build_report(prof)
     queries = profile.build_recommendation_queries(prof, context)
 
+    # Generate and open HTML report as a side effect
+    html_note = ""
+    try:
+        import subprocess as _sp
+        from .config import DATA_DIR
+        html_content = profile.build_html_report(prof)
+        out_path = DATA_DIR / f"report_{period}_{prof['generated_at'].strftime('%Y%m%d')}.html"
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(html_content, encoding="utf-8")
+        _sp.run(["open", str(out_path)], check=False)
+        html_note = f"\n\n📄 HTML 报告已在浏览器打开（{out_path.name}）"
+    except Exception:
+        pass
+
     rec_lines = ["", "─" * 40, "🎵 个性化推荐（可用 smart_search 播放）："]
     for i, q in enumerate(queries, 1):
         rec_lines.append(f"  {i}. {q}")
     rec_lines.append("")
     rec_lines.append('想播放推荐吗？说"播放推荐"或"play 1"即可。')
 
-    return report_text + "\n" + "\n".join(rec_lines)
+    return report_text + html_note + "\n" + "\n".join(rec_lines)
 
 
 @mcp.tool()
