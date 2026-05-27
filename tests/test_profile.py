@@ -125,6 +125,16 @@ def _make_profile(overrides=None):
         "stable_pref": ["lofi", "ambient"],
         "declining_pref": ["华语"],
         "time_pattern": {"night": ["lofi", "ambient"], "afternoon": ["classical"]},
+        "tracks_by_artist": {"Hans Zimmer": [{"t": "Interstellar", "c": 5}]},
+        "tracks_by_genre":  {"lofi": [{"t": "Track 1", "a": "Hans Zimmer"}]},
+        "unique_artist_count": 5,
+        "estimated_hours": 2.5,
+        "peak_band": "night",
+        "band_track_counts": {"morning": 3, "afternoon": 8, "evening": 10, "night": 21},
+        "daily_plays": {"2026-05-20": 10, "2026-05-21": 15, "2026-05-22": 8,
+                        "2026-05-23": 5, "2026-05-24": 12, "2026-05-25": 4, "2026-05-26": 6},
+        "personality_scores": {"focus": 70, "explore": 45, "mood": 60, "night_owl": 83, "loyalty": 55},
+        "trend_detail": {"synthwave": (0, 4), "lofi": (5, 7), "ambient": (6, 4), "华语": (3, 0)},
     }
     if overrides:
         base.update(overrides)
@@ -330,3 +340,35 @@ def test_build_profile_personality_scores_in_range(monkeypatch):
     for key in ("focus", "explore", "mood", "night_owl", "loyalty"):
         assert key in scores
         assert 0 <= scores[key] <= 100
+
+
+def test_build_html_report_contains_daily_chart():
+    html_out = profile.build_html_report(_make_profile())
+    assert 'id="daily-chart"' in html_out
+
+
+def test_build_html_report_contains_radar_card():
+    html_out = profile.build_html_report(_make_profile())
+    assert 'id="radar-card"' in html_out
+
+
+def test_build_html_report_contains_medals():
+    html_out = profile.build_html_report(_make_profile())
+    assert "🥇" in html_out
+
+
+def test_build_html_report_contains_estimated_hours():
+    html_out = profile.build_html_report(_make_profile())
+    assert "2.5" in html_out
+
+
+def test_build_html_report_contains_loved_artist():
+    html_out = profile.build_html_report(_make_profile())
+    # loved_artists has "Hans Zimmer"
+    assert "Hans Zimmer" in html_out
+
+
+def test_build_html_report_contains_search_term():
+    html_out = profile.build_html_report(_make_profile())
+    # top_search_terms has "lofi"
+    assert "lofi" in html_out

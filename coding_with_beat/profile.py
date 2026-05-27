@@ -554,31 +554,42 @@ def _music_personality(profile: dict) -> tuple[str, str, str]:
 
 
 def build_html_report(profile: dict) -> str:
-    """Generate a self-contained dark-theme HTML listening report with SVG charts."""
-    period       = profile.get("period", "weekly")
-    generated_at = profile.get("generated_at", datetime.datetime.now())
-    days         = _PERIOD_DAYS.get(period, 7)
-    start        = (generated_at - datetime.timedelta(days=days)).strftime("%Y-%m-%d")
-    end          = generated_at.strftime("%Y-%m-%d")
-    label        = _PERIOD_LABELS.get(period, "听歌报告")
-    play_count   = profile.get("play_count", 0)
-    top_artists  = profile.get("top_artists", [])
-    top_genres   = profile.get("top_genres", [])
-    language_pref = profile.get("language_pref", {})
-    recent_trend = profile.get("recent_trend", [])
-    stable_pref  = profile.get("stable_pref", [])
-    declining_pref = profile.get("declining_pref", [])
-    time_pattern = profile.get("time_pattern", {})
-    queries      = build_recommendation_queries(profile)
+    """Generate a self-contained dark-theme HTML dashboard listening report."""
+    period            = profile.get("period", "weekly")
+    generated_at      = profile.get("generated_at", datetime.datetime.now())
+    days              = _PERIOD_DAYS.get(period, 7)
+    start             = (generated_at - datetime.timedelta(days=days)).strftime("%Y-%m-%d")
+    end               = generated_at.strftime("%Y-%m-%d")
+    label             = _PERIOD_LABELS.get(period, "听歌报告")
+    play_count        = profile.get("play_count", 0)
+    top_artists       = profile.get("top_artists", [])
+    top_genres        = profile.get("top_genres", [])
+    language_pref     = profile.get("language_pref", {})
+    recent_trend      = profile.get("recent_trend", [])
+    stable_pref       = profile.get("stable_pref", [])
+    declining_pref    = profile.get("declining_pref", [])
+    time_pattern      = profile.get("time_pattern", {})
+    top_search_terms  = profile.get("top_search_terms", [])
+    loved_artists     = profile.get("loved_artists", [])
+    tracks_by_artist  = profile.get("tracks_by_artist", {})
+    tracks_by_genre   = profile.get("tracks_by_genre", {})
+    unique_artist_count = profile.get("unique_artist_count", 0)
+    estimated_hours   = profile.get("estimated_hours", 0.0)
+    peak_band         = profile.get("peak_band", "night")
+    band_track_counts = profile.get("band_track_counts", {})
+    daily_plays       = profile.get("daily_plays", {})
+    personality_scores = profile.get("personality_scores", {})
+    trend_detail      = profile.get("trend_detail", {})
+    queries           = build_recommendation_queries(profile)
     p_emoji, p_title, p_desc = _music_personality(profile)
-    tracks_by_artist = profile.get("tracks_by_artist", {})
-    tracks_by_genre  = profile.get("tracks_by_genre", {})
-    _raw = json.dumps(
-        {"artists": tracks_by_artist, "genres": tracks_by_genre},
-        ensure_ascii=False,
-    ).replace("</script>", "<\\/script>").replace("<!--", "<\\!--")
-    track_data_json = _raw
 
+    _PEAK_LABELS = {
+        "morning": "🌅 早晨", "afternoon": "☀️ 下午",
+        "evening": "🌆 傍晚", "night": "🌙 深夜",
+    }
+    peak_label = _PEAK_LABELS.get(peak_band, "🌙 深夜")
+
+    # ── Summary sentence ──────────────────────────────────────────────────────
     summary_parts: list[str] = []
     if top_genres:
         top2 = " 和 ".join(html.escape(g) for g, _ in top_genres[:2])
@@ -587,21 +598,34 @@ def build_html_report(profile: dict) -> str:
         summary_parts.append(f"{'、'.join(html.escape(x) for x in declining_pref[:2])} 播放次数有所下降")
     if recent_trend:
         summary_parts.append(f"{'、'.join(html.escape(x) for x in recent_trend[:2])} 开始走高")
-    summary = "，".join(summary_parts) + "。" if summary_parts else f"本{_PERIOD_ZH.get(period, '周')}共播放 {play_count} 首，继续保持！"
+    summary = "，".join(summary_parts) + "。" if summary_parts else (
+        f"本{_PERIOD_ZH.get(period, '周')}共播放 {play_count} 首，继续保持！"
+    )
 
+    # ── JSON for modal drill-down ─────────────────────────────────────────────
+    _raw = json.dumps(
+        {"artists": tracks_by_artist, "genres": tracks_by_genre},
+        ensure_ascii=False,
+    ).replace("</script>", "<\\/script>").replace("<!--", "<\\!--")
+    track_data_json = _raw
+
+    # ── Helper: bar chart with medals ─────────────────────────────────────────
     def _bar_html(items: list, data_type: str, max_items: int = 5) -> str:
         items = items[:max_items]
         if not items:
             return '<p style="color:#68687a;font-size:12px;margin:0">暂无数据</p>'
+        medals = ["🥇", "🥈", "🥉"]
         max_val = max(c for _, c in items) or 1
         rows = []
-        for name, count in items:
+        for idx, (name, count) in enumerate(items):
             pct = max(4, int((count / max_val) * 100))
             nm = html.escape((name[:9] + "…") if len(name) > 9 else name)
             key = html.escape(name, quote=True)
+            prefix = medals[idx] + " " if idx < 3 else "  "
             rows.append(
-                f'<div class="bar-item" data-type="{data_type}" data-key="{key}" onclick="handleBarClick(this)">'
-                f'<div class="bar-label">{nm}</div>'
+                f'<div class="bar-item" data-type="{data_type}" data-key="{key}"'
+                f' onclick="handleBarClick(this)">'
+                f'<div class="bar-label">{prefix}{nm}</div>'
                 f'<div class="bar-track">'
                 f'<div class="bar-bg"><div class="bar-fill" style="width:{pct}%"></div></div>'
                 f'<span class="bar-count">{count}</span>'
@@ -609,6 +633,7 @@ def build_html_report(profile: dict) -> str:
             )
         return "".join(rows)
 
+    # ── Helper: donut SVG (language) ──────────────────────────────────────────
     def _donut_svg(lang_pref: dict) -> str:
         COLORS = {"zh": "#8b5cf6", "en": "#a78bfa", "instrumental": "#6d7fd4"}
         LABELS = {"zh": "中文", "en": "英文", "instrumental": "纯音乐"}
@@ -629,7 +654,8 @@ def build_html_report(profile: dict) -> str:
             c = COLORS.get(lang, "#6b7280")
             paths.append(
                 f'<path d="M {x1:.1f} {y1:.1f} A {R} {R} 0 {lg} 1 {x2:.1f} {y2:.1f}'
-                f' L {ix2:.1f} {iy2:.1f} A {r} {r} 0 {lg} 0 {ix1:.1f} {iy1:.1f} Z" fill="{c}"/>'
+                f' L {ix2:.1f} {iy2:.1f} A {r} {r} 0 {lg} 0 {ix1:.1f} {iy1:.1f} Z"'
+                f' fill="{c}"/>'
             )
             angle += sweep
         dom_lang, dom_val = max(items, key=lambda x: x[1])
@@ -639,65 +665,289 @@ def build_html_report(profile: dict) -> str:
         for i, (lang, val) in enumerate(items):
             ly = legend_top + i * 20
             c = COLORS.get(lang, "#6b7280")
-            legend += [
+            legend.append(
                 f'<g transform="translate({cx},{ly})">'
                 f'<rect x="-33" y="0" width="10" height="10" rx="2" fill="{c}"/>'
-                f'<text x="-19" y="9" fill="#cec8bc" font-size="11">{LABELS.get(lang, lang)} {int(val*100)}%</text>'
-                f'</g>',
-            ]
+                f'<text x="-19" y="9" fill="#cec8bc" font-size="11">'
+                f'{LABELS.get(lang, lang)} {int(val * 100)}%</text>'
+                f'</g>'
+            )
         total_h = legend_top + len(items) * 20 + 4
         return (
-            f'<svg width="160" height="{total_h}" style="overflow:visible;font-family:monospace">'
+            f'<svg width="160" height="{total_h}"'
+            f' style="overflow:visible;font-family:monospace">'
             f'{"".join(paths)}'
-            f'<text x="{cx}" y="{cy-5}" text-anchor="middle" fill="#a78bfa" font-size="15" font-weight="bold">{dom_pct}%</text>'
-            f'<text x="{cx}" y="{cy+12}" text-anchor="middle" fill="#cec8bc" font-size="11">{LABELS.get(dom_lang, dom_lang)}</text>'
+            f'<text x="{cx}" y="{cy - 5}" text-anchor="middle" fill="#a78bfa"'
+            f' font-size="15" font-weight="bold">{dom_pct}%</text>'
+            f'<text x="{cx}" y="{cy + 12}" text-anchor="middle" fill="#cec8bc"'
+            f' font-size="11">{LABELS.get(dom_lang, dom_lang)}</text>'
             f'{"".join(legend)}</svg>'
         )
 
-    def _pills(items: list, color: str) -> str:
-        if not items:
-            return '<span style="color:#68687a;font-size:12px">—</span>'
-        return "".join(
-            f'<span style="background:{color};color:#fff;padding:2px 8px;border-radius:10px;'
-            f'font-size:12px;font-family:monospace;display:inline-block;margin:2px">{html.escape(item)}</span>'
-            for item in items[:4]
+    # ── Helper: daily plays bar chart ─────────────────────────────────────────
+    def _daily_chart_html(plays: dict, p: str) -> str:
+        if not plays:
+            return '<p style="color:#68687a;font-size:12px;margin:0">暂无数据</p>'
+        _DAY_CN = {
+            "Mon": "周一", "Tue": "周二", "Wed": "周三", "Thu": "周四",
+            "Fri": "周五", "Sat": "周六", "Sun": "周日",
+        }
+        items = sorted(plays.items())
+        max_val = max(v for _, v in items) or 1
+
+        def _label(k: str) -> str:
+            if p == "daily":
+                return f"{k}:00"
+            if p == "yearly":
+                return k[5:]  # "MM"
+            try:
+                d = datetime.datetime.strptime(k, "%Y-%m-%d")
+                return _DAY_CN.get(d.strftime("%a"), d.strftime("%m/%d"))
+            except ValueError:
+                return k
+
+        bars = []
+        for k, v in items:
+            bar_h = max(4, int(v / max_val * 60))
+            lbl = html.escape(_label(k)[:4])
+            bars.append(
+                f'<div style="display:flex;flex-direction:column;align-items:center;flex:1;gap:2px">'
+                f'<div style="width:100%;height:60px;display:flex;align-items:flex-end">'
+                f'<div style="width:100%;height:{bar_h}px;background:#8b5cf6;opacity:.8;'
+                f'border-radius:2px 2px 0 0" title="{lbl}: {v}首"></div>'
+                f'</div>'
+                f'<span style="font-size:9px;color:#68687a;white-space:nowrap;'
+                f'overflow:hidden;text-overflow:ellipsis;max-width:28px">{lbl}</span>'
+                f'</div>'
+            )
+        return f'<div style="display:flex;gap:2px;align-items:flex-end">{"".join(bars)}</div>'
+
+    # ── Helper: search term word cloud ────────────────────────────────────────
+    def _word_cloud_html(terms: list) -> str:
+        if not terms:
+            return '<p style="color:#68687a;font-size:12px;margin:0">暂无搜索记录</p>'
+        terms = terms[:8]
+        max_count = max(c for _, c in terms) or 1
+        tags = []
+        for term, count in terms:
+            ratio = count / max_count
+            size = int(11 + ratio * 7)
+            opacity = round(0.3 + ratio * 0.7, 2)
+            tags.append(
+                f'<span style="font-size:{size}px;color:rgba(139,92,246,{opacity});'
+                f'font-family:monospace;margin:2px 4px;display:inline-block">'
+                f'{html.escape(term)}</span>'
+            )
+        return f'<div style="line-height:2">{"".join(tags)}</div>'
+
+    # ── Helper: time band heatmap ─────────────────────────────────────────────
+    def _time_heatmap_html(tp: dict, btc: dict) -> str:
+        bands = [
+            ("morning",   "🌅", "早晨"),
+            ("afternoon", "☀️", "下午"),
+            ("evening",   "🌆", "傍晚"),
+            ("night",     "🌙", "深夜"),
+        ]
+        max_count = max(btc.values()) if btc else 1
+        cols = []
+        for band, emoji, short in bands:
+            count = btc.get(band, 0)
+            opacity = round(max(0.12, count / max(max_count, 1)), 2)
+            genres = tp.get(band, [])
+            genre_tags = "".join(
+                f'<span class="gpill" data-type="genre"'
+                f' data-key="{html.escape(g, quote=True)}"'
+                f' onclick="handlePillClick(this)">{html.escape(g)}</span>'
+                for g in genres[:2]
+            )
+            cols.append(
+                f'<div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex:1">'
+                f'<div style="width:100%;height:44px;background:rgba(139,92,246,{opacity});'
+                f'border-radius:8px;display:flex;align-items:center;'
+                f'justify-content:center;font-size:18px">{emoji}</div>'
+                f'<span style="font-size:10px;color:#68687a">{short}</span>'
+                f'<div style="display:flex;flex-wrap:wrap;gap:2px;justify-content:center">'
+                f'{genre_tags}</div>'
+                f'</div>'
+            )
+        return f'<div style="display:flex;gap:8px">{"".join(cols)}</div>'
+
+    # ── Helper: loved artists wall ────────────────────────────────────────────
+    def _loved_html(loved: list, artists: list) -> str:
+        if not loved:
+            return '<p style="color:#68687a;font-size:12px;margin:0">暂无收藏</p>'
+        artist_map = {a: c for a, c in artists}
+        rows = []
+        for artist in loved[:5]:
+            count = artist_map.get(artist, 0)
+            color = "#a78bfa" if count > 0 else "#68687a"
+            rows.append(
+                f'<div style="display:flex;justify-content:space-between;'
+                f'align-items:center;padding:5px 0;'
+                f'border-bottom:1px solid rgba(139,92,246,.1)">'
+                f'<span style="font-size:12px;color:{color};font-family:monospace">'
+                f'{html.escape(artist)}</span>'
+                f'<span style="font-size:11px;color:#68687a">{count} 次</span>'
+                f'</div>'
+            )
+        return "".join(rows)
+
+    # ── Helper: trend pills with % change ────────────────────────────────────
+    def _trend_pill(genre: str, direction: str) -> str:
+        first, second = trend_detail.get(genre, (0, 0))
+        if direction == "new":
+            badge = '<span style="background:#16a34a;color:#fff;font-size:9px;padding:1px 5px;border-radius:4px;margin-left:4px">NEW</span>'
+            color = "#16a34a"
+        elif direction == "gone":
+            badge = '<span style="background:#b91c1c;color:#fff;font-size:9px;padding:1px 5px;border-radius:4px;margin-left:4px">-100%</span>'
+            color = "#b91c1c"
+        else:
+            if first > 0:
+                pct = int(abs(second - first) / first * 100)
+                sign = "+" if second >= first else "-"
+                clr = "#16a34a" if second >= first else "#b91c1c"
+                badge = (
+                    f'<span style="background:{clr};color:#fff;font-size:9px;'
+                    f'padding:1px 5px;border-radius:4px;margin-left:4px">'
+                    f'{sign}{pct}%</span>'
+                )
+            else:
+                badge = ""
+            color = "#a78bfa"
+        return (
+            f'<div style="display:flex;align-items:center;margin-bottom:4px">'
+            f'<span style="font-size:12px;color:{color};font-family:monospace">'
+            f'{html.escape(genre)}</span>{badge}'
+            f'</div>'
         )
 
-    band_labels = {"morning": "🌅 早晨", "afternoon": "☀️ 下午", "evening": "🌆 傍晚", "night": "🌙 深夜"}
-    time_rows = "".join(
-        f'<div class="time-row">'
-        f'<span class="time-label">{band_labels[band]}</span>'
-        + "".join(
-            f'<span class="gpill" data-type="genre" data-key="{html.escape(g, quote=True)}"'
-            f' onclick="handlePillClick(this)">{html.escape(g)}</span>'
-            for g in genres[:3]
+    def _trends_col(title: str, items: list, direction: str, header_color: str) -> str:
+        if not items:
+            return (
+                f'<div>'
+                f'<div style="font-size:10px;color:{header_color};'
+                f'letter-spacing:.08em;margin-bottom:8px">{title}</div>'
+                f'<span style="font-size:11px;color:#68687a">—</span>'
+                f'</div>'
+            )
+        pills = "".join(_trend_pill(g, direction) for g in items[:3])
+        return (
+            f'<div>'
+            f'<div style="font-size:10px;color:{header_color};'
+            f'letter-spacing:.08em;margin-bottom:8px">{title}</div>'
+            f'{pills}'
+            f'</div>'
         )
-        + "</div>"
-        for band in ("morning", "afternoon", "evening", "night")
-        if (genres := time_pattern.get(band, []))
+
+    trends_section = (
+        f'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">'
+        f'{_trends_col("↑ 新增", recent_trend,  "new",  "#16a34a")}'
+        f'{_trends_col("→ 稳定", stable_pref,   "stable","#a78bfa")}'
+        f'{_trends_col("↓ 下降", declining_pref,"gone",  "#b91c1c")}'
+        f'</div>'
     )
 
+    # ── Helper: pentagon radar SVG ────────────────────────────────────────────
+    def _radar_svg(scores: dict) -> str:
+        dims = [
+            ("focus",     "专注力"),
+            ("explore",   "探索欲"),
+            ("mood",      "情绪"),
+            ("night_owl", "夜猫"),
+            ("loyalty",   "忠诚"),
+        ]
+        N = len(dims)
+        cx, cy, R = 85, 80, 60
+        label_R = R + 22
+
+        def pt(i: int, ratio: float) -> tuple[float, float]:
+            angle = -math.pi / 2 + i * 2 * math.pi / N
+            return cx + ratio * R * math.cos(angle), cy + ratio * R * math.sin(angle)
+
+        def lpt(i: int) -> tuple[float, float]:
+            angle = -math.pi / 2 + i * 2 * math.pi / N
+            return cx + label_R * math.cos(angle), cy + label_R * math.sin(angle)
+
+        grid_paths = []
+        for level in (0.33, 0.67, 1.0):
+            pts_str = " ".join(f"{pt(i, level)[0]:.1f},{pt(i, level)[1]:.1f}" for i in range(N))
+            op = "0.12" if level < 1.0 else "0.25"
+            grid_paths.append(
+                f'<polygon points="{pts_str}" fill="none" stroke="#8b5cf6"'
+                f' stroke-width="1" opacity="{op}"/>'
+            )
+
+        spokes = []
+        for i in range(N):
+            x, y = pt(i, 1.0)
+            spokes.append(
+                f'<line x1="{cx}" y1="{cy}" x2="{x:.1f}" y2="{y:.1f}"'
+                f' stroke="#8b5cf6" stroke-width="1" opacity="0.15"/>'
+            )
+
+        data_pts = " ".join(
+            f"{pt(i, scores.get(k, 0) / 100)[0]:.1f},"
+            f"{pt(i, scores.get(k, 0) / 100)[1]:.1f}"
+            for i, (k, _) in enumerate(dims)
+        )
+        data_poly = (
+            f'<polygon points="{data_pts}"'
+            f' fill="rgba(139,92,246,0.3)" stroke="#8b5cf6" stroke-width="2"/>'
+        )
+
+        dots = []
+        for i, (k, _) in enumerate(dims):
+            dx, dy = pt(i, scores.get(k, 0) / 100)
+            dots.append(f'<circle cx="{dx:.1f}" cy="{dy:.1f}" r="3" fill="#8b5cf6"/>')
+
+        labels = []
+        for i, (_, lbl) in enumerate(dims):
+            lx, ly = lpt(i)
+            labels.append(
+                f'<text x="{lx:.0f}" y="{ly:.0f}" text-anchor="middle"'
+                f' fill="#cec8bc" font-size="10" font-family="monospace">{lbl}</text>'
+            )
+
+        total_h = int(cy + R + label_R - R + 20)
+        return (
+            f'<svg width="170" height="{total_h}"'
+            f' style="overflow:visible;font-family:monospace">'
+            + "".join(grid_paths) + "".join(spokes) + data_poly
+            + "".join(dots) + "".join(labels)
+            + "</svg>"
+        )
+
+    # ── Radar score bars (right side of radar card) ───────────────────────────
+    _DIM_LABELS = {
+        "focus":     "专注力",
+        "explore":   "探索欲",
+        "mood":      "情绪起伏",
+        "night_owl": "夜猫指数",
+        "loyalty":   "忠诚度",
+    }
+    radar_scores_html = "".join(
+        f'<div style="margin-bottom:8px">'
+        f'<div style="display:flex;justify-content:space-between;'
+        f'font-size:11px;margin-bottom:3px">'
+        f'<span style="color:#cec8bc">{_DIM_LABELS[k]}</span>'
+        f'<span style="color:#a78bfa">{personality_scores.get(k, 0)}</span>'
+        f'</div>'
+        f'<div style="height:5px;background:rgba(139,92,246,.15);border-radius:3px;overflow:hidden">'
+        f'<div style="width:{personality_scores.get(k, 0)}%;height:100%;'
+        f'background:#8b5cf6;border-radius:3px"></div>'
+        f'</div>'
+        f'</div>'
+        for k in ("focus", "explore", "mood", "night_owl", "loyalty")
+    )
+
+    # ── Recommendation cards ──────────────────────────────────────────────────
     rec_cards = "".join(
-        f'<div class="rec-card"><span class="rec-n">{i}</span><span class="rec-q">{html.escape(q)}</span></div>'
+        f'<div class="rec-card"><span class="rec-n">{i}</span>'
+        f'<span class="rec-q">{html.escape(q)}</span></div>'
         for i, q in enumerate(queries, 1)
     )
 
-    trends_html = ""
-    if recent_trend or stable_pref or declining_pref:
-        trends_html = (
-            "<div class='section'><div class='stitle'>📈 偏好变化</div>"
-            "<div class='trends'>"
-            f"<div class='tcol'><div class='tcol-h'>↑ 新增</div>{_pills(recent_trend, '#16a34a')}</div>"
-            f"<div class='tcol'><div class='tcol-h'>→ 稳定</div>{_pills(stable_pref, '#6d28d9')}</div>"
-            f"<div class='tcol'><div class='tcol-h'>↓ 下降</div>{_pills(declining_pref, '#b91c1c')}</div>"
-            "</div></div>"
-        )
-
-    time_html = (
-        f"<div class='section'><div class='stitle'>🕐 时间规律</div>{time_rows}</div>"
-        if time_rows else ""
-    )
-
+    # ── JavaScript ────────────────────────────────────────────────────────────
     _save_js = (
         "function saveAsImage(){"
         "var btn=document.getElementById('save-btn');"
@@ -734,9 +984,11 @@ def build_html_report(profile: dict) -> str:
         "for(var i=0;i<data.length;i++){"
         "var d=data[i];"
         "if(type==='artist'){"
-        "rows+='<div class=\"modal-row\"><span class=\"modal-track\">'+d.t+'</span><span class=\"modal-sub\">'+d.c+'次</span></div>';}"
+        "rows+='<div class=\"modal-row\"><span class=\"modal-track\">'+d.t+'</span>"
+        "<span class=\"modal-sub\">'+d.c+'次</span></div>';}"
         "else{"
-        "rows+='<div class=\"modal-row\"><span class=\"modal-track\">'+d.t+'</span><span class=\"modal-sub\">'+d.a+'</span></div>';}}"
+        "rows+='<div class=\"modal-row\"><span class=\"modal-track\">'+d.t+'</span>"
+        "<span class=\"modal-sub\">'+d.a+'</span></div>';}}"
         "}else{"
         "rows='<div style=\"color:#68687a;font-size:12px;padding:8px 0\">暂无详细记录</div>';}"
         "document.getElementById('modal-body').innerHTML=rows;"
@@ -755,26 +1007,25 @@ def build_html_report(profile: dict) -> str:
 <style>
 *{{box-sizing:border-box;margin:0;padding:0}}
 body{{background:#080810;color:#cec8bc;font-family:'JetBrains Mono',monospace,sans-serif;padding:24px 16px;min-height:100vh}}
-.wrap{{max-width:720px;margin:0 auto}}
-.header{{text-align:center;padding:40px 0 32px;border-bottom:1px solid rgba(139,92,246,.25)}}
-.header-logo{{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:24px;text-decoration:none}}
+.wrap{{max-width:860px;margin:0 auto}}
+.header{{text-align:center;padding:40px 0 28px;border-bottom:1px solid rgba(139,92,246,.25)}}
+.header-logo{{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:20px;text-decoration:none}}
 .header-logo .logo-text{{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;letter-spacing:.12em;color:#f0ece4}}
 .header-logo .logo-name{{color:#a78bfa}}
-.header h1{{font-size:22px;font-weight:600;color:#f0ece4;letter-spacing:.04em;margin-bottom:6px}}
-.header .date{{font-size:12px;color:#68687a;margin-bottom:20px}}
-.big-num{{font-size:56px;font-weight:700;color:#a78bfa;line-height:1;margin-bottom:4px}}
-.big-label{{font-size:12px;color:#68687a;letter-spacing:.1em}}
-.cards{{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:16px;margin:24px 0}}
-.card{{background:#0f0f1a;border:1px solid rgba(139,92,246,.25);border-radius:10px;padding:20px;overflow:hidden}}
+.header h1{{font-size:20px;font-weight:600;color:#f0ece4;letter-spacing:.04em;margin-bottom:4px}}
+.header .date{{font-size:12px;color:#68687a;margin-bottom:0}}
+.persona{{margin-bottom:20px}}
+.persona-emoji{{font-size:40px;line-height:1;margin-bottom:8px}}
+.persona-title{{font-size:22px;font-weight:700;color:#f0ece4;letter-spacing:.04em;margin-bottom:4px}}
+.persona-desc{{font-size:12px;color:#68687a;letter-spacing:.03em}}
+.stats-bar{{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:20px 0}}
+.stat-card{{background:#0f0f1a;border:1px solid rgba(139,92,246,.25);border-radius:10px;padding:16px;text-align:center}}
+.stat-num{{font-size:28px;font-weight:700;color:#a78bfa;line-height:1;margin-bottom:4px}}
+.stat-label{{font-size:11px;color:#68687a;letter-spacing:.08em}}
+.two-col{{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}}
+.three-col{{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px}}
+.card{{background:#0f0f1a;border:1px solid rgba(139,92,246,.25);border-radius:10px;padding:20px;margin-bottom:16px;overflow:hidden}}
 .ctitle{{font-size:11px;letter-spacing:.1em;color:#68687a;margin-bottom:14px;text-transform:uppercase}}
-.section{{margin:0 0 24px}}
-.stitle{{font-size:11px;letter-spacing:.1em;color:#68687a;text-transform:uppercase;margin-bottom:12px}}
-.trends{{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;background:#0f0f1a;border:1px solid rgba(139,92,246,.25);border-radius:10px;padding:20px}}
-.tcol-h{{font-size:11px;color:#68687a;margin-bottom:8px;letter-spacing:.08em}}
-.time-row{{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}}
-.time-label{{font-size:12px;color:#68687a;min-width:76px}}
-.gpill{{background:rgba(139,92,246,.18);border:1px solid rgba(139,92,246,.3);color:#a78bfa;font-size:11px;padding:2px 8px;border-radius:8px;cursor:pointer;transition:background .15s}}
-.gpill:hover{{background:rgba(139,92,246,.35)}}
 .bar-item{{cursor:pointer;margin-bottom:8px;padding:4px 6px;border-radius:6px;transition:background .15s}}
 .bar-item:hover{{background:rgba(139,92,246,.1)}}
 .bar-label{{font-size:12px;color:#cec8bc;margin-bottom:3px;font-family:monospace}}
@@ -782,7 +1033,15 @@ body{{background:#080810;color:#cec8bc;font-family:'JetBrains Mono',monospace,sa
 .bar-bg{{flex:1;height:8px;background:rgba(139,92,246,.15);border-radius:4px;overflow:hidden;min-width:60px}}
 .bar-fill{{height:100%;background:#8b5cf6;border-radius:4px;opacity:.8}}
 .bar-count{{font-size:11px;color:#68687a;min-width:24px;text-align:right;flex-shrink:0}}
-.lang-card{{text-align:center}}
+.gpill{{background:rgba(139,92,246,.18);border:1px solid rgba(139,92,246,.3);color:#a78bfa;font-size:10px;padding:2px 6px;border-radius:6px;cursor:pointer;transition:background .15s;display:inline-block;margin:2px}}
+.gpill:hover{{background:rgba(139,92,246,.35)}}
+.radar-wrap{{display:flex;align-items:flex-start;gap:24px}}
+.radar-scores{{flex:1;padding-top:8px}}
+.rec-card{{background:#0f0f1a;border:1px solid rgba(139,92,246,.2);border-radius:8px;padding:12px 16px;display:flex;align-items:flex-start;gap:10px;margin-bottom:8px}}
+.rec-n{{color:#8b5cf6;font-size:13px;font-weight:700;min-width:16px;padding-top:1px}}
+.rec-q{{color:#cec8bc;font-size:12px;line-height:1.5}}
+.summary{{background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.2);border-radius:10px;padding:16px 20px;margin:0 0 24px;font-size:13px;line-height:1.7}}
+.footer{{text-align:center;padding:20px 0 8px;font-size:11px;color:#68687a;border-top:1px solid rgba(139,92,246,.15)}}
 #modal{{display:none;position:fixed;inset:0;z-index:200;align-items:center;justify-content:center}}
 #modal.open{{display:flex}}
 #modal-backdrop{{position:absolute;inset:0;background:rgba(0,0,0,.72)}}
@@ -795,26 +1054,19 @@ body{{background:#080810;color:#cec8bc;font-family:'JetBrains Mono',monospace,sa
 .modal-row:last-child{{border-bottom:none}}
 .modal-track{{color:#cec8bc;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
 .modal-sub{{color:#68687a;font-size:11px;flex-shrink:0}}
-.rec-card{{background:#0f0f1a;border:1px solid rgba(139,92,246,.2);border-radius:8px;padding:12px 16px;display:flex;align-items:flex-start;gap:10px;margin-bottom:8px}}
-.rec-n{{color:#8b5cf6;font-size:13px;font-weight:700;min-width:16px;padding-top:1px}}
-.rec-q{{color:#cec8bc;font-size:12px;line-height:1.5}}
-.summary{{background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.2);border-radius:10px;padding:16px 20px;margin:0 0 32px;font-size:13px;line-height:1.7}}
-.footer{{text-align:center;padding:24px 0 8px;font-size:11px;color:#68687a;border-top:1px solid rgba(139,92,246,.15)}}
 #save-btn{{position:fixed;top:16px;right:16px;background:#8b5cf6;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-family:'JetBrains Mono',monospace;cursor:pointer;z-index:99;letter-spacing:.05em;box-shadow:0 2px 12px rgba(139,92,246,.4);transition:opacity .15s}}
 #save-btn:hover{{opacity:.85}}
 #save-btn:disabled{{opacity:.4;cursor:not-allowed}}
+@media(max-width:600px){{.two-col,.three-col{{grid-template-columns:1fr}}.stats-bar{{grid-template-columns:repeat(2,1fr)}}}}
 @media print{{#save-btn{{display:none!important}}body{{-webkit-print-color-adjust:exact;print-color-adjust:exact}}@page{{margin:0}}}}
-.persona{{margin-bottom:24px}}
-.persona-emoji{{font-size:44px;line-height:1;margin-bottom:10px}}
-.persona-title{{font-size:24px;font-weight:700;color:#f0ece4;letter-spacing:.04em;margin-bottom:6px}}
-.persona-desc{{font-size:12px;color:#68687a;letter-spacing:.03em}}
 </style>
 </head>
 <body>
 <div class="wrap">
+
   <div class="header">
     <a href="https://codebeat.top" class="header-logo" target="_blank" rel="noopener">
-      <svg width="22" height="22" viewBox="0 0 48 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <svg width="20" height="20" viewBox="0 0 48 40" fill="none">
         <rect x="0" y="14" width="6" height="12" rx="3" fill="#8b5cf6" opacity=".5"/>
         <rect x="9" y="8" width="6" height="24" rx="3" fill="#8b5cf6" opacity=".75"/>
         <rect x="18" y="0" width="8" height="40" rx="4" fill="#8b5cf6"/>
@@ -830,27 +1082,82 @@ body{{background:#080810;color:#cec8bc;font-family:'JetBrains Mono',monospace,sa
     </div>
     <h1>{label}</h1>
     <div class="date">{start} ~ {end}</div>
-    <div class="big-num">{play_count}</div>
-    <div class="big-label">首歌曲</div>
   </div>
 
-  <div class="cards" style="margin-top:24px">
-    <div class="card"><div class="ctitle">🎤 常听歌手</div>{_bar_html(top_artists,'artist')}</div>
-    <div class="card"><div class="ctitle">🎵 主要曲风</div>{_bar_html(top_genres,'genre')}</div>
-    <div class="card lang-card"><div class="ctitle">🌐 语言偏好</div>{_donut_svg(language_pref)}</div>
+  <div class="stats-bar">
+    <div class="stat-card">
+      <div class="stat-num">{play_count}</div>
+      <div class="stat-label">总播放</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num">{unique_artist_count}</div>
+      <div class="stat-label">独立艺手</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num">{estimated_hours}h</div>
+      <div class="stat-label">估算时长</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" style="font-size:24px">{peak_label}</div>
+      <div class="stat-label">峰值时段</div>
+    </div>
   </div>
 
-  {trends_html}
-  {time_html}
+  <div class="card" id="daily-chart">
+    <div class="ctitle">📅 每日播放</div>
+    {_daily_chart_html(daily_plays, period)}
+  </div>
 
-  <div class="section">
-    <div class="stitle">🎵 个性化推荐</div>
+  <div class="two-col">
+    <div class="card"><div class="ctitle">🎤 常听歌手</div>{_bar_html(top_artists, 'artist')}</div>
+    <div class="card"><div class="ctitle">🎵 主要曲风</div>{_bar_html(top_genres, 'genre')}</div>
+  </div>
+
+  <div class="two-col">
+    <div class="card"><div class="ctitle">🕐 时段热力</div>{_time_heatmap_html(time_pattern, band_track_counts)}</div>
+    <div class="card"><div class="ctitle">🔍 热搜词云</div>{_word_cloud_html(top_search_terms)}</div>
+  </div>
+
+  <div class="three-col">
+    <div class="card" style="text-align:center">
+      <div class="ctitle">🌐 语言偏好</div>
+      {_donut_svg(language_pref)}
+    </div>
+    <div class="card">
+      <div class="ctitle">♥ 收藏艺手</div>
+      {_loved_html(loved_artists, top_artists)}
+    </div>
+    <div class="card">
+      <div class="ctitle">📈 偏好变化</div>
+      {trends_section}
+    </div>
+  </div>
+
+  <div class="card" id="radar-card">
+    <div class="ctitle">🎧 音乐人格</div>
+    <div class="radar-wrap">
+      {_radar_svg(personality_scores)}
+      <div class="radar-scores">
+        <div style="margin-bottom:16px">
+          <div style="font-size:18px;font-weight:700;color:#f0ece4">{p_emoji} {p_title}</div>
+          <div style="font-size:11px;color:#68687a;margin-top:4px">{p_desc}</div>
+        </div>
+        {radar_scores_html}
+      </div>
+    </div>
+  </div>
+
+  <div style="margin-bottom:16px">
+    <div class="ctitle" style="margin-bottom:12px">🎵 个性化推荐</div>
     {rec_cards}
   </div>
 
   <div class="summary">💬 {summary}</div>
 
-  <div class="footer">Generated by <a href="https://codebeat.top" style="color:#8b5cf6;text-decoration:none">码上律动</a> · {generated_at.strftime("%Y-%m-%d %H:%M")}</div>
+  <div class="footer">
+    Generated by <a href="https://codebeat.top" style="color:#8b5cf6;text-decoration:none">码上律动</a>
+    · {generated_at.strftime("%Y-%m-%d %H:%M")}
+  </div>
 </div>
 
 <div id="modal" onclick="closeModal()">
