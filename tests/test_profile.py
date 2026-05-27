@@ -174,3 +174,45 @@ def test_build_report_empty_trend_sections_hidden():
     report = profile.build_report(prof)
     # Should not crash and should still contain basic stats
     assert "42" in report
+
+
+# ── build_recommendation_queries ──────────────────────────────────────────────
+
+def test_build_recommendation_queries_returns_list_of_strings():
+    queries = profile.build_recommendation_queries(_make_profile())
+    assert isinstance(queries, list)
+    assert all(isinstance(q, str) for q in queries)
+    assert 1 <= len(queries) <= 3
+
+
+def test_build_recommendation_queries_includes_stable_genre():
+    prof = _make_profile({"stable_pref": ["lofi", "jazz"], "recent_trend": []})
+    queries = profile.build_recommendation_queries(prof)
+    assert any("lofi" in q or "jazz" in q for q in queries)
+
+
+def test_build_recommendation_queries_includes_context():
+    queries = profile.build_recommendation_queries(_make_profile(), context="写代码")
+    assert any("写代码" in q for q in queries)
+
+
+def test_build_recommendation_queries_fallback_when_no_trend():
+    prof = _make_profile({"recent_trend": [], "top_genres": [("classical", 5), ("jazz", 3)]})
+    queries = profile.build_recommendation_queries(prof)
+    # slot 2 falls back to second top_genre
+    assert any("jazz" in q or "classical" in q for q in queries)
+
+
+def test_build_recommendation_queries_includes_top_artist():
+    prof = _make_profile({"top_artists": [("Hans Zimmer", 10)]})
+    queries = profile.build_recommendation_queries(prof)
+    assert any("Hans Zimmer" in q for q in queries)
+
+
+def test_build_recommendation_queries_not_empty_when_minimal_profile():
+    prof = _make_profile({
+        "stable_pref": [], "recent_trend": [],
+        "top_genres": [("lofi", 3)], "top_artists": [],
+    })
+    queries = profile.build_recommendation_queries(prof)
+    assert len(queries) >= 1

@@ -329,3 +329,42 @@ def build_report(profile: dict) -> str:
         lines.append(f"本{_PERIOD_ZH.get(period, '周')}共播放 {play_count} 首，继续保持！")
 
     return "\n".join(lines)
+
+
+def build_recommendation_queries(profile: dict, context: str = "") -> list[str]:
+    """Generate 2–3 smart_search query strings based on user profile.
+
+    Slot 1: stable preference genres + context (core recommendation)
+    Slot 2: recent trend genre for exploration (falls back to 2nd top genre)
+    Slot 3: top artist extension
+    """
+    top_genres   = profile.get("top_genres", [])
+    recent_trend = profile.get("recent_trend", [])
+    top_artists  = profile.get("top_artists", [])
+    stable_pref  = profile.get("stable_pref", [])
+
+    queries: list[str] = []
+
+    # Slot 1: stable pref (or top genres as fallback) + context
+    base = stable_pref[:2] if stable_pref else [g for g, _ in top_genres[:2]]
+    if base:
+        slot1 = " ".join(base)
+        slot1 += f" {context} instrumental focus" if context else " instrumental focus"
+        queries.append(slot1.strip())
+
+    # Slot 2: recent trend for exploration; fall back to second top genre
+    trend = recent_trend[0] if recent_trend else (
+        top_genres[1][0] if len(top_genres) > 1 else None
+    )
+    if trend:
+        queries.append(f"{trend} night coding focus electronic")
+
+    # Slot 3: top artist extension
+    if top_artists:
+        queries.append(f"{top_artists[0][0]} similar instrumental lo-fi")
+
+    # Guarantee at least 1 query
+    if not queries and top_genres:
+        queries.append(f"{top_genres[0][0]} instrumental")
+
+    return queries[:3]
