@@ -463,8 +463,12 @@ def cmd_history() -> int:
 def cmd_profile() -> int:
     from . import profile as _profile
 
+    args = sys.argv[2:]
+    html_mode = "--html" in args
+    period_args = [a for a in args if not a.startswith("-")]
+
     valid = {"daily", "weekly", "monthly", "yearly"}
-    period = sys.argv[2] if len(sys.argv) > 2 else "weekly"
+    period = period_args[0] if period_args else "weekly"
     if period not in valid:
         print(f"error: period must be one of: {', '.join(sorted(valid))}")
         return 2
@@ -473,6 +477,16 @@ def cmd_profile() -> int:
         prof = _profile.build_profile(period)
     except ValueError:
         print("（听歌记录不足 5 首，多听一会儿再来生成报告吧 🎵）")
+        return 0
+
+    if html_mode:
+        import subprocess
+        from .config import DATA_DIR
+        html = _profile.build_html_report(prof)
+        out_path = DATA_DIR / f"report_{period}_{prof['generated_at'].strftime('%Y%m%d')}.html"
+        out_path.write_text(html, encoding="utf-8")
+        print(f"报告已生成：{out_path}")
+        subprocess.run(["open", str(out_path)], check=False)
         return 0
 
     print(_profile.build_report(prof))
