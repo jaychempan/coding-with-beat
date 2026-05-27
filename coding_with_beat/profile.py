@@ -603,11 +603,10 @@ def build_html_report(profile: dict) -> str:
     )
 
     # ── JSON for modal drill-down ─────────────────────────────────────────────
-    _raw = json.dumps(
+    track_data_json = json.dumps(
         {"artists": tracks_by_artist, "genres": tracks_by_genre},
         ensure_ascii=False,
     ).replace("</script>", "<\\/script>").replace("<!--", "<\\!--")
-    track_data_json = _raw
 
     # ── Helper: bar chart with medals ─────────────────────────────────────────
     def _bar_html(items: list, data_type: str, max_items: int = 5) -> str:
@@ -709,7 +708,7 @@ def build_html_report(profile: dict) -> str:
         bars = []
         for k, v in items:
             bar_h = max(4, int(v / max_val * 60))
-            lbl = html.escape(_label(k)[:4])
+            lbl = html.escape(_label(k)[:5])
             bars.append(
                 f'<div style="display:flex;flex-direction:column;align-items:center;flex:1;gap:2px">'
                 f'<div style="width:100%;height:60px;display:flex;align-items:flex-end">'
@@ -973,6 +972,7 @@ def build_html_report(profile: dict) -> str:
     )
 
     _modal_js = (
+        "function esc(s){var d=document.createElement('div');d.textContent=String(s);return d.innerHTML;}"
         "function handleBarClick(el){showModal(el.dataset.type,el.dataset.key);}"
         "function handlePillClick(el){showModal('genre',el.dataset.key);}"
         "function showModal(type,key){"
@@ -984,11 +984,11 @@ def build_html_report(profile: dict) -> str:
         "for(var i=0;i<data.length;i++){"
         "var d=data[i];"
         "if(type==='artist'){"
-        "rows+='<div class=\"modal-row\"><span class=\"modal-track\">'+d.t+'</span>"
-        "<span class=\"modal-sub\">'+d.c+'次</span></div>';}"
+        "rows+='<div class=\"modal-row\"><span class=\"modal-track\">'+esc(d.t)+'</span>"
+        "<span class=\"modal-sub\">'+esc(d.c)+'次</span></div>';}"
         "else{"
-        "rows+='<div class=\"modal-row\"><span class=\"modal-track\">'+d.t+'</span>"
-        "<span class=\"modal-sub\">'+d.a+'</span></div>';}}"
+        "rows+='<div class=\"modal-row\"><span class=\"modal-track\">'+esc(d.t)+'</span>"
+        "<span class=\"modal-sub\">'+esc(d.a)+'</span></div>';}}"
         "}else{"
         "rows='<div style=\"color:#68687a;font-size:12px;padding:8px 0\">暂无详细记录</div>';}"
         "document.getElementById('modal-body').innerHTML=rows;"
