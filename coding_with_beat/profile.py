@@ -158,7 +158,10 @@ def build_profile(period: str = "weekly", source: str | None = None) -> dict:
         text = f"{t.get('title', '')} {t.get('artist', '')}"
         lang_counter[_detect_language(text)] += 1
     total = sum(lang_counter.values()) or 1
-    language_pref = {k: round(v / total, 2) for k, v in lang_counter.most_common()}
+    language_pref = {
+        lang: round(lang_counter.get(lang, 0) / total, 2)
+        for lang in ("zh", "en", "instrumental")
+    }
 
     # ── Search terms ──────────────────────────────────────────────────────────
     search_records = _history.read_search(limit=500)
