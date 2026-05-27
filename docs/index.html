@@ -551,10 +551,10 @@
     }
     .footer-tagline {
       font-family: 'Inter', sans-serif; font-size: 15px; font-weight: 600; color: var(--text);
-      display: flex; align-items: center; gap: 8px;
+      display: flex; align-items: center; gap: 8px; flex: 1;
     }
     .footer-tagline .hl-purple { color: var(--purple-lt); }
-    .footer-slogan { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--purple-lt); font-style: italic; white-space: nowrap; }
+    .footer-slogan { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--purple-lt); font-style: italic; white-space: nowrap; flex: 1; text-align: right; }
 
     .footer-meta {
       display: flex; align-items: center; flex-wrap: wrap; gap: 0;
@@ -600,18 +600,21 @@
     nav.nav-open .nav-hamburger .close-icon { display: block; }
 
     @media (max-width: 640px) {
-      nav { padding: 10px 16px; flex-wrap: wrap; }
+      nav { padding: 10px 16px; }
       .nav-tagline { display: none; }
       .nav-logo { font-size: 11px; }
       .nav-actions { margin-left: auto; }
       .nav-right {
         display: none;
-        width: 100%;
+        position: absolute;
+        top: 100%; left: 0; right: 0;
         flex-direction: column;
         gap: 0;
-        padding: 6px 0 4px;
-        margin-top: 8px;
-        border-top: 1px solid var(--purple-border);
+        padding: 4px 16px 10px;
+        background: rgba(8,8,16,.96);
+        backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+        border-bottom: 1px solid var(--purple-border);
+        box-shadow: 0 8px 24px rgba(0,0,0,.45);
       }
       nav.nav-open .nav-right { display: flex; }
       .nav-hamburger { display: flex; }
@@ -641,6 +644,7 @@
       .feat-card:last-child:nth-child(odd) { grid-column: 1 / -1; max-width: unset; justify-self: unset; }
       .platforms-inline { flex-wrap: wrap; gap: 10px; }
       .source-grid { grid-template-columns: 1fr; }
+      .source-card { align-items: center; text-align: center; }
       .screens-grid { grid-template-columns: 1fr; }
       .links-grid { grid-template-columns: 1fr; }
       .scene-grid { grid-template-columns: repeat(2, 1fr); }
