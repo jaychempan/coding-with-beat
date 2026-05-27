@@ -216,3 +216,44 @@ def test_build_recommendation_queries_not_empty_when_minimal_profile():
     })
     queries = profile.build_recommendation_queries(prof)
     assert len(queries) >= 1
+
+
+# ── build_html_report ─────────────────────────────────────────────────────────
+
+def test_build_html_report_is_valid_html():
+    html = profile.build_html_report(_make_profile())
+    assert html.startswith("<!DOCTYPE html>")
+    assert "</html>" in html
+
+
+def test_build_html_report_contains_play_count():
+    html = profile.build_html_report(_make_profile())
+    assert "42" in html
+
+
+def test_build_html_report_contains_top_artist():
+    html = profile.build_html_report(_make_profile())
+    assert "Hans Zimmer" in html
+
+
+def test_build_html_report_contains_top_genre():
+    html = profile.build_html_report(_make_profile())
+    assert "lofi" in html
+
+
+def test_build_html_report_contains_language_pct():
+    html = profile.build_html_report(_make_profile())
+    # language_pref has en:0.6 → 60%
+    assert "60" in html
+
+
+def test_build_html_report_contains_trend_items():
+    html = profile.build_html_report(_make_profile())
+    assert "synthwave" in html   # recent_trend
+    assert "华语" in html         # declining_pref
+
+
+def test_build_html_report_contains_recommendation_query():
+    html = profile.build_html_report(_make_profile())
+    # stable_pref=["lofi","ambient"] → slot 1 contains "lofi"
+    assert "lofi" in html

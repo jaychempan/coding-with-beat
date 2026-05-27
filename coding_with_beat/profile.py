@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import datetime
+import math
 import re
 from collections import Counter
 
@@ -368,3 +369,196 @@ def build_recommendation_queries(profile: dict, context: str = "") -> list[str]:
         queries.append(f"{top_genres[0][0]} instrumental")
 
     return queries[:3]
+
+
+def build_html_report(profile: dict) -> str:
+    """Generate a self-contained dark-theme HTML listening report with SVG charts."""
+    period       = profile.get("period", "weekly")
+    generated_at = profile.get("generated_at", datetime.datetime.now())
+    days         = _PERIOD_DAYS.get(period, 7)
+    start        = (generated_at - datetime.timedelta(days=days)).strftime("%Y-%m-%d")
+    end          = generated_at.strftime("%Y-%m-%d")
+    label        = _PERIOD_LABELS.get(period, "听歌报告")
+    play_count   = profile.get("play_count", 0)
+    top_artists  = profile.get("top_artists", [])
+    top_genres   = profile.get("top_genres", [])
+    language_pref = profile.get("language_pref", {})
+    recent_trend = profile.get("recent_trend", [])
+    stable_pref  = profile.get("stable_pref", [])
+    declining_pref = profile.get("declining_pref", [])
+    time_pattern = profile.get("time_pattern", {})
+    queries      = build_recommendation_queries(profile)
+
+    summary_parts: list[str] = []
+    if top_genres:
+        top2 = " 和 ".join(g for g, _ in top_genres[:2])
+        summary_parts.append(f"这{_PERIOD_ZH.get(period, '周')}你的音乐偏好明显偏向 {top2}")
+    if declining_pref:
+        summary_parts.append(f"{'、'.join(declining_pref[:2])} 播放次数有所下降")
+    if recent_trend:
+        summary_parts.append(f"{'、'.join(recent_trend[:2])} 开始走高")
+    summary = "，".join(summary_parts) + "。" if summary_parts else f"本{_PERIOD_ZH.get(period, '周')}共播放 {play_count} 首，继续保持！"
+
+    def _bar_svg(items: list, max_items: int = 5) -> str:
+        items = items[:max_items]
+        if not items:
+            return '<p style="color:#68687a;font-size:12px;margin:0">暂无数据</p>'
+        max_val = max(c for _, c in items) or 1
+        W, BAR_H, GAP, LW = 240, 18, 10, 82
+        rows = []
+        for i, (name, count) in enumerate(items):
+            y = i * (BAR_H + GAP)
+            bw = max(4, int((count / max_val) * (W - LW - 36)))
+            nm = (name[:9] + "…") if len(name) > 9 else name
+            rows += [
+                f'<text x="0" y="{y+13}" fill="#cec8bc" font-size="12">{nm}</text>',
+                f'<rect x="{LW}" y="{y+2}" width="{bw}" height="{BAR_H-4}" rx="3" fill="#8b5cf6" opacity=".8"/>',
+                f'<text x="{LW+bw+5}" y="{y+13}" fill="#68687a" font-size="11">{count}</text>',
+            ]
+        h = len(items) * (BAR_H + GAP)
+        return f'<svg width="{W}" height="{h}" style="overflow:visible;font-family:monospace">{"".join(rows)}</svg>'
+
+    def _donut_svg(lang_pref: dict) -> str:
+        COLORS = {"zh": "#8b5cf6", "en": "#a78bfa", "instrumental": "#6d7fd4"}
+        LABELS = {"zh": "中文", "en": "英文", "instrumental": "纯音乐"}
+        items = [(k, v) for k, v in lang_pref.items() if v > 0]
+        if not items:
+            return '<p style="color:#68687a;font-size:12px;margin:0">暂无数据</p>'
+        total = sum(v for _, v in items)
+        cx, cy, R, r = 60, 60, 50, 26
+        angle = -math.pi / 2
+        paths = []
+        for lang, val in items:
+            sweep = (val / total) * 2 * math.pi
+            x1, y1 = cx + R * math.cos(angle), cy + R * math.sin(angle)
+            x2, y2 = cx + R * math.cos(angle + sweep), cy + R * math.sin(angle + sweep)
+            ix1, iy1 = cx + r * math.cos(angle), cy + r * math.sin(angle)
+            ix2, iy2 = cx + r * math.cos(angle + sweep), cy + r * math.sin(angle + sweep)
+            lg = 1 if sweep > math.pi else 0
+            c = COLORS.get(lang, "#6b7280")
+            paths.append(
+                f'<path d="M {x1:.1f} {y1:.1f} A {R} {R} 0 {lg} 1 {x2:.1f} {y2:.1f}'
+                f' L {ix2:.1f} {iy2:.1f} A {r} {r} 0 {lg} 0 {ix1:.1f} {iy1:.1f} Z" fill="{c}"/>'
+            )
+            angle += sweep
+        dom_lang, dom_val = max(items, key=lambda x: x[1])
+        dom_pct = int(dom_val * 100)
+        legend = []
+        for i, (lang, val) in enumerate(items):
+            ly = 128 + i * 18
+            legend += [
+                f'<rect x="0" y="{ly}" width="10" height="10" rx="2" fill="{COLORS.get(lang, "#6b7280")}"/>',
+                f'<text x="14" y="{ly+9}" fill="#cec8bc" font-size="11">{LABELS.get(lang, lang)} {int(val*100)}%</text>',
+            ]
+        total_h = 128 + len(items) * 18
+        return (
+            f'<svg width="160" height="{total_h}" style="overflow:visible;font-family:monospace">'
+            f'{"".join(paths)}'
+            f'<text x="{cx}" y="{cy-4}" text-anchor="middle" fill="#a78bfa" font-size="15" font-weight="bold">{dom_pct}%</text>'
+            f'<text x="{cx}" y="{cy+12}" text-anchor="middle" fill="#cec8bc" font-size="11">{LABELS.get(dom_lang, dom_lang)}</text>'
+            f'{"".join(legend)}</svg>'
+        )
+
+    def _pills(items: list, color: str) -> str:
+        if not items:
+            return '<span style="color:#68687a;font-size:12px">—</span>'
+        return "".join(
+            f'<span style="background:{color};color:#fff;padding:2px 8px;border-radius:10px;'
+            f'font-size:12px;font-family:monospace;display:inline-block;margin:2px">{item}</span>'
+            for item in items[:4]
+        )
+
+    band_labels = {"morning": "🌅 早晨", "afternoon": "☀️ 下午", "evening": "🌆 傍晚", "night": "🌙 深夜"}
+    time_rows = "".join(
+        f'<div class="time-row">'
+        f'<span class="time-label">{band_labels[band]}</span>'
+        + "".join(f'<span class="gpill">{g}</span>' for g in genres[:3])
+        + "</div>"
+        for band in ("morning", "afternoon", "evening", "night")
+        if (genres := time_pattern.get(band, []))
+    )
+
+    rec_cards = "".join(
+        f'<div class="rec-card"><span class="rec-n">{i}</span><span class="rec-q">{q}</span></div>'
+        for i, q in enumerate(queries, 1)
+    )
+
+    trends_html = ""
+    if recent_trend or stable_pref or declining_pref:
+        trends_html = (
+            "<div class='section'><div class='stitle'>📈 偏好变化</div>"
+            "<div class='trends'>"
+            f"<div class='tcol'><div class='tcol-h'>↑ 新增</div>{_pills(recent_trend, '#16a34a')}</div>"
+            f"<div class='tcol'><div class='tcol-h'>→ 稳定</div>{_pills(stable_pref, '#6d28d9')}</div>"
+            f"<div class='tcol'><div class='tcol-h'>↓ 下降</div>{_pills(declining_pref, '#b91c1c')}</div>"
+            "</div></div>"
+        )
+
+    time_html = (
+        f"<div class='section'><div class='stitle'>🕐 时间规律</div>{time_rows}</div>"
+        if time_rows else ""
+    )
+
+    return f"""<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>{label} · 码上律动</title>
+<style>
+*{{box-sizing:border-box;margin:0;padding:0}}
+body{{background:#080810;color:#cec8bc;font-family:'JetBrains Mono',monospace,sans-serif;padding:24px 16px;min-height:100vh}}
+.wrap{{max-width:720px;margin:0 auto}}
+.header{{text-align:center;padding:40px 0 32px;border-bottom:1px solid rgba(139,92,246,.25)}}
+.header-logo{{font-size:11px;letter-spacing:.15em;color:#68687a;margin-bottom:12px}}
+.header h1{{font-size:22px;font-weight:600;color:#f0ece4;letter-spacing:.04em;margin-bottom:6px}}
+.header .date{{font-size:12px;color:#68687a;margin-bottom:20px}}
+.big-num{{font-size:56px;font-weight:700;color:#a78bfa;line-height:1;margin-bottom:4px}}
+.big-label{{font-size:12px;color:#68687a;letter-spacing:.1em}}
+.cards{{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:16px;margin:24px 0}}
+.card{{background:#0f0f1a;border:1px solid rgba(139,92,246,.25);border-radius:10px;padding:20px}}
+.ctitle{{font-size:11px;letter-spacing:.1em;color:#68687a;margin-bottom:14px;text-transform:uppercase}}
+.section{{margin:0 0 24px}}
+.stitle{{font-size:11px;letter-spacing:.1em;color:#68687a;text-transform:uppercase;margin-bottom:12px}}
+.trends{{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;background:#0f0f1a;border:1px solid rgba(139,92,246,.25);border-radius:10px;padding:20px}}
+.tcol-h{{font-size:11px;color:#68687a;margin-bottom:8px;letter-spacing:.08em}}
+.time-row{{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}}
+.time-label{{font-size:12px;color:#68687a;min-width:76px}}
+.gpill{{background:rgba(139,92,246,.18);border:1px solid rgba(139,92,246,.3);color:#a78bfa;font-size:11px;padding:2px 8px;border-radius:8px}}
+.rec-card{{background:#0f0f1a;border:1px solid rgba(139,92,246,.2);border-radius:8px;padding:12px 16px;display:flex;align-items:flex-start;gap:10px;margin-bottom:8px}}
+.rec-n{{color:#8b5cf6;font-size:13px;font-weight:700;min-width:16px;padding-top:1px}}
+.rec-q{{color:#cec8bc;font-size:12px;line-height:1.5}}
+.summary{{background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.2);border-radius:10px;padding:16px 20px;margin:0 0 32px;font-size:13px;line-height:1.7}}
+.footer{{text-align:center;padding:24px 0 8px;font-size:11px;color:#68687a;border-top:1px solid rgba(139,92,246,.15)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header">
+    <div class="header-logo">码上律动 · CODING WITH BEAT</div>
+    <h1>{label}</h1>
+    <div class="date">{start} ~ {end}</div>
+    <div class="big-num">{play_count}</div>
+    <div class="big-label">首歌曲</div>
+  </div>
+
+  <div class="cards" style="margin-top:24px">
+    <div class="card"><div class="ctitle">🎤 常听歌手</div>{_bar_svg(top_artists)}</div>
+    <div class="card"><div class="ctitle">🎵 主要曲风</div>{_bar_svg(top_genres)}</div>
+    <div class="card"><div class="ctitle">🌐 语言偏好</div>{_donut_svg(language_pref)}</div>
+  </div>
+
+  {trends_html}
+  {time_html}
+
+  <div class="section">
+    <div class="stitle">🎵 个性化推荐</div>
+    {rec_cards}
+  </div>
+
+  <div class="summary">💬 {summary}</div>
+
+  <div class="footer">Generated by coding-with-beat · {generated_at.strftime("%Y-%m-%d %H:%M")}</div>
+</div>
+</body>
+</html>"""
