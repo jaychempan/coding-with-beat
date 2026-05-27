@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import datetime
 import html
+import json
 import math
 import re
 from collections import Counter
@@ -224,6 +225,41 @@ def build_profile(period: str = "weekly", source: str | None = None) -> dict:
         if ctr
     }
 
+    # ── Per-artist track list (for HTML drill-down) ───────────────────────────
+    tracks_by_artist: dict[str, list[dict]] = {}
+    for artist, _ in top_artists:
+        a_tracks = [t for t in period_tracks if (t.get("artist") or "").strip() == artist]
+        title_ctr: Counter = Counter()
+        for t in a_tracks:
+            title = (t.get("title") or "").strip()
+            if title:
+                title_ctr[title] += t.get("played_count", 1)
+        tracks_by_artist[artist] = [
+            {"t": title, "c": cnt} for title, cnt in title_ctr.most_common(8)
+        ]
+
+    # ── Per-genre track list (for HTML drill-down) ────────────────────────────
+    drill_genres: set[str] = {g for g, _ in top_genres}
+    for genres_list in time_pattern.values():
+        drill_genres.update(genres_list)
+
+    tracks_by_genre: dict[str, list[dict]] = {}
+    for genre in drill_genres:
+        seen: set[str] = set()
+        g_list: list[dict] = []
+        for t in period_tracks:
+            text = f"{t.get('artist', '')} {t.get('album', '')} {t.get('title', '')}".lower()
+            if genre in _match_genres(text):
+                title = (t.get("title") or "").strip()
+                a_name = (t.get("artist") or "").strip()
+                key = f"{title.lower()}|{a_name.lower()}"
+                if key not in seen and title:
+                    seen.add(key)
+                    g_list.append({"t": title, "a": a_name})
+            if len(g_list) >= 10:
+                break
+        tracks_by_genre[genre] = g_list
+
     return {
         "period": period,
         "generated_at": now,
@@ -237,6 +273,8 @@ def build_profile(period: str = "weekly", source: str | None = None) -> dict:
         "stable_pref": stable_pref,
         "declining_pref": declining_pref,
         "time_pattern": time_pattern,
+        "tracks_by_artist": tracks_by_artist,
+        "tracks_by_genre": tracks_by_genre,
     }
 
 
@@ -461,6 +499,13 @@ def build_html_report(profile: dict) -> str:
     time_pattern = profile.get("time_pattern", {})
     queries      = build_recommendation_queries(profile)
     p_emoji, p_title, p_desc = _music_personality(profile)
+    tracks_by_artist = profile.get("tracks_by_artist", {})
+    tracks_by_genre  = profile.get("tracks_by_genre", {})
+    _raw = json.dumps(
+        {"artists": tracks_by_artist, "genres": tracks_by_genre},
+        ensure_ascii=False,
+    ).replace("</script>", "<\\/script>").replace("<!--", "<\\!--")
+    track_data_json = _raw
 
     summary_parts: list[str] = []
     if top_genres:
@@ -472,24 +517,25 @@ def build_html_report(profile: dict) -> str:
         summary_parts.append(f"{'、'.join(html.escape(x) for x in recent_trend[:2])} 开始走高")
     summary = "，".join(summary_parts) + "。" if summary_parts else f"本{_PERIOD_ZH.get(period, '周')}共播放 {play_count} 首，继续保持！"
 
-    def _bar_svg(items: list, max_items: int = 5) -> str:
+    def _bar_html(items: list, data_type: str, max_items: int = 5) -> str:
         items = items[:max_items]
         if not items:
             return '<p style="color:#68687a;font-size:12px;margin:0">暂无数据</p>'
         max_val = max(c for _, c in items) or 1
-        W, BAR_H, GAP, LW = 170, 18, 10, 76
         rows = []
-        for i, (name, count) in enumerate(items):
-            y = i * (BAR_H + GAP)
-            bw = max(4, int((count / max_val) * (W - LW - 24)))
+        for name, count in items:
+            pct = max(4, int((count / max_val) * 100))
             nm = html.escape((name[:9] + "…") if len(name) > 9 else name)
-            rows += [
-                f'<text x="0" y="{y+13}" fill="#cec8bc" font-size="12">{nm}</text>',
-                f'<rect x="{LW}" y="{y+2}" width="{bw}" height="{BAR_H-4}" rx="3" fill="#8b5cf6" opacity=".8"/>',
-                f'<text x="{LW+bw+5}" y="{y+13}" fill="#68687a" font-size="11">{count}</text>',
-            ]
-        h = len(items) * (BAR_H + GAP)
-        return f'<svg width="{W}" height="{h}" style="overflow:hidden;font-family:monospace">{"".join(rows)}</svg>'
+            key = html.escape(name, quote=True)
+            rows.append(
+                f'<div class="bar-item" data-type="{data_type}" data-key="{key}" onclick="handleBarClick(this)">'
+                f'<div class="bar-label">{nm}</div>'
+                f'<div class="bar-track">'
+                f'<div class="bar-bg"><div class="bar-fill" style="width:{pct}%"></div></div>'
+                f'<span class="bar-count">{count}</span>'
+                f'</div></div>'
+            )
+        return "".join(rows)
 
     def _donut_svg(lang_pref: dict) -> str:
         COLORS = {"zh": "#8b5cf6", "en": "#a78bfa", "instrumental": "#6d7fd4"}
@@ -498,7 +544,7 @@ def build_html_report(profile: dict) -> str:
         if not items:
             return '<p style="color:#68687a;font-size:12px;margin:0">暂无数据</p>'
         total = sum(v for _, v in items)
-        cx, cy, R, r = 60, 60, 50, 26
+        cx, cy, R, r = 80, 64, 52, 26
         angle = -math.pi / 2
         paths = []
         for lang, val in items:
@@ -516,18 +562,22 @@ def build_html_report(profile: dict) -> str:
             angle += sweep
         dom_lang, dom_val = max(items, key=lambda x: x[1])
         dom_pct = int(dom_val * 100)
+        legend_top = cy + R + 28
         legend = []
         for i, (lang, val) in enumerate(items):
-            ly = 128 + i * 18
+            ly = legend_top + i * 20
+            c = COLORS.get(lang, "#6b7280")
             legend += [
-                f'<rect x="0" y="{ly}" width="10" height="10" rx="2" fill="{COLORS.get(lang, "#6b7280")}"/>',
-                f'<text x="14" y="{ly+9}" fill="#cec8bc" font-size="11">{LABELS.get(lang, lang)} {int(val*100)}%</text>',
+                f'<g transform="translate({cx},{ly})">'
+                f'<rect x="-33" y="0" width="10" height="10" rx="2" fill="{c}"/>'
+                f'<text x="-19" y="9" fill="#cec8bc" font-size="11">{LABELS.get(lang, lang)} {int(val*100)}%</text>'
+                f'</g>',
             ]
-        total_h = 128 + len(items) * 18
+        total_h = legend_top + len(items) * 20 + 4
         return (
             f'<svg width="160" height="{total_h}" style="overflow:visible;font-family:monospace">'
             f'{"".join(paths)}'
-            f'<text x="{cx}" y="{cy-4}" text-anchor="middle" fill="#a78bfa" font-size="15" font-weight="bold">{dom_pct}%</text>'
+            f'<text x="{cx}" y="{cy-5}" text-anchor="middle" fill="#a78bfa" font-size="15" font-weight="bold">{dom_pct}%</text>'
             f'<text x="{cx}" y="{cy+12}" text-anchor="middle" fill="#cec8bc" font-size="11">{LABELS.get(dom_lang, dom_lang)}</text>'
             f'{"".join(legend)}</svg>'
         )
@@ -545,7 +595,11 @@ def build_html_report(profile: dict) -> str:
     time_rows = "".join(
         f'<div class="time-row">'
         f'<span class="time-label">{band_labels[band]}</span>'
-        + "".join(f'<span class="gpill">{html.escape(g)}</span>' for g in genres[:3])
+        + "".join(
+            f'<span class="gpill" data-type="genre" data-key="{html.escape(g, quote=True)}"'
+            f' onclick="handlePillClick(this)">{html.escape(g)}</span>'
+            for g in genres[:3]
+        )
         + "</div>"
         for band in ("morning", "afternoon", "evening", "night")
         if (genres := time_pattern.get(band, []))
@@ -576,37 +630,47 @@ def build_html_report(profile: dict) -> str:
         "function saveAsImage(){"
         "var btn=document.getElementById('save-btn');"
         "var orig=btn.textContent;"
+        "if(typeof html2canvas==='undefined'){"
+        "btn.textContent='❌ 需要联网';setTimeout(function(){btn.textContent=orig;},2000);return;}"
         "btn.textContent='⏳ 生成中…';btn.disabled=true;"
-        "var el=document.querySelector('.wrap');"
-        "var W=el.offsetWidth,H=el.scrollHeight;"
-        "var css=document.querySelector('style').textContent;"
-        "var markup='<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"'+W+'\" height=\"'+H+'\">"
-        "<foreignObject width=\"100%\" height=\"100%\">"
-        "<html xmlns=\"http://www.w3.org/1999/xhtml\"><head>"
-        "<style>*{box-sizing:border-box;margin:0;padding:0}"
-        "body{background:#080810;color:#cec8bc;font-family:monospace;"
-        "padding:24px 16px}'+css+'</style></head>"
-        "<body>'+el.outerHTML+'</body></html>"
-        "</foreignObject></svg>';"
-        "var img=new Image();"
-        "img.onload=function(){"
-        "var c=document.createElement('canvas');"
-        "c.width=W*2;c.height=H*2;"
-        "var ctx=c.getContext('2d');"
-        "ctx.scale(2,2);"
-        "ctx.fillStyle='#080810';ctx.fillRect(0,0,W,H);"
-        "ctx.drawImage(img,0,0);"
+        "html2canvas(document.querySelector('.wrap'),{"
+        "backgroundColor:'#080810',scale:2,logging:false,useCORS:true,"
+        "ignoreElements:function(el){return el.id==='save-btn'||el.id==='modal';}"
+        "}).then(function(c){"
+        "var PAD=80;"
+        "var out=document.createElement('canvas');"
+        "out.width=c.width+PAD*2;out.height=c.height+PAD*2;"
+        "var ctx=out.getContext('2d');"
+        "ctx.fillStyle='#080810';ctx.fillRect(0,0,out.width,out.height);"
+        "ctx.drawImage(c,PAD,PAD);"
         "var a=document.createElement('a');"
         "a.download='cwb-report-'+new Date().toISOString().slice(0,10)+'.png';"
-        "a.href=c.toDataURL('image/png');a.click();"
+        "a.href=out.toDataURL('image/png');a.click();"
         "btn.textContent=orig;btn.disabled=false;"
-        "};"
-        "img.onerror=function(){"
-        "btn.textContent=orig;btn.disabled=false;"
-        "window.print();"
-        "};"
-        "img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(markup);"
-        "}"
+        "}).catch(function(){btn.textContent=orig;btn.disabled=false;});}"
+    )
+
+    _modal_js = (
+        "function handleBarClick(el){showModal(el.dataset.type,el.dataset.key);}"
+        "function handlePillClick(el){showModal('genre',el.dataset.key);}"
+        "function showModal(type,key){"
+        "var data=type==='artist'?TRACK_DATA.artists[key]:TRACK_DATA.genres[key];"
+        "var emoji=type==='artist'?'🎤':'🎵';"
+        "document.getElementById('modal-title').textContent=emoji+' '+key;"
+        "var rows='';"
+        "if(data&&data.length){"
+        "for(var i=0;i<data.length;i++){"
+        "var d=data[i];"
+        "if(type==='artist'){"
+        "rows+='<div class=\"modal-row\"><span class=\"modal-track\">'+d.t+'</span><span class=\"modal-sub\">'+d.c+'次</span></div>';}"
+        "else{"
+        "rows+='<div class=\"modal-row\"><span class=\"modal-track\">'+d.t+'</span><span class=\"modal-sub\">'+d.a+'</span></div>';}}"
+        "}else{"
+        "rows='<div style=\"color:#68687a;font-size:12px;padding:8px 0\">暂无详细记录</div>';}"
+        "document.getElementById('modal-body').innerHTML=rows;"
+        "document.getElementById('modal').classList.add('open');}"
+        "function closeModal(){document.getElementById('modal').classList.remove('open');}"
+        "document.addEventListener('keydown',function(e){if(e.key==='Escape')closeModal();});"
     )
 
     return f"""<!DOCTYPE html>
@@ -615,12 +679,15 @@ def build_html_report(profile: dict) -> str:
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>{label} · 码上律动</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 40'><rect x='0' y='14' width='6' height='12' rx='3' fill='%238b5cf6' opacity='.5'/><rect x='9' y='8' width='6' height='24' rx='3' fill='%238b5cf6' opacity='.75'/><rect x='18' y='0' width='8' height='40' rx='4' fill='%238b5cf6'/><rect x='29' y='6' width='6' height='28' rx='3' fill='%238b5cf6' opacity='.75'/><rect x='38' y='14' width='10' height='12' rx='3' fill='%238b5cf6' opacity='.5'/></svg>">
 <style>
 *{{box-sizing:border-box;margin:0;padding:0}}
 body{{background:#080810;color:#cec8bc;font-family:'JetBrains Mono',monospace,sans-serif;padding:24px 16px;min-height:100vh}}
 .wrap{{max-width:720px;margin:0 auto}}
 .header{{text-align:center;padding:40px 0 32px;border-bottom:1px solid rgba(139,92,246,.25)}}
-.header-logo{{font-size:11px;letter-spacing:.15em;color:#68687a;margin-bottom:12px}}
+.header-logo{{display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:24px;text-decoration:none}}
+.header-logo .logo-text{{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;letter-spacing:.12em;color:#f0ece4}}
+.header-logo .logo-name{{color:#a78bfa}}
 .header h1{{font-size:22px;font-weight:600;color:#f0ece4;letter-spacing:.04em;margin-bottom:6px}}
 .header .date{{font-size:12px;color:#68687a;margin-bottom:20px}}
 .big-num{{font-size:56px;font-weight:700;color:#a78bfa;line-height:1;margin-bottom:4px}}
@@ -634,7 +701,28 @@ body{{background:#080810;color:#cec8bc;font-family:'JetBrains Mono',monospace,sa
 .tcol-h{{font-size:11px;color:#68687a;margin-bottom:8px;letter-spacing:.08em}}
 .time-row{{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}}
 .time-label{{font-size:12px;color:#68687a;min-width:76px}}
-.gpill{{background:rgba(139,92,246,.18);border:1px solid rgba(139,92,246,.3);color:#a78bfa;font-size:11px;padding:2px 8px;border-radius:8px}}
+.gpill{{background:rgba(139,92,246,.18);border:1px solid rgba(139,92,246,.3);color:#a78bfa;font-size:11px;padding:2px 8px;border-radius:8px;cursor:pointer;transition:background .15s}}
+.gpill:hover{{background:rgba(139,92,246,.35)}}
+.bar-item{{cursor:pointer;margin-bottom:8px;padding:4px 6px;border-radius:6px;transition:background .15s}}
+.bar-item:hover{{background:rgba(139,92,246,.1)}}
+.bar-label{{font-size:12px;color:#cec8bc;margin-bottom:3px;font-family:monospace}}
+.bar-track{{display:flex;align-items:center;gap:8px}}
+.bar-bg{{flex:1;height:8px;background:rgba(139,92,246,.15);border-radius:4px;overflow:hidden;min-width:60px}}
+.bar-fill{{height:100%;background:#8b5cf6;border-radius:4px;opacity:.8}}
+.bar-count{{font-size:11px;color:#68687a;min-width:24px;text-align:right;flex-shrink:0}}
+.lang-card{{text-align:center}}
+#modal{{display:none;position:fixed;inset:0;z-index:200;align-items:center;justify-content:center}}
+#modal.open{{display:flex}}
+#modal-backdrop{{position:absolute;inset:0;background:rgba(0,0,0,.72)}}
+#modal-box{{position:relative;background:#0f0f1a;border:1px solid rgba(139,92,246,.4);border-radius:12px;padding:24px;max-width:400px;width:90%;max-height:70vh;overflow-y:auto;z-index:1}}
+#modal-head{{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}}
+#modal-title{{font-size:14px;font-weight:700;color:#f0ece4;letter-spacing:.02em}}
+#modal-close{{background:none;border:none;color:#68687a;font-size:20px;cursor:pointer;padding:0 4px;line-height:1}}
+#modal-close:hover{{color:#cec8bc}}
+.modal-row{{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid rgba(139,92,246,.1);font-size:12px;gap:8px}}
+.modal-row:last-child{{border-bottom:none}}
+.modal-track{{color:#cec8bc;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
+.modal-sub{{color:#68687a;font-size:11px;flex-shrink:0}}
 .rec-card{{background:#0f0f1a;border:1px solid rgba(139,92,246,.2);border-radius:8px;padding:12px 16px;display:flex;align-items:flex-start;gap:10px;margin-bottom:8px}}
 .rec-n{{color:#8b5cf6;font-size:13px;font-weight:700;min-width:16px;padding-top:1px}}
 .rec-q{{color:#cec8bc;font-size:12px;line-height:1.5}}
@@ -643,6 +731,7 @@ body{{background:#080810;color:#cec8bc;font-family:'JetBrains Mono',monospace,sa
 #save-btn{{position:fixed;top:16px;right:16px;background:#8b5cf6;color:#fff;border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-family:'JetBrains Mono',monospace;cursor:pointer;z-index:99;letter-spacing:.05em;box-shadow:0 2px 12px rgba(139,92,246,.4);transition:opacity .15s}}
 #save-btn:hover{{opacity:.85}}
 #save-btn:disabled{{opacity:.4;cursor:not-allowed}}
+@media print{{#save-btn{{display:none!important}}body{{-webkit-print-color-adjust:exact;print-color-adjust:exact}}@page{{margin:0}}}}
 .persona{{margin-bottom:24px}}
 .persona-emoji{{font-size:44px;line-height:1;margin-bottom:10px}}
 .persona-title{{font-size:24px;font-weight:700;color:#f0ece4;letter-spacing:.04em;margin-bottom:6px}}
@@ -652,7 +741,16 @@ body{{background:#080810;color:#cec8bc;font-family:'JetBrains Mono',monospace,sa
 <body>
 <div class="wrap">
   <div class="header">
-    <div class="header-logo">码上律动 · CODING WITH BEAT</div>
+    <a href="https://codebeat.top" class="header-logo" target="_blank" rel="noopener">
+      <svg width="22" height="22" viewBox="0 0 48 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="0" y="14" width="6" height="12" rx="3" fill="#8b5cf6" opacity=".5"/>
+        <rect x="9" y="8" width="6" height="24" rx="3" fill="#8b5cf6" opacity=".75"/>
+        <rect x="18" y="0" width="8" height="40" rx="4" fill="#8b5cf6"/>
+        <rect x="29" y="6" width="6" height="28" rx="3" fill="#8b5cf6" opacity=".75"/>
+        <rect x="38" y="14" width="10" height="12" rx="3" fill="#8b5cf6" opacity=".5"/>
+      </svg>
+      <span class="logo-text"><span class="logo-name">Coding</span>&nbsp;with Beat</span>
+    </a>
     <div class="persona">
       <div class="persona-emoji">{p_emoji}</div>
       <div class="persona-title">{p_title}</div>
@@ -665,9 +763,9 @@ body{{background:#080810;color:#cec8bc;font-family:'JetBrains Mono',monospace,sa
   </div>
 
   <div class="cards" style="margin-top:24px">
-    <div class="card"><div class="ctitle">🎤 常听歌手</div>{_bar_svg(top_artists)}</div>
-    <div class="card"><div class="ctitle">🎵 主要曲风</div>{_bar_svg(top_genres)}</div>
-    <div class="card"><div class="ctitle">🌐 语言偏好</div>{_donut_svg(language_pref)}</div>
+    <div class="card"><div class="ctitle">🎤 常听歌手</div>{_bar_html(top_artists,'artist')}</div>
+    <div class="card"><div class="ctitle">🎵 主要曲风</div>{_bar_html(top_genres,'genre')}</div>
+    <div class="card lang-card"><div class="ctitle">🌐 语言偏好</div>{_donut_svg(language_pref)}</div>
   </div>
 
   {trends_html}
@@ -682,7 +780,22 @@ body{{background:#080810;color:#cec8bc;font-family:'JetBrains Mono',monospace,sa
 
   <div class="footer">Generated by <a href="https://codebeat.top" style="color:#8b5cf6;text-decoration:none">码上律动</a> · {generated_at.strftime("%Y-%m-%d %H:%M")}</div>
 </div>
+
+<div id="modal" onclick="closeModal()">
+  <div id="modal-backdrop"></div>
+  <div id="modal-box" onclick="event.stopPropagation()">
+    <div id="modal-head">
+      <span id="modal-title"></span>
+      <button id="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
 <button id="save-btn" onclick="saveAsImage()">📸 保存图片</button>
+<script>var TRACK_DATA={track_data_json};</script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <script>{_save_js}</script>
+<script>{_modal_js}</script>
 </body>
 </html>"""
