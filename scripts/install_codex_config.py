@@ -28,6 +28,7 @@ _CWB_TOOLS = [
     "focus_start",
     "focus_status",
     "focus_stop",
+    "generate_profile",
     "history_search",
     "like_current",
     "list_history",
@@ -220,22 +221,35 @@ def remove_hooks(hooks: dict) -> dict:
 
 
 def install_skill(repo: Path, codex_dir: Path) -> None:
-    src = repo / "codex_skills" / "cwb" / "SKILL.md"
-    if not src.exists():
-        print(f"WARN: skill source not found: {src}", file=sys.stderr)
+    skills_src = repo / "codex_skills"
+    if not skills_src.exists():
+        print(f"WARN: codex_skills/ not found: {skills_src}", file=sys.stderr)
         return
-    dest_dir = codex_dir / "skills" / "cwb"
-    dest_dir.mkdir(parents=True, exist_ok=True)
-    dest = dest_dir / "SKILL.md"
-    dest.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
+    for skill_dir in sorted(skills_src.iterdir()):
+        if not skill_dir.is_dir():
+            continue
+        src = skill_dir / "SKILL.md"
+        if not src.exists():
+            print(f"WARN: skill source not found: {src}", file=sys.stderr)
+            continue
+        dest_dir = codex_dir / "skills" / skill_dir.name
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        dest = dest_dir / "SKILL.md"
+        dest.write_text(src.read_text(encoding="utf-8"), encoding="utf-8")
 
 
 def remove_skill(codex_dir: Path) -> None:
-    skill_dir = codex_dir / "skills" / "cwb"
-    if skill_dir.exists():
-        import shutil
+    import shutil
 
-        shutil.rmtree(skill_dir)
+    skills_src_names = {
+        d.name
+        for d in (Path(__file__).parent.parent / "codex_skills").iterdir()
+        if d.is_dir()
+    } if (Path(__file__).parent.parent / "codex_skills").exists() else {"cwb"}
+    for name in skills_src_names:
+        skill_dir = codex_dir / "skills" / name
+        if skill_dir.exists():
+            shutil.rmtree(skill_dir)
 
 
 # ── CLI ───────────────────────────────────────────────────────────────────────
