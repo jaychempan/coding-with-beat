@@ -778,7 +778,7 @@ async def generate_profile(
         out_path.parent.mkdir(parents=True, exist_ok=True)
         out_path.write_text(html_content, encoding="utf-8")
         _sp.run(["open", str(out_path)], check=False)
-        html_note = f"\n\n📄 HTML 报告已在浏览器打开（{out_path.name}）"
+        html_note = f"\n\n📄 HTML 报告已在浏览器打开：{out_path}"
     except Exception:
         pass
 
