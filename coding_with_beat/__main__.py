@@ -464,7 +464,7 @@ def cmd_profile() -> int:
     from . import profile as _profile
 
     args = sys.argv[2:]
-    html_mode = "--html" in args
+    html_now = "--html" in args  # skip prompt, go straight to HTML
     period_args = [a for a in args if not a.startswith("-")]
 
     valid = {"daily", "weekly", "monthly", "yearly"}
@@ -479,17 +479,7 @@ def cmd_profile() -> int:
         print("（听歌记录不足 5 首，多听一会儿再来生成报告吧 🎵）")
         return 0
 
-    if html_mode:
-        import subprocess
-        from .config import DATA_DIR
-        html = _profile.build_html_report(prof)
-        out_path = DATA_DIR / f"report_{period}_{prof['generated_at'].strftime('%Y%m%d')}.html"
-        out_path.parent.mkdir(parents=True, exist_ok=True)
-        out_path.write_text(html, encoding="utf-8")
-        print(f"报告已生成：{out_path}")
-        subprocess.run(["open", str(out_path)], check=False)
-        return 0
-
+    # Always print the text report first
     print(_profile.build_report(prof))
     print()
     queries = _profile.build_recommendation_queries(prof)
@@ -497,6 +487,24 @@ def cmd_profile() -> int:
         print("🎵 个性化推荐 queries：")
         for i, q in enumerate(queries, 1):
             print(f"  {i}. {q}")
+
+    # Prompt for HTML unless --html was passed directly
+    if not html_now:
+        try:
+            answer = input("\n需要生成 HTML 报告并在浏览器打开吗？[y/N] ").strip().lower()
+        except (EOFError, KeyboardInterrupt):
+            answer = ""
+        if answer not in ("y", "yes", "是", "需要"):
+            return 0
+
+    import subprocess
+    from .config import DATA_DIR
+    html = _profile.build_html_report(prof)
+    out_path = DATA_DIR / f"report_{period}_{prof['generated_at'].strftime('%Y%m%d')}.html"
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(html, encoding="utf-8")
+    print(f"报告已生成：{out_path}")
+    subprocess.run(["open", str(out_path)], check=False)
     return 0
 
 

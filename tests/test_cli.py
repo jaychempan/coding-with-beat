@@ -175,6 +175,7 @@ def test_cmd_profile_weekly_success(monkeypatch, capsys):
     }
     from coding_with_beat import profile as _profile
     monkeypatch.setattr(_profile, "build_profile", lambda period, **kw: fake_profile)
+    monkeypatch.setattr("builtins.input", lambda _: "n")
 
     from coding_with_beat.__main__ import cmd_profile
     rc = cmd_profile()
