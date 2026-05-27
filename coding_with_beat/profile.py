@@ -372,6 +372,77 @@ def build_recommendation_queries(profile: dict, context: str = "") -> list[str]:
     return queries[:3]
 
 
+def _music_personality(profile: dict) -> tuple[str, str, str]:
+    """Derive a fun music personality title. Returns (emoji, title, description)."""
+    time_pattern  = profile.get("time_pattern", {})
+    language_pref = profile.get("language_pref", {})
+    top_genres    = profile.get("top_genres", [])
+
+    time_counts = {band: len(genres) for band, genres in time_pattern.items()}
+    dom_time = max(time_counts, key=time_counts.get) if time_counts else "night"
+
+    _BUCKETS = [
+        ("lofi",       ["lofi", "lo-fi", "chillhop"]),
+        ("electronic", ["electronic", "synthwave", "edm", "techno", "house", "cyberpunk", "赛博"]),
+        ("classical",  ["classical", "piano", "orchestra", "古典"]),
+        ("jazz",       ["jazz", "bossa"]),
+        ("hiphop",     ["hip-hop", "hip hop", "rap", "trap", "嘻哈"]),
+        ("ambient",    ["ambient", "drone", "meditation"]),
+        ("rnb",        ["rnb", "r&b", "soul"]),
+        ("chinese",    ["华语", "国风", "民谣", "古风"]),
+        ("pop",        ["pop", "indie"]),
+    ]
+    bucket_scores: dict[str, int] = {}
+    for genre, count in top_genres:
+        gl = genre.lower()
+        for bucket, keys in _BUCKETS:
+            if any(k in gl for k in keys):
+                bucket_scores[bucket] = bucket_scores.get(bucket, 0) + count
+    top_bucket = max(bucket_scores, key=bucket_scores.get) if bucket_scores else "pop"
+
+    zh = language_pref.get("zh", 0)
+    if zh > 0.65 and top_bucket not in ("chinese", "lofi", "classical"):
+        top_bucket = "chinese"
+
+    _TABLE: dict[tuple[str, str], tuple[str, str, str]] = {
+        ("night",     "lofi"):       ("🌙", "深夜lofi主义者",  "代码与旋律在午夜交融，这是属于你的静谧时光"),
+        ("night",     "electronic"): ("⚡", "赛博夜行先锋",    "在霓虹与合成器之间，划破深夜的电波"),
+        ("night",     "ambient"):    ("🌌", "深夜氛围冥想者",  "用环境音为思绪构建一片宁静的宇宙"),
+        ("night",     "classical"):  ("🎹", "深夜古典守夜人",  "琴键陪伴每个不眠之夜，音符是最好的伴侣"),
+        ("night",     "hiphop"):     ("🎤", "深夜嘻哈游侠",    "节拍与黑夜是最忠实的搭档"),
+        ("night",     "jazz"):       ("🎷", "午夜爵士幽灵",    "在蓝调的忧郁里，感受那份慵懒的美"),
+        ("night",     "chinese"):    ("🏮", "夜色华语诗人",    "在华语旋律里寻找那份独有的共鸣"),
+        ("night",     "rnb"):        ("💙", "深夜灵魂歌者",    "R&B的丝滑节奏是深夜最好的慰藉"),
+        ("night",     "pop"):        ("🌙", "深夜流行漫游者",  "在旋律里流浪，在深夜里做梦"),
+        ("morning",   "pop"):        ("🌅", "清晨活力先行者",  "用音乐点亮每一个崭新的早晨"),
+        ("morning",   "classical"):  ("☀️", "清晨古典主义者",  "晨光里，音符比咖啡更能唤醒灵魂"),
+        ("morning",   "lofi"):       ("🌤️","晨曦lofi漫步者",  "轻柔的旋律陪伴每一个从容的早晨"),
+        ("morning",   "chinese"):    ("🌸", "清晨华语吟游者",  "用熟悉的中文旋律开启每一天"),
+        ("afternoon", "jazz"):       ("☕", "午后爵士常客",    "一杯咖啡，一段爵士，完美的下午"),
+        ("afternoon", "pop"):        ("✨", "午后流行探索者",  "在阳光下随着旋律自由漂流"),
+        ("afternoon", "lofi"):       ("📖", "午后lofi阅读者", "lofi的节拍让午后的专注更持久"),
+        ("evening",   "electronic"): ("🌆", "傍晚电子巡游者", "华灯初上，电子音浪开始涌动"),
+        ("evening",   "chinese"):    ("🌸", "傍晚华语漫想家", "夕阳西下，用华语旋律填满思绪"),
+        ("evening",   "jazz"):       ("🌇", "黄昏爵士追随者", "在落日余晖里享受蓝调的余韵"),
+    }
+    key = (dom_time, top_bucket)
+    if key in _TABLE:
+        return _TABLE[key]
+
+    _FALLBACK: dict[str, tuple[str, str, str]] = {
+        "lofi":       ("🎧", "lofi冥想主义者",  "在节奏与宁静之间，找到专属的心流状态"),
+        "electronic": ("⚡", "电子音浪冲浪者",  "骑着合成器的浪潮，探索声音的边界"),
+        "classical":  ("🎼", "古典浪漫主义者",  "在跨越时代的旋律里，寻找灵魂的共鸣"),
+        "jazz":       ("☕", "爵士咖啡馆常客",  "蓝调与爵士是你永恒的精神食粮"),
+        "hiphop":     ("🎤", "嘻哈文化信徒",    "节拍与韵脚是你表达世界的方式"),
+        "ambient":    ("🌌", "氛围音景建筑师",  "用声音构建属于自己的内心宇宙"),
+        "rnb":        ("💙", "R&B灵魂共鸣者",   "丝滑的节奏直抵内心最柔软的角落"),
+        "chinese":    ("🏮", "华语情怀守护者",  "在中文旋律里找到了最深的情感共鸣"),
+        "pop":        ("🎵", "流行音乐探险家",  "广泛探索各种风格，音乐品味包罗万象"),
+    }
+    return _FALLBACK.get(top_bucket, ("🎵", "音乐探险家", "广泛探索各种风格，音乐品味包罗万象"))
+
+
 def build_html_report(profile: dict) -> str:
     """Generate a self-contained dark-theme HTML listening report with SVG charts."""
     period       = profile.get("period", "weekly")
@@ -389,6 +460,7 @@ def build_html_report(profile: dict) -> str:
     declining_pref = profile.get("declining_pref", [])
     time_pattern = profile.get("time_pattern", {})
     queries      = build_recommendation_queries(profile)
+    p_emoji, p_title, p_desc = _music_personality(profile)
 
     summary_parts: list[str] = []
     if top_genres:
@@ -531,12 +603,21 @@ body{{background:#080810;color:#cec8bc;font-family:'JetBrains Mono',monospace,sa
 .rec-q{{color:#cec8bc;font-size:12px;line-height:1.5}}
 .summary{{background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.2);border-radius:10px;padding:16px 20px;margin:0 0 32px;font-size:13px;line-height:1.7}}
 .footer{{text-align:center;padding:24px 0 8px;font-size:11px;color:#68687a;border-top:1px solid rgba(139,92,246,.15)}}
+.persona{{margin-bottom:24px}}
+.persona-emoji{{font-size:44px;line-height:1;margin-bottom:10px}}
+.persona-title{{font-size:24px;font-weight:700;color:#f0ece4;letter-spacing:.04em;margin-bottom:6px}}
+.persona-desc{{font-size:12px;color:#68687a;letter-spacing:.03em}}
 </style>
 </head>
 <body>
 <div class="wrap">
   <div class="header">
     <div class="header-logo">码上律动 · CODING WITH BEAT</div>
+    <div class="persona">
+      <div class="persona-emoji">{p_emoji}</div>
+      <div class="persona-title">{p_title}</div>
+      <div class="persona-desc">{p_desc}</div>
+    </div>
     <h1>{label}</h1>
     <div class="date">{start} ~ {end}</div>
     <div class="big-num">{play_count}</div>
@@ -559,7 +640,7 @@ body{{background:#080810;color:#cec8bc;font-family:'JetBrains Mono',monospace,sa
 
   <div class="summary">💬 {summary}</div>
 
-  <div class="footer">Generated by coding-with-beat · {generated_at.strftime("%Y-%m-%d %H:%M")}</div>
+  <div class="footer">Generated by <a href="https://codebeat.top" style="color:#8b5cf6;text-decoration:none">码上律动</a> · {generated_at.strftime("%Y-%m-%d %H:%M")}</div>
 </div>
 </body>
 </html>"""
