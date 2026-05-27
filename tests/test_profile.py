@@ -106,3 +106,71 @@ def test_build_profile_returns_required_keys(monkeypatch):
         "recent_trend", "stable_pref", "declining_pref", "time_pattern",
     }
     assert required.issubset(prof.keys())
+
+
+# ── build_report ──────────────────────────────────────────────────────────────
+
+def _make_profile(overrides=None):
+    now = datetime.datetime.now()
+    base = {
+        "period": "weekly",
+        "generated_at": now,
+        "play_count": 42,
+        "top_artists": [("Hans Zimmer", 12), ("周杰伦", 8), ("ODESZA", 5)],
+        "top_genres": [("lofi", 9), ("ambient", 6), ("classical", 4)],
+        "top_search_terms": [("lofi", 5), ("coding", 4)],
+        "language_pref": {"en": 0.6, "zh": 0.3, "instrumental": 0.1},
+        "loved_artists": ["Hans Zimmer"],
+        "recent_trend": ["synthwave"],
+        "stable_pref": ["lofi", "ambient"],
+        "declining_pref": ["华语"],
+        "time_pattern": {"night": ["lofi", "ambient"], "afternoon": ["classical"]},
+    }
+    if overrides:
+        base.update(overrides)
+    return base
+
+
+def test_build_report_contains_play_count():
+    report = profile.build_report(_make_profile())
+    assert "42" in report
+
+
+def test_build_report_contains_top_artist():
+    report = profile.build_report(_make_profile())
+    assert "Hans Zimmer" in report
+
+
+def test_build_report_contains_top_genre():
+    report = profile.build_report(_make_profile())
+    assert "lofi" in report
+
+
+def test_build_report_contains_preference_changes():
+    report = profile.build_report(_make_profile())
+    assert "synthwave" in report   # recent_trend
+    assert "华语" in report         # declining_pref
+
+
+def test_build_report_contains_time_pattern():
+    report = profile.build_report(_make_profile())
+    assert "lofi" in report
+
+
+def test_build_report_contains_summary_sentence():
+    report = profile.build_report(_make_profile())
+    assert "💬" in report
+
+
+def test_build_report_all_periods():
+    for period in ("daily", "weekly", "monthly", "yearly"):
+        prof = _make_profile({"period": period})
+        report = profile.build_report(prof)
+        assert "📅" in report
+
+
+def test_build_report_empty_trend_sections_hidden():
+    prof = _make_profile({"recent_trend": [], "stable_pref": [], "declining_pref": []})
+    report = profile.build_report(prof)
+    # Should not crash and should still contain basic stats
+    assert "42" in report

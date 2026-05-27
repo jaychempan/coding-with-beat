@@ -236,3 +236,96 @@ def build_profile(period: str = "weekly", source: str | None = None) -> dict:
         "declining_pref": declining_pref,
         "time_pattern": time_pattern,
     }
+
+
+_PERIOD_LABELS: dict[str, str] = {
+    "daily":   "今日听歌报告",
+    "weekly":  "本周听歌报告",
+    "monthly": "本月听歌报告",
+    "yearly":  "年度听歌报告",
+}
+
+_BAND_LABELS: dict[str, str] = {
+    "morning":   "早晨",
+    "afternoon": "下午",
+    "evening":   "傍晚",
+    "night":     "深夜",
+}
+
+_LANG_LABELS: dict[str, str] = {
+    "zh": "中文", "en": "英文", "instrumental": "纯音乐",
+}
+
+_PERIOD_ZH: dict[str, str] = {
+    "daily": "天", "weekly": "周", "monthly": "月", "yearly": "年",
+}
+
+
+def build_report(profile: dict) -> str:
+    """Generate a plain-text listening report from a UserProfile dict."""
+    period = profile.get("period", "weekly")
+    generated_at = profile.get("generated_at", datetime.datetime.now())
+    days = _PERIOD_DAYS.get(period, 7)
+    start = (generated_at - datetime.timedelta(days=days)).strftime("%Y-%m-%d")
+    end = generated_at.strftime("%Y-%m-%d")
+    label = _PERIOD_LABELS.get(period, "听歌报告")
+
+    top_artists  = profile.get("top_artists", [])
+    top_genres   = profile.get("top_genres", [])
+    language_pref = profile.get("language_pref", {})
+    recent_trend = profile.get("recent_trend", [])
+    stable_pref  = profile.get("stable_pref", [])
+    declining_pref = profile.get("declining_pref", [])
+    time_pattern = profile.get("time_pattern", {})
+    play_count   = profile.get("play_count", 0)
+
+    artists_str = " · ".join(a for a, _ in top_artists[:3]) if top_artists else "—"
+    genres_str  = " · ".join(g for g, _ in top_genres[:3]) if top_genres else "—"
+
+    lang_parts = [
+        f"{_LANG_LABELS.get(lang, lang)} {int(ratio * 100)}%"
+        for lang, ratio in sorted(language_pref.items(), key=lambda x: -x[1])
+        if ratio > 0
+    ]
+    lang_str = " · ".join(lang_parts) if lang_parts else "—"
+
+    lines = [
+        f"📅 {label}（{start} ~ {end}）",
+        "",
+        f"▸ 共播放 {play_count} 次，常听歌手：{artists_str}",
+        f"▸ 主要曲风：{genres_str}",
+        f"▸ 语言偏好：{lang_str}",
+    ]
+
+    if recent_trend or stable_pref or declining_pref:
+        lines += ["", "📈 偏好变化"]
+        if recent_trend:
+            lines.append(f"  新增：{' · '.join(recent_trend[:3])}")
+        if stable_pref:
+            lines.append(f"  稳定：{' · '.join(stable_pref[:3])}")
+        if declining_pref:
+            lines.append(f"  下降：{' · '.join(declining_pref[:3])}")
+
+    if time_pattern:
+        lines += ["", "🕐 时间规律"]
+        for band in ("morning", "afternoon", "evening", "night"):
+            genres = time_pattern.get(band, [])
+            if genres:
+                lines.append(f"  {_BAND_LABELS[band]}：{' · '.join(genres[:3])}")
+
+    # Natural language summary
+    lines += ["", "💬 总结"]
+    summary_parts: list[str] = []
+    if top_genres:
+        top2 = " 和 ".join(g for g, _ in top_genres[:2])
+        summary_parts.append(f"这{_PERIOD_ZH.get(period, '周')}你的音乐偏好明显偏向 {top2}")
+    if declining_pref:
+        summary_parts.append(f"{'、'.join(declining_pref[:2])} 播放次数有所下降")
+    if recent_trend:
+        summary_parts.append(f"{'、'.join(recent_trend[:2])} 开始走高")
+    if summary_parts:
+        lines.append("，".join(summary_parts) + "。")
+    else:
+        lines.append(f"本{_PERIOD_ZH.get(period, '周')}共播放 {play_count} 首，继续保持！")
+
+    return "\n".join(lines)
