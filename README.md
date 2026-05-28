@@ -79,15 +79,6 @@ cwb profile monthly
 cwb profile yearly
 ```
 
-> **Dev preview install:**
-> ```bash
-> # Claude Code
-> CWB_BRANCH=dev curl -LsSf https://raw.githubusercontent.com/jaychempan/coding-with-beat/dev/bootstrap.sh | sh
->
-> # Codex CLI
-> CWB_BRANCH=dev curl -LsSf https://raw.githubusercontent.com/jaychempan/coding-with-beat/dev/bootstrap_codex.sh | sh
-> ```
-
 ---
 
 ## Features
@@ -156,6 +147,17 @@ cd coding-with-beat
 Installs Codex CLI if needed, configures `~/.codex/config.toml` with the MCP endpoint, writes hooks, and installs the `cwb` skill so Codex recognises music commands automatically. Proxy is auto-detected. Re-running is safe — already-completed steps are skipped automatically.
 
 See **[README_CODEX.md](README_CODEX.md)** for the full integration guide — hooks, proxy, mood reactions, statusline alternatives, and debugging.
+
+### Dev Preview
+
+> **Dev preview install:**
+> ```bash
+> # Claude Code
+> CWB_BRANCH=dev curl -LsSf https://raw.githubusercontent.com/jaychempan/coding-with-beat/dev/bootstrap.sh | sh
+>
+> # Codex CLI
+> CWB_BRANCH=dev curl -LsSf https://raw.githubusercontent.com/jaychempan/coding-with-beat/dev/bootstrap_codex.sh | sh
+> ```
 
 ---
 
