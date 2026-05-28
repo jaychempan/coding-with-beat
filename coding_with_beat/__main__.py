@@ -460,6 +460,54 @@ def cmd_history() -> int:
     return 0
 
 
+def cmd_profile() -> int:
+    from . import profile as _profile
+
+    args = sys.argv[2:]
+    html_now = "--html" in args  # skip prompt, go straight to HTML
+    period_args = [a for a in args if not a.startswith("-")]
+
+    valid = {"daily", "weekly", "monthly", "yearly"}
+    period = period_args[0] if period_args else "weekly"
+    if period not in valid:
+        print(f"error: period must be one of: {', '.join(sorted(valid))}")
+        return 2
+
+    try:
+        prof = _profile.build_profile(period)
+    except ValueError:
+        print("（听歌记录不足 5 首，多听一会儿再来生成报告吧 🎵）")
+        return 0
+
+    # Always print the text report first
+    print(_profile.build_report(prof))
+    print()
+    queries = _profile.build_recommendation_queries(prof)
+    if queries:
+        print("🎵 个性化推荐 queries：")
+        for i, q in enumerate(queries, 1):
+            print(f"  {i}. {q}")
+
+    # Prompt for HTML unless --html was passed directly
+    if not html_now:
+        try:
+            answer = input("\n需要生成 HTML 报告并在浏览器打开吗？[y/N] ").strip().lower()
+        except (EOFError, KeyboardInterrupt):
+            answer = ""
+        if answer not in ("y", "yes", "是", "需要"):
+            return 0
+
+    import subprocess
+    from .config import DATA_DIR
+    html = _profile.build_html_report(prof)
+    out_path = DATA_DIR / f"report_{period}_{prof['generated_at'].strftime('%Y%m%d')}.html"
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(html, encoding="utf-8")
+    print(f"报告已生成：{out_path}")
+    subprocess.run(["open", str(out_path)], check=False)
+    return 0
+
+
 def cmd_mode() -> int:
     mode = sys.argv[2] if len(sys.argv) > 2 else ""
     if not mode:
@@ -827,6 +875,7 @@ COMMANDS = {
     "volume": cmd_volume,
     "seek": cmd_seek,
     "history": cmd_history,
+    "profile": cmd_profile,
     "bar": cmd_bar,
     "help": cmd_help,
     # ── Chinese aliases ────────────────────────────────────────────────────
@@ -852,6 +901,9 @@ COMMANDS = {
     "播放器": cmd_player,
     "状态": cmd_status,
     "历史": cmd_history,
+    "画像": cmd_profile,
+    "音乐画像": cmd_profile,
+    "听歌报告": cmd_profile,
     "状态栏": cmd_bar,
     "音量": cmd_volume,
     "模式": cmd_mode,

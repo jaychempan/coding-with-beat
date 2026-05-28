@@ -127,5 +127,119 @@ class CliCommandTest(unittest.TestCase):
         self.assertEqual(out.getvalue(), output + "\n")
 
 
+# ── cwb profile ───────────────────────────────────────────────────────────────
+
+def test_cmd_profile_invalid_period(monkeypatch, capsys):
+    import sys
+    monkeypatch.setattr(sys, "argv", ["cwb", "profile", "quarterly"])
+    from coding_with_beat.__main__ import cmd_profile
+    rc = cmd_profile()
+    out = capsys.readouterr().out
+    assert rc == 2
+    assert "error" in out.lower()
+
+
+def test_cmd_profile_insufficient_history(monkeypatch, capsys):
+    import sys
+    monkeypatch.setattr(sys, "argv", ["cwb", "profile", "weekly"])
+    from coding_with_beat import profile as _profile
+
+    def _raise(period, **kw):
+        raise ValueError("insufficient_history")
+
+    monkeypatch.setattr(_profile, "build_profile", _raise)
+    from coding_with_beat.__main__ import cmd_profile
+    rc = cmd_profile()
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "不足" in out or "5" in out
+
+
+def test_cmd_profile_weekly_success(monkeypatch, capsys):
+    import sys, datetime
+    monkeypatch.setattr(sys, "argv", ["cwb", "profile", "weekly"])
+
+    fake_profile = {
+        "period": "weekly",
+        "generated_at": datetime.datetime.now(),
+        "play_count": 10,
+        "top_artists": [("Hans Zimmer", 5)],
+        "top_genres": [("lofi", 4)],
+        "top_search_terms": [],
+        "language_pref": {"en": 1.0, "zh": 0.0, "instrumental": 0.0},
+        "loved_artists": [],
+        "recent_trend": [],
+        "stable_pref": ["lofi"],
+        "declining_pref": [],
+        "time_pattern": {},
+    }
+    from coding_with_beat import profile as _profile
+    monkeypatch.setattr(_profile, "build_profile", lambda period, **kw: fake_profile)
+    monkeypatch.setattr("builtins.input", lambda _: "n")
+
+    from coding_with_beat.__main__ import cmd_profile
+    rc = cmd_profile()
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "Hans Zimmer" in out
+    assert "lofi" in out
+
+
+def test_cmd_profile_html_flag_writes_file(monkeypatch, tmp_path):
+    import sys, datetime
+    monkeypatch.setattr(sys, "argv", ["cwb", "profile", "weekly", "--html"])
+
+    fake_profile = {
+        "period": "weekly",
+        "generated_at": datetime.datetime.now(),
+        "play_count": 10,
+        "top_artists": [("Hans Zimmer", 5)],
+        "top_genres": [("lofi", 4)],
+        "top_search_terms": [],
+        "language_pref": {"en": 1.0, "zh": 0.0, "instrumental": 0.0},
+        "loved_artists": [],
+        "recent_trend": [],
+        "stable_pref": ["lofi"],
+        "declining_pref": [],
+        "time_pattern": {},
+    }
+    from coding_with_beat import profile as _profile
+    monkeypatch.setattr(_profile, "build_profile", lambda period, **kw: fake_profile)
+
+    import subprocess
+    opened = []
+    monkeypatch.setattr(subprocess, "run", lambda cmd, **kw: opened.append(cmd))
+
+    import coding_with_beat.config as _cfg
+    real_data_dir = _cfg.DATA_DIR
+    _cfg.DATA_DIR = tmp_path
+    try:
+        from coding_with_beat.__main__ import cmd_profile
+        rc = cmd_profile()
+    finally:
+        _cfg.DATA_DIR = real_data_dir
+
+    assert rc == 0
+    html_files = list(tmp_path.glob("report_weekly_*.html"))
+    assert len(html_files) == 1
+    assert html_files[0].read_text(encoding="utf-8").startswith("<!DOCTYPE html>")
+
+
+def test_cmd_profile_html_flag_insufficient_history(monkeypatch, capsys):
+    import sys
+    monkeypatch.setattr(sys, "argv", ["cwb", "profile", "weekly", "--html"])
+    from coding_with_beat import profile as _profile
+
+    def _raise(period, **kw):
+        raise ValueError("insufficient_history")
+
+    monkeypatch.setattr(_profile, "build_profile", _raise)
+    from coding_with_beat.__main__ import cmd_profile
+    rc = cmd_profile()
+    out = capsys.readouterr().out
+    assert rc == 0
+    assert "不足" in out or "5" in out
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -14,7 +14,7 @@ from typing import Optional
 
 from mcp.server.fastmcp import FastMCP
 
-from . import dj, focus, history, state
+from . import dj, focus, history, profile, state
 from .config import DATA_DIR
 from .lyrics_snapshot import current_text as current_lyrics_text
 from .lyrics_snapshot import track_key
@@ -735,6 +735,63 @@ async def history_search() -> str:
 
 
 @mcp.tool()
+async def generate_profile(
+    period: str = "weekly",
+    context: str = "",
+) -> str:
+    """Generate a personal music listening report with profile analysis and recommendations.
+
+    Analyses play history and search patterns to produce:
+    - Listening statistics: top artists, genres, language preference
+    - Preference trends: rising, stable, and declining genres
+    - Time-of-day listening patterns
+    - 2–3 personalised smart_search query strings ready to play
+
+    After displaying the report, offer to call smart_search(queries=[...])
+    with the returned recommendation queries.
+
+    Args:
+        period: Report time window — daily | weekly | monthly | yearly (default: weekly)
+        context: Optional scene or mood hint to tune recommendations
+                 e.g. "写代码", "跑步", "放松"
+    """
+    import asyncio as _asyncio
+
+    if period not in ("daily", "weekly", "monthly", "yearly"):
+        period = "weekly"
+
+    try:
+        prof = await _asyncio.to_thread(profile.build_profile, period)
+    except ValueError:
+        return "（听歌记录不足 5 首，多听一会儿再来生成报告吧 🎵）"
+
+    report_text = profile.build_report(prof)
+    queries = profile.build_recommendation_queries(prof, context)
+
+    # Generate and open HTML report as a side effect
+    html_note = ""
+    try:
+        import subprocess as _sp
+        from .config import DATA_DIR
+        html_content = profile.build_html_report(prof)
+        out_path = DATA_DIR / f"report_{period}_{prof['generated_at'].strftime('%Y%m%d')}.html"
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(html_content, encoding="utf-8")
+        _sp.run(["open", str(out_path)], check=False)
+        html_note = f"\n\n📄 HTML 报告已在浏览器打开：{out_path}"
+    except Exception:
+        pass
+
+    rec_lines = ["", "─" * 40, "🎵 个性化推荐（可用 smart_search 播放）："]
+    for i, q in enumerate(queries, 1):
+        rec_lines.append(f"  {i}. {q}")
+    rec_lines.append("")
+    rec_lines.append('想播放推荐吗？说"播放推荐"或"play 1"即可。')
+
+    return report_text + html_note + "\n" + "\n".join(rec_lines)
+
+
+@mcp.tool()
 async def list_loved(limit: int = 50) -> str:
     """List all loved/hearted tracks in the current source's library.
     Returns a numbered list tagged [♥ Loved]. Use play_number() to play."""
@@ -1009,6 +1066,13 @@ async def smart_search(
     Results are numbered — use play_number() to play by index.
     """
     import asyncio
+
+    # Capture queries for search history profile
+    if queries:
+        for _q in queries:
+            history.write_search(_q)
+    elif description:
+        history.write_search(description)
 
     if queries:
         _q0 = queries[0][:22] + ("…" if len(queries[0]) > 22 else "")
@@ -1374,11 +1438,11 @@ def session_intro() -> str:
 _TIPS_EN = """\
 🎵 What you can say:
 
-▸ Mood
+▸ Mood / Scene
   · "play some late-night lofi"
   · "focus music, no lyrics"
-  · "jazz / lofi / classical / synthwave"
-  · "I want to relax"
+  · "jazz / lofi / classical / synthwave / sad / hype"
+  · "I want to relax" · "something for a drive"
 
 ▸ Playlists
   · "show my playlists"
@@ -1388,16 +1452,30 @@ _TIPS_EN = """\
   · "show loved tracks" · "like this"
   · "search Jay Chou in loved"
 
-▸ History & recommendations
+▸ Music profile & report
+  · "generate my weekly listening report"
+  · "show my music profile for this month"
+  · "what have I been listening to?"
+
+▸ Focus mode (Pomodoro)
+  · "start a focus session" · "stop focus"
+  · "how much focus time left?"
+
+▸ Lyrics & visuals
+  · "show lyrics" · "show cover art"
+  · "show player"
+
+▸ History
   · "show my recently played"
-  · "recommend based on my history"
+  · "search my history for lofi"
 
 ▸ Playback
   · "next" · "pause" · "resume"
   · "louder" · "quieter" · "play #3"
+  · "shuffle" · "repeat" · "seek to 1:30"
 
-▸ Status
-  · "what's playing" · "show player"
+▸ DJ mode
+  · "say something DJ" · "set vibe to chill"
 
 💡 Run 'cwb watch' in another terminal for live lyrics & progress.
 💡 Apple Music: if a popup appears, click 'Add to Library', then say 'play it' again.
@@ -1409,8 +1487,8 @@ _TIPS_ZH = """\
 ▸ 按心情找歌
   · 「来首深夜写代码的」
   · 「放点专注的背景音乐」
-  · 「来点爵士/lofi/古典/电子」
-  · 「我想放松一下」
+  · 「来点爵士/lofi/古典/电子/悲伤/充能」
+  · 「我想放松一下」·「适合夜驾的」
 
 ▸ 歌单
   · 「我有哪些歌单」
@@ -1420,16 +1498,30 @@ _TIPS_ZH = """\
   · 「喜欢列表」·「我喜欢这首」
   · 「从喜欢里找周杰伦」
 
-▸ 历史与推荐
+▸ 音乐画像与听歌报告
+  · 「生成我的本周听歌报告」
+  · 「这个月的音乐画像」
+  · 「我最近都在听什么」
+
+▸ 专注模式（番茄钟）
+  · 「开始专注」·「停止专注」
+  · 「专注还剩多久」
+
+▸ 歌词与视觉
+  · 「显示歌词」·「显示封面」
+  · 「显示播放器」
+
+▸ 历史记录
   · 「最近播放」
-  · 「根据我的历史推荐」
+  · 「历史里有没有lofi的」
 
 ▸ 播放控制
   · 「下一首」·「暂停」·「继续」
   · 「大声一点」·「小声一点」·「播放第3首」
+  · 「随机播放」·「单曲循环」·「跳到1分30秒」
 
-▸ 查看状态
-  · 「现在播的是什么」·「显示播放器」
+▸ DJ 互动
+  · 「DJ说点什么」·「氛围调成 chill」
 
 💡 推荐在另一个终端运行 cwb watch，实时查看歌词和进度。
 💡 Apple Music 曲目首次播放会弹窗，点击「加入资料库」后再说一次播放就好。

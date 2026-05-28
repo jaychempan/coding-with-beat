@@ -618,11 +618,14 @@
       }
       nav.nav-open .nav-right { display: flex; }
       .nav-hamburger { display: flex; }
-      /* dropdown items */
+      /* dropdown items — reset desktop card borders, use simple row separators */
       .gh-link, .nav-paper {
         padding: 11px 4px;
         font-size: 12px;
+        border: none;
         border-bottom: 1px solid var(--purple-border);
+        border-radius: 0;
+        background: transparent;
         gap: 8px;
       }
       .gh-link .gh-label, .nav-paper-label { display: inline; }
@@ -1010,7 +1013,7 @@
   <img src="assets/demo_2.png" alt="Coding With Beat demo screenshot"
     style="width:100%;border-radius:8px;border:1px solid var(--purple-border);display:block;margin-top:12px;">
   <details style="margin-top:12px;">
-    <summary style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);cursor:pointer;user-select:none;letter-spacing:.06em;">more screenshots</summary>
+    <summary data-i18n="more-screenshots" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--dim);cursor:pointer;user-select:none;letter-spacing:.06em;">more screenshots</summary>
     <img src="assets/demo_1.png" alt="Coding With Beat demo screenshot 1"
       style="width:100%;border-radius:8px;border:1px solid var(--purple-border);display:block;margin-top:10px;">
     <img src="assets/demo.png" alt="Coding With Beat demo screenshot 0"
@@ -1404,6 +1407,7 @@
       'scene-head':   'smart search scenes',
       'status-head':  'statusline preview',
       'screens-head': 'demo',
+      'more-screenshots': 'more screenshots',
       'src-head':     'music sources',
       'src-am-1': '✓ full playback', 'src-am-2': '✓ lyrics / art', 'src-am-3': '✓ like / seek',
       'src-local-name': 'Local Files',
@@ -1508,6 +1512,7 @@
       'scene-head':   '智能搜索场景',
       'status-head':  '状态栏预览',
       'screens-head': 'demo 演示',
+      'more-screenshots': '更多截图',
       'src-head':     '音乐来源',
       'src-am-1': '✓ 完整播放', 'src-am-2': '✓ 歌词 / 封面', 'src-am-3': '✓ 收藏 / 跳转',
       'src-local-name': '本地文件',

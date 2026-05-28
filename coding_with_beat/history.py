@@ -8,6 +8,7 @@ from collections import Counter
 from .config import DATA_DIR, ensure_dirs
 
 _LOG_FILE = DATA_DIR / "history.log"
+_SEARCH_LOG_FILE = DATA_DIR / "search_history.log"
 
 _STYLE_KEYWORDS: dict[str, list[str]] = {
     "lofi": ["lofi", "lo-fi", "chillhop"],
@@ -134,3 +135,40 @@ def summarize(tracks: list[dict], window_days: int = 14) -> dict:
         "style_tags": style_tags,
         "unheard_candidates": unheard_candidates,
     }
+
+
+def write_search(query: str) -> None:
+    """Append one search record to search_history.log."""
+    if not query:
+        return
+    ensure_dirs()
+    ts = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    entry = f"{ts} | {query} | smart_search\n"
+    try:
+        with open(_SEARCH_LOG_FILE, "a", encoding="utf-8") as f:
+            f.write(entry)
+    except Exception:
+        pass
+
+
+def read_search(limit: int = 500) -> list[dict]:
+    """Read the most recent `limit` entries from search_history.log, most-recent first.
+    Each entry: {query: str, ts: datetime}."""
+    try:
+        lines = _SEARCH_LOG_FILE.read_text(encoding="utf-8").splitlines()
+    except FileNotFoundError:
+        return []
+    result: list[dict] = []
+    for line in reversed(lines):
+        parts = line.split(" | ", 2)
+        if len(parts) < 3:
+            continue
+        ts_str, query = parts[0], parts[1]
+        try:
+            ts = datetime.datetime.strptime(ts_str, "%Y-%m-%d %H:%M:%S")
+        except ValueError:
+            continue
+        result.append({"query": query, "ts": ts})
+        if len(result) >= limit:
+            break
+    return result

@@ -45,6 +45,48 @@ A retro pixel DJ companion for AI coding sessions. It plays music, shows lyrics,
 
 ---
 
+## 🆕 What's New
+
+**`/cwb-profile` — Music Profile & Listening Reports** _(dev preview)_
+
+A new skill that analyses your play history and search patterns to generate personalised listening reports and recommendations — daily, weekly, monthly, or yearly.
+
+**Try it** — just say it naturally:
+
+```
+帮我生成本周的听歌报告
+生成年度音乐画像
+我最近都在听什么？适合写代码的
+what have I been listening to this week
+```
+
+The AI calls `generate_profile()` and returns:
+
+- 📊 Top artists · genres · language breakdown
+- 📈 Rising / stable / declining tastes
+- 🕐 Time-of-day listening patterns
+- 🎵 2–3 personalised `smart_search` queries ready to play
+
+**CLI** (works offline, no MCP server needed):
+
+```bash
+cwb profile           # weekly (default)
+cwb profile daily
+cwb profile monthly
+cwb profile yearly
+```
+
+> **Dev preview install:**
+> ```bash
+> # Claude Code
+> CWB_BRANCH=dev curl -LsSf https://raw.githubusercontent.com/jaychempan/coding-with-beat/dev/bootstrap.sh | sh
+>
+> # Codex CLI
+> CWB_BRANCH=dev curl -LsSf https://raw.githubusercontent.com/jaychempan/coding-with-beat/dev/bootstrap_codex.sh | sh
+> ```
+
+---
+
 ## Features
 
 - **MCP server** — 38 tools so you can tell your AI "play some lofi", "skip this", "what's playing" and it just works.

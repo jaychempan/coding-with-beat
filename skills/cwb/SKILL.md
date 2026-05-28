@@ -23,23 +23,38 @@ Call these tools directly — do not shell out to `cwb` unless MCP is unavailabl
 | Tool | Purpose |
 |------|---------|
 | `play` | Resume playback |
+| `resume` | Resume (alias for play) |
+| `toggle` | Toggle play / pause |
 | `play_song(query)` | Search and play by name/artist/genre |
 | `play_number(number)` | Play track #n from last search or list |
+| `play_playlist(name)` | Play a named playlist |
+| `smart_search(queries)` | Mood/vibe/scene search — pass 2–3 angle queries |
 | `pause` | Pause |
 | `next_track` | Skip to next |
 | `prev_track` | Go to previous |
 | `now_playing` | Get current track info |
 | `set_volume(percent)` | Volume 0–100 |
-| `seek(seconds)` | Seek to position |
+| `seek(seconds)` | Seek to position (seconds or mm:ss) |
+| `set_play_mode(mode)` | `shuffle` \| `sequential` \| `repeat` \| `repeat_one` |
 | `like_current` | Like / favourite current track |
 | `search(query)` | Search library + Apple Music catalog |
 | `list_library(limit)` | List all library tracks |
 | `list_loved(limit)` | List all loved/hearted tracks `[♥ 喜欢]` |
 | `search_loved(query)` | Search only within loved tracks |
+| `list_playlists` | List all playlists |
+| `list_history(limit)` | Recently played tracks |
+| `history_search(query)` | Search within play history |
 | `set_source(name)` | Switch source: `apple_music` \| `local` \| `qq_music` |
-| `set_play_mode(mode)` | `shuffle` \| `sequential` \| `repeat` \| `repeat_one` |
-| `status` | Full player state |
+| `generate_profile(period)` | Generate listening report + open HTML in browser — `daily` \| `weekly` \| `monthly` \| `yearly` |
+| `focus_start(work, break_, cycles)` | Start Pomodoro focus session |
+| `focus_status` | Current focus phase and time remaining |
+| `focus_stop` | Stop focus session |
 | `show_player` | Render pixel player UI |
+| `show_cover` | Render current track cover art as pixel art |
+| `show_lyrics` | Show karaoke / synced lyrics |
+| `dj_say(message)` | Have DJ Buddy say something |
+| `vibe_set(vibe)` | Set session vibe / mood |
+| `status` | Full player state |
 | `tips` | Show a card of natural-language phrases the user can say |
 
 ## Natural language examples

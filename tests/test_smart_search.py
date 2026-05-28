@@ -392,3 +392,24 @@ def test_search_loved_no_results(mock_gs, mock_state, mock_wqf, mock_wam):
 
     result = _run(server.search_loved("zzz"))
     assert "no loved tracks" in result
+
+
+def test_smart_search_writes_search_history(tmp_path, monkeypatch):
+    """smart_search must write each query to search_history.log."""
+    from coding_with_beat import history as _history
+    monkeypatch.setattr(_history, "_SEARCH_LOG_FILE", tmp_path / "search_history.log")
+    monkeypatch.setattr(_history, "ensure_dirs", lambda: None)
+
+    from unittest.mock import AsyncMock, patch
+
+    async def _run():
+        with patch("coding_with_beat.server._multi_angle_search", new=AsyncMock(return_value="ok")):
+            from coding_with_beat.server import smart_search
+            await smart_search(queries=["lofi jazz focus", "ambient drone"])
+
+    asyncio.run(_run())
+
+    records = _history.read_search()
+    queries_written = [r["query"] for r in records]
+    assert "lofi jazz focus" in queries_written
+    assert "ambient drone" in queries_written
