@@ -161,7 +161,14 @@ if [ "$_installed_loc" = "$REPO" ] && [ -x "$VENV/bin/cwb" ]; then
   ok "coding-with-beat already installed from $REPO — skipping pip"
 else
   printf "  installing packages (mcp, Pillow, httpx…) this may take a minute… "
-  "$VENV_PY" -m pip install --quiet --upgrade pip
+  # Bootstrap SSL: macOS python.org builds ship without a CA cert bundle.
+  # Use --trusted-host once to install certifi, then point SSL_CERT_FILE at it
+  # so all subsequent pip calls verify SSL normally.
+  "$VENV_PY" -m pip install --quiet \
+    --trusted-host pypi.org --trusted-host files.pythonhosted.org \
+    --upgrade pip certifi 2>/dev/null || true
+  _certifi="$("$VENV_PY" -m certifi 2>/dev/null || true)"
+  [ -n "$_certifi" ] && export SSL_CERT_FILE="$_certifi" REQUESTS_CA_BUNDLE="$_certifi"
   "$VENV_PY" -m pip install --quiet -e "$REPO"
   printf "done\n"
   ok "installed/updated coding-with-beat (editable) -> $REPO"
