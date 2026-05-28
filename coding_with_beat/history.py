@@ -1,5 +1,6 @@
 # coding_with_beat/history.py
 """Play history: write (non-AM sources) and analyse (all sources)."""
+
 from __future__ import annotations
 
 import datetime
@@ -13,8 +14,7 @@ _SEARCH_LOG_FILE = DATA_DIR / "search_history.log"
 _STYLE_KEYWORDS: dict[str, list[str]] = {
     "lofi": ["lofi", "lo-fi", "chillhop"],
     "jazz": ["jazz", "bossa", "blues", "swing"],
-    "classical": ["classical", "piano", "nocturne", "symphony",
-                  "beethoven", "mozart", "bach", "chopin", "satie"],
+    "classical": ["classical", "piano", "nocturne", "symphony", "beethoven", "mozart", "bach", "chopin", "satie"],
     "ambient": ["ambient", "drone"],
     "electronic": ["electronic", "电子", "synth", "edm"],
     "华语": ["华语", "国语", "粤语", "中文"],
@@ -90,7 +90,6 @@ def summarize(tracks: list[dict], window_days: int = 14) -> dict:
         else:
             older.append(t)
 
-
     # top artists (recent window)
     artist_counter: Counter = Counter()
     for t in recent:
@@ -109,10 +108,7 @@ def summarize(tracks: list[dict], window_days: int = 14) -> dict:
     style_tags = [tag for tag, _ in tag_counter.most_common(3)]
 
     # unheard candidates: artists in older not seen in recent, deduplicated by artist
-    recent_artists_lower = {
-        a for t in recent
-        if (a := (t.get("artist") or "").strip().lower()) and a != "?"
-    }
+    recent_artists_lower = {a for t in recent if (a := (t.get("artist") or "").strip().lower()) and a != "?"}
     recent_titles_lower = {(t.get("title") or "").strip().lower() for t in recent}
     seen_unheard: set[str] = set()
     unheard_candidates: list[dict] = []

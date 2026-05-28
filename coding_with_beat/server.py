@@ -772,7 +772,9 @@ async def generate_profile(
     html_note = ""
     try:
         import subprocess as _sp
+
         from .config import DATA_DIR
+
         html_content = profile.build_html_report(prof)
         out_path = DATA_DIR / f"report_{period}_{prof['generated_at'].strftime('%Y%m%d')}.html"
         out_path.parent.mkdir(parents=True, exist_ok=True)

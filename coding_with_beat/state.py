@@ -4,7 +4,7 @@ import time
 from dataclasses import asdict, dataclass, field, fields
 from typing import Optional
 
-from .config import DATA_DIR, STATE_FILE, ensure_dirs
+from .config import STATE_FILE, ensure_dirs
 
 
 @dataclass

@@ -6,33 +6,37 @@ import pytest
 
 from coding_with_beat import history, profile
 
-
 # ── helpers ───────────────────────────────────────────────────────────────────
+
 
 def _track(title, artist, hours_ago, album="", played_count=1):
     ts = datetime.datetime.now() - datetime.timedelta(hours=hours_ago)
     return {
-        "title": title, "artist": artist, "album": album,
-        "ts": ts, "played_count": played_count,
+        "title": title,
+        "artist": artist,
+        "album": album,
+        "ts": ts,
+        "played_count": played_count,
     }
 
 
 def _weekly_tracks():
     return [
-        _track("Track 1", "Hans Zimmer", 10,  "lofi jazz ambient"),
-        _track("Track 2", "Hans Zimmer", 20,  "lofi hip hop"),
-        _track("Track 3", "Hans Zimmer", 30,  "lofi"),
-        _track("Track 4", "周杰伦",       40,  "华语"),
-        _track("Track 5", "周杰伦",       50,  "华语"),
-        _track("Track 6", "ODESZA",       60,  "electronic"),
-        _track("Track 7", "ODESZA",       80,  "electronic synthwave"),
-        _track("Track 8", "Debussy",      100, "classical piano"),
-        _track("Track 9", "Debussy",      110, "classical"),
-        _track("Track 10", "Tycho",       120, "ambient"),
+        _track("Track 1", "Hans Zimmer", 10, "lofi jazz ambient"),
+        _track("Track 2", "Hans Zimmer", 20, "lofi hip hop"),
+        _track("Track 3", "Hans Zimmer", 30, "lofi"),
+        _track("Track 4", "周杰伦", 40, "华语"),
+        _track("Track 5", "周杰伦", 50, "华语"),
+        _track("Track 6", "ODESZA", 60, "electronic"),
+        _track("Track 7", "ODESZA", 80, "electronic synthwave"),
+        _track("Track 8", "Debussy", 100, "classical piano"),
+        _track("Track 9", "Debussy", 110, "classical"),
+        _track("Track 10", "Tycho", 120, "ambient"),
     ]
 
 
 # ── build_profile ─────────────────────────────────────────────────────────────
+
 
 def test_build_profile_raises_on_insufficient_history(monkeypatch):
     monkeypatch.setattr(history, "read", lambda limit=500: [])
@@ -63,7 +67,7 @@ def test_build_profile_top_genres_detected(monkeypatch):
 
 def test_build_profile_period_days_filtering(monkeypatch):
     old_track = _track("Old Track", "Old Artist", 48)  # 48 hours ago, outside daily window
-    new_track = _track("New Track", "New Artist", 1)   # 1 hour ago, inside daily window
+    new_track = _track("New Track", "New Artist", 1)  # 1 hour ago, inside daily window
     monkeypatch.setattr(history, "read", lambda limit=500: [old_track, new_track] * 5)
     monkeypatch.setattr(history, "read_search", lambda limit=500: [])
     with mock.patch("coding_with_beat.profile.get_source", side_effect=Exception("no AM")):
@@ -101,14 +105,24 @@ def test_build_profile_returns_required_keys(monkeypatch):
     with mock.patch("coding_with_beat.profile.get_source", side_effect=Exception("no AM")):
         prof = profile.build_profile("weekly")
     required = {
-        "period", "generated_at", "play_count", "top_artists", "top_genres",
-        "top_search_terms", "language_pref", "loved_artists",
-        "recent_trend", "stable_pref", "declining_pref", "time_pattern",
+        "period",
+        "generated_at",
+        "play_count",
+        "top_artists",
+        "top_genres",
+        "top_search_terms",
+        "language_pref",
+        "loved_artists",
+        "recent_trend",
+        "stable_pref",
+        "declining_pref",
+        "time_pattern",
     }
     assert required.issubset(prof.keys())
 
 
 # ── build_report ──────────────────────────────────────────────────────────────
+
 
 def _make_profile(overrides=None):
     now = datetime.datetime.now()
@@ -126,13 +140,20 @@ def _make_profile(overrides=None):
         "declining_pref": ["华语"],
         "time_pattern": {"night": ["lofi", "ambient"], "afternoon": ["classical"]},
         "tracks_by_artist": {"Hans Zimmer": [{"t": "Interstellar", "c": 5}]},
-        "tracks_by_genre":  {"lofi": [{"t": "Track 1", "a": "Hans Zimmer"}]},
+        "tracks_by_genre": {"lofi": [{"t": "Track 1", "a": "Hans Zimmer"}]},
         "unique_artist_count": 5,
         "estimated_hours": 2.5,
         "peak_band": "night",
         "band_track_counts": {"morning": 3, "afternoon": 8, "evening": 10, "night": 21},
-        "daily_plays": {"2026-05-20": 10, "2026-05-21": 15, "2026-05-22": 8,
-                        "2026-05-23": 5, "2026-05-24": 12, "2026-05-25": 4, "2026-05-26": 6},
+        "daily_plays": {
+            "2026-05-20": 10,
+            "2026-05-21": 15,
+            "2026-05-22": 8,
+            "2026-05-23": 5,
+            "2026-05-24": 12,
+            "2026-05-25": 4,
+            "2026-05-26": 6,
+        },
         "personality_scores": {"focus": 70, "explore": 45, "mood": 60, "night_owl": 83, "loyalty": 55},
         "trend_detail": {"synthwave": (0, 4), "lofi": (5, 7), "ambient": (6, 4), "华语": (3, 0)},
     }
@@ -158,8 +179,8 @@ def test_build_report_contains_top_genre():
 
 def test_build_report_contains_preference_changes():
     report = profile.build_report(_make_profile())
-    assert "synthwave" in report   # recent_trend
-    assert "华语" in report         # declining_pref
+    assert "synthwave" in report  # recent_trend
+    assert "华语" in report  # declining_pref
 
 
 def test_build_report_contains_time_pattern():
@@ -187,6 +208,7 @@ def test_build_report_empty_trend_sections_hidden():
 
 
 # ── build_recommendation_queries ──────────────────────────────────────────────
+
 
 def test_build_recommendation_queries_returns_list_of_strings():
     queries = profile.build_recommendation_queries(_make_profile())
@@ -220,15 +242,20 @@ def test_build_recommendation_queries_includes_top_artist():
 
 
 def test_build_recommendation_queries_not_empty_when_minimal_profile():
-    prof = _make_profile({
-        "stable_pref": [], "recent_trend": [],
-        "top_genres": [("lofi", 3)], "top_artists": [],
-    })
+    prof = _make_profile(
+        {
+            "stable_pref": [],
+            "recent_trend": [],
+            "top_genres": [("lofi", 3)],
+            "top_artists": [],
+        }
+    )
     queries = profile.build_recommendation_queries(prof)
     assert len(queries) >= 1
 
 
 # ── build_html_report ─────────────────────────────────────────────────────────
+
 
 def test_build_html_report_is_valid_html():
     html = profile.build_html_report(_make_profile())
@@ -259,8 +286,8 @@ def test_build_html_report_contains_language_pct():
 
 def test_build_html_report_contains_trend_items():
     html = profile.build_html_report(_make_profile())
-    assert "synthwave" in html   # recent_trend
-    assert "华语" in html         # declining_pref
+    assert "synthwave" in html  # recent_trend
+    assert "华语" in html  # declining_pref
 
 
 def test_build_html_report_contains_recommendation_query():
@@ -275,8 +302,13 @@ def test_build_profile_new_fields_present(monkeypatch):
     with mock.patch("coding_with_beat.profile.get_source", side_effect=Exception("no AM")):
         prof = profile.build_profile("weekly")
     new_fields = {
-        "unique_artist_count", "estimated_hours", "peak_band",
-        "band_track_counts", "daily_plays", "personality_scores", "trend_detail",
+        "unique_artist_count",
+        "estimated_hours",
+        "peak_band",
+        "band_track_counts",
+        "daily_plays",
+        "personality_scores",
+        "trend_detail",
     }
     assert new_fields.issubset(prof.keys())
 

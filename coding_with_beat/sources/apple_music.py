@@ -1176,6 +1176,7 @@ end tell"""
             except Exception:
                 if _attempt == 0:
                     import time as _time
+
                     _time.sleep(1)
         if not raw:
             return []
