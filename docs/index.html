@@ -618,11 +618,14 @@
       }
       nav.nav-open .nav-right { display: flex; }
       .nav-hamburger { display: flex; }
-      /* dropdown items */
+      /* dropdown items — reset desktop card borders, use simple row separators */
       .gh-link, .nav-paper {
         padding: 11px 4px;
         font-size: 12px;
+        border: none;
         border-bottom: 1px solid var(--purple-border);
+        border-radius: 0;
+        background: transparent;
         gap: 8px;
       }
       .gh-link .gh-label, .nav-paper-label { display: inline; }
