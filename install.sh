@@ -156,7 +156,7 @@ else
   ok "venv exists at $VENV"
 fi
 VENV_PY="$VENV/bin/python"
-_installed_loc=$("$VENV_PY" -m pip show coding-with-beat 2>/dev/null | grep "^Location:" | awk '{print $2}')
+_installed_loc=$("$VENV_PY" -m pip show coding-with-beat 2>/dev/null | grep "^Location:" | awk '{print $2}') || true
 if [ "$_installed_loc" = "$REPO" ] && [ -x "$VENV/bin/cwb" ]; then
   ok "coding-with-beat already installed from $REPO — skipping pip"
 else
