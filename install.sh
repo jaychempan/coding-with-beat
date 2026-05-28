@@ -140,8 +140,8 @@ if [ -n "$MCP_URL" ]; then
   printf "%s\n" "$MCP_URL" > "$HOME/.coding-with-beat/mcp-url"
   ok "saved MCP URL for CLI commands: $HOME/.coding-with-beat/mcp-url"
 fi
-if [ -d "$VENV" ] && { [ ! -x "$VENV/bin/python" ] || [ ! -x "$VENV/bin/pip" ]; }; then
-  warn "incomplete venv at $VENV — recreating it."
+if [ -d "$VENV" ] && { [ ! -x "$VENV/bin/python" ] || [ ! -x "$VENV/bin/pip" ] || ! "$VENV/bin/python" -c "" >/dev/null 2>&1; }; then
+  warn "incomplete or broken venv at $VENV — recreating it."
   rm -rf "$VENV"
 fi
 if [ ! -d "$VENV" ]; then
@@ -161,15 +161,21 @@ if [ "$_installed_loc" = "$REPO" ] && [ -x "$VENV/bin/cwb" ]; then
   ok "coding-with-beat already installed from $REPO — skipping pip"
 else
   printf "  installing packages (mcp, Pillow, httpx…) this may take a minute… "
+  # Isolate venv from conda/user site-packages to avoid version conflicts.
+  export PYTHONNOUSERSITE=1
+  unset PYTHONPATH 2>/dev/null || true
   # Bootstrap SSL: macOS python.org builds ship without a CA cert bundle.
-  # Use --trusted-host once to install certifi, then point SSL_CERT_FILE at it
-  # so all subsequent pip calls verify SSL normally.
+  # Use --trusted-host once to get certifi, then all subsequent installs
+  # verify SSL normally.
   "$VENV_PY" -m pip install --quiet \
     --trusted-host pypi.org --trusted-host files.pythonhosted.org \
     --upgrade pip certifi 2>/dev/null || true
   _certifi="$("$VENV_PY" -m certifi 2>/dev/null || true)"
   [ -n "$_certifi" ] && export SSL_CERT_FILE="$_certifi" REQUESTS_CA_BUNDLE="$_certifi"
-  "$VENV_PY" -m pip install --quiet -e "$REPO"
+  if ! "$VENV_PY" -m pip install --quiet -e "$REPO"; then
+    printf "\n"
+    die "pip install failed — check the errors above, then re-run the installer"
+  fi
   printf "done\n"
   ok "installed/updated coding-with-beat (editable) -> $REPO"
 fi
