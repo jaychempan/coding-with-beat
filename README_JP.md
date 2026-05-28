@@ -13,6 +13,9 @@
 ![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)
 [![Website](https://img.shields.io/badge/website-codebeat.top-9bbc0f?style=flat-square)](https://codebeat.top)
 
+> [!NOTE]
+> 最新機能をいち早く試したい方は、**[dev ブランチ](https://github.com/jaychempan/coding-with-beat/blob/dev/README_JP.md)** をご確認ください。
+
 > **バイブコーディング中に歌って踊ったのはいつだっけ？**
 >
 > そう、覚えていないよね。
