@@ -70,6 +70,8 @@
     .nav-logo span { color: var(--purple-lt); }
     .nav-tagline { font-size: 10px; font-weight: 400; letter-spacing: .08em; color: var(--dim); margin-left: 10px; white-space: nowrap; }
     .nav-right { display: flex; align-items: center; gap: 14px; margin-left: auto; }
+    .nav-about { color: var(--dim); font-family: 'JetBrains Mono', monospace; font-size: 11px; transition: color .2s; display: flex; align-items: center; gap: 4px; padding: 4px 6px; }
+    .nav-about:hover { color: var(--purple-lt); }
     .gh-link { color: var(--ltgrn); font-family: 'JetBrains Mono', monospace; font-size: 11px; transition: color .2s, border-color .2s, background .2s; display: flex; align-items: center; gap: 4px; border: 1px solid rgba(120,200,80,.35); border-radius: 4px; padding: 4px 10px; background: rgba(120,200,80,.07); }
     .gh-link:hover { color: var(--bright); border-color: rgba(120,200,80,.65); background: rgba(120,200,80,.14); }
     .nav-paper { color: var(--purple-lt); font-size: 11px; transition: color .2s, border-color .2s, background .2s; display: flex; align-items: center; gap: 4px; border: 1px solid rgba(139,92,246,.35); border-radius: 4px; padding: 4px 10px; background: var(--purple-bg); }
@@ -619,7 +621,7 @@
       nav.nav-open .nav-right { display: flex; }
       .nav-hamburger { display: flex; }
       /* dropdown items — reset desktop card borders, use simple row separators */
-      .gh-link, .nav-paper {
+      .nav-about, .gh-link, .nav-paper {
         padding: 11px 4px;
         font-size: 12px;
         border: none;
@@ -672,6 +674,9 @@
     <span>Coding</span>&nbsp;with Beat<span class="nav-tagline"><span style="color:var(--dim)">· 将音乐搬进AI终端</span> <span style="color:var(--dim)">·</span> <span style="color:var(--purple-lt)">打造Coding专属智能DJ</span> <span style="color:var(--dim)">·</span> <span style="color:var(--amber)">听歌新范式</span> <span style="color:var(--dim)">·</span> <span style="color:var(--green)">交互式音乐</span></span>
   </div>
   <div class="nav-right">
+    <a class="nav-about" href="https://github.com/CodeBeatAI" target="_blank" rel="noopener" data-i18n-title="nav-about-title">
+      <span class="nav-about-label" data-i18n="nav-about">关于我们</span>
+    </a>
     <a class="gh-link" href="https://github.com/jaychempan/coding-with-beat" target="_blank" rel="noopener">
       <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" style="vertical-align:middle;margin-right:4px"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg><span class="gh-label">GitHub</span>
     </a>
@@ -1464,6 +1469,7 @@
       'ack-desc':  'Submit a feature suggestion or research insight via GitHub Issues. Contributors whose ideas meaningfully shape the study may be named in the acknowledgements of our technical report.',
       'ack-btn':   'Submit a Suggestion →',
       'ack-meta':  'GitHub Issues · Open to everyone · Technical Report',
+      'nav-about':   'About Us',
       'nav-paper':   'Technical Report',
       'nav-survey':  'User Survey ✦',
       'footer-t1':     'Your workflow. Your vibe.',
@@ -1569,6 +1575,7 @@
       'ack-desc':  '通过 GitHub Issues 提交使用建议或研究见解。对研究有实质影响的贡献者，可能被列入技术报告的致谢部分。',
       'ack-btn':   '提交建议 →',
       'ack-meta':  'GitHub Issues · 向所有人开放 · 技术报告',
+      'nav-about':   '关于我们',
       'nav-paper':   '技术报告',
       'nav-survey':  '用户问卷 ✦',
       'footer-t1':     '你的工作流. 你的氛围.',
