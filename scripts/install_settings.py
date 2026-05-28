@@ -65,8 +65,9 @@ def session_hook_entry(python: str, repo: str) -> dict:
 
 
 def cwb_expansion_hook_entry(python: str, repo: str) -> dict:
+    # UserPromptExpansion does not support "matcher" — filtering is done
+    # inside the hook command itself (cwb_agent checks for /cwb prefix).
     return {
-        "matcher": "cwb",
         "hooks": [
             {
                 "type": "command",
