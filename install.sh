@@ -579,9 +579,6 @@ start_updater_service
 "$VENV_PY" -c "from coding_with_beat.config import ensure_dirs; ensure_dirs()"
 ok "data dir ready: ~/.coding-with-beat/"
 
-echo
-"$VENV/bin/cwb" welcome 2>/dev/null || true
-echo
 bold "From a new shell (or after 'source ~/.zshrc'):"
 if [ -n "$MCP_URL" ]; then
   echo "  # MCP endpoint configured at $MCP_URL"
@@ -592,3 +589,5 @@ echo "  cwb watch        — live TUI"
 echo "  /cwb play lofi beats   — drive it from Claude Code"
 echo
 warn "To remove: ./uninstall.sh   (add --purge to also delete ~/.coding-with-beat)"
+echo
+PYTHONUTF8=1 "$VENV_PY" -c "from coding_with_beat.ui.frame import welcome_screen; print(welcome_screen())" || true
