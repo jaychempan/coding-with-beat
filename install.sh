@@ -160,8 +160,10 @@ _installed_loc=$("$VENV_PY" -m pip show coding-with-beat 2>/dev/null | grep "^Lo
 if [ "$_installed_loc" = "$REPO" ] && [ -x "$VENV/bin/cwb" ]; then
   ok "coding-with-beat already installed from $REPO — skipping pip"
 else
+  printf "  installing packages (mcp, Pillow, httpx…) this may take a minute… "
   "$VENV_PY" -m pip install --quiet --upgrade pip
   "$VENV_PY" -m pip install --quiet -e "$REPO"
+  printf "done\n"
   ok "installed/updated coding-with-beat (editable) -> $REPO"
 fi
 
