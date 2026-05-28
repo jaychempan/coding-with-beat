@@ -856,7 +856,7 @@ def build_html_report(profile: dict) -> str:
             ("loyalty",   "忠诚"),
         ]
         N = len(dims)
-        cx, cy, R = 85, 80, 60
+        cx, cy, R = 100, 105, 60
         label_R = R + 22
 
         def pt(i: int, ratio: float) -> tuple[float, float]:
@@ -909,7 +909,7 @@ def build_html_report(profile: dict) -> str:
 
         total_h = int(cy + R + label_R - R + 20)
         return (
-            f'<svg width="170" height="{total_h}"'
+            f'<svg width="200" height="{total_h}"'
             f' style="overflow:visible;font-family:monospace">'
             + "".join(grid_paths) + "".join(spokes) + data_poly
             + "".join(dots) + "".join(labels)
