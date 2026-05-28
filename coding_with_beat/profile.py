@@ -1,5 +1,6 @@
 # coding_with_beat/profile.py
 """User music profile: analysis, report generation, and recommendation queries."""
+
 from __future__ import annotations
 
 import datetime
@@ -22,15 +23,44 @@ _PERIOD_DAYS: dict[str, int] = {
 
 _AVG_TRACK_MIN: float = 3.5  # assumed average track duration in minutes
 
-_INSTRUMENTAL_KEYWORDS = frozenset([
-    "instrumental", "无人声", "pure music", "纯音乐", "bgm", "ost",
-    "soundtrack", "piano solo", "guitar instrumental",
-])
+_INSTRUMENTAL_KEYWORDS = frozenset(
+    [
+        "instrumental",
+        "无人声",
+        "pure music",
+        "纯音乐",
+        "bgm",
+        "ost",
+        "soundtrack",
+        "piano solo",
+        "guitar instrumental",
+    ]
+)
 
-_STOPWORDS = frozenset([
-    "a", "the", "and", "or", "of", "for", "in", "to", "with", "no",
-    "some", "my", "by", "on", "at", "is", "it", "be", "lo", "fi",
-])
+_STOPWORDS = frozenset(
+    [
+        "a",
+        "the",
+        "and",
+        "or",
+        "of",
+        "for",
+        "in",
+        "to",
+        "with",
+        "no",
+        "some",
+        "my",
+        "by",
+        "on",
+        "at",
+        "is",
+        "it",
+        "be",
+        "lo",
+        "fi",
+    ]
+)
 
 
 def _time_band(hour: int) -> str:
@@ -48,19 +78,13 @@ def _detect_language(text: str) -> str:
     text_lower = text.lower()
     if any(kw in text_lower for kw in _INSTRUMENTAL_KEYWORDS):
         return "instrumental"
-    cjk_count = sum(
-        1 for c in text
-        if '一' <= c <= '鿿' or '぀' <= c <= 'ヿ'
-    )
+    cjk_count = sum(1 for c in text if "一" <= c <= "鿿" or "぀" <= c <= "ヿ")
     return "zh" if cjk_count >= 1 else "en"
 
 
 def _match_genres(text: str) -> list[str]:
     text_lower = text.lower()
-    return [
-        tag for tag, keywords in _STYLE_KEYWORDS.items()
-        if any(kw in text_lower for kw in keywords)
-    ]
+    return [tag for tag, keywords in _STYLE_KEYWORDS.items() if any(kw in text_lower for kw in keywords)]
 
 
 def _genre_counter(tracks: list[dict]) -> Counter:
@@ -128,9 +152,7 @@ def build_profile(period: str = "weekly", source: str | None = None) -> dict:
         am_keys: set[str] = set()
         for t in am_norm:
             minute_str = t["ts"].strftime("%Y-%m-%dT%H:%M")
-            am_keys.add(
-                f"{(t.get('title') or '').lower()}|{(t.get('artist') or '').lower()}|{minute_str}"
-            )
+            am_keys.add(f"{(t.get('title') or '').lower()}|{(t.get('artist') or '').lower()}|{minute_str}")
         filtered_local = []
         for t in local_norm:
             minute_str = t["ts"].strftime("%Y-%m-%dT%H:%M")
@@ -164,17 +186,14 @@ def build_profile(period: str = "weekly", source: str | None = None) -> dict:
         text = f"{t.get('title', '')} {t.get('artist', '')}"
         lang_counter[_detect_language(text)] += 1
     total = sum(lang_counter.values()) or 1
-    language_pref = {
-        lang: round(lang_counter.get(lang, 0) / total, 2)
-        for lang in ("zh", "en", "instrumental")
-    }
+    language_pref = {lang: round(lang_counter.get(lang, 0) / total, 2) for lang in ("zh", "en", "instrumental")}
 
     # ── Search terms ──────────────────────────────────────────────────────────
     search_records = _history.read_search(limit=500)
     recent_searches = [s for s in search_records if s["ts"] >= cutoff]
     term_counter: Counter = Counter()
     for rec in recent_searches:
-        tokens = re.findall(r'[a-zA-Z一-鿿]+', rec["query"].lower())
+        tokens = re.findall(r"[a-zA-Z一-鿿]+", rec["query"].lower())
         for tok in tokens:
             if tok not in _STOPWORDS and len(tok) > 1:
                 term_counter[tok] += 1
@@ -186,11 +205,9 @@ def build_profile(period: str = "weekly", source: str | None = None) -> dict:
         am = get_source("apple_music")
         fn = getattr(am, "list_loved", None)
         if callable(fn):
-            loved_artists = list({
-                t.get("artist", "").strip()
-                for t in fn(50)
-                if t.get("artist") and t.get("artist") != "?"
-            })[:5]
+            loved_artists = list(
+                {t.get("artist", "").strip() for t in fn(50) if t.get("artist") and t.get("artist") != "?"}
+            )[:5]
     except Exception:
         pass
 
@@ -214,19 +231,17 @@ def build_profile(period: str = "weekly", source: str | None = None) -> dict:
 
     # ── Time pattern ──────────────────────────────────────────────────────────
     band_genres: dict[str, Counter] = {
-        "morning": Counter(), "afternoon": Counter(),
-        "evening": Counter(), "night": Counter(),
+        "morning": Counter(),
+        "afternoon": Counter(),
+        "evening": Counter(),
+        "night": Counter(),
     }
     for t in period_tracks:
         band = _time_band(t["ts"].hour)
         text = f"{t.get('artist', '')} {t.get('album', '')}".lower()
         for g in _match_genres(text):
             band_genres[band][g] += 1
-    time_pattern = {
-        band: [g for g, _ in ctr.most_common(3)]
-        for band, ctr in band_genres.items()
-        if ctr
-    }
+    time_pattern = {band: [g for g, _ in ctr.most_common(3)] for band, ctr in band_genres.items() if ctr}
 
     # ── Per-artist track list (for HTML drill-down) ───────────────────────────
     tracks_by_artist: dict[str, list[dict]] = {}
@@ -237,9 +252,7 @@ def build_profile(period: str = "weekly", source: str | None = None) -> dict:
             title = (t.get("title") or "").strip()
             if title:
                 title_ctr[title] += t.get("played_count", 1)
-        tracks_by_artist[artist] = [
-            {"t": title, "c": cnt} for title, cnt in title_ctr.most_common(8)
-        ]
+        tracks_by_artist[artist] = [{"t": title, "c": cnt} for title, cnt in title_ctr.most_common(8)]
 
     # ── Per-genre track list (for HTML drill-down) ────────────────────────────
     drill_genres: set[str] = {g for g, _ in top_genres}
@@ -275,8 +288,12 @@ def build_profile(period: str = "weekly", source: str | None = None) -> dict:
     night_plays = band_track_counts.get("night", 0)
 
     personality_scores = _personality_scores(
-        language_pref, genre_counter_all, unique_artist_count,
-        len(period_tracks), night_plays, top_artists,
+        language_pref,
+        genre_counter_all,
+        unique_artist_count,
+        len(period_tracks),
+        night_plays,
+        top_artists,
     )
 
     if period == "daily":
@@ -294,8 +311,7 @@ def build_profile(period: str = "weekly", source: str | None = None) -> dict:
     daily_plays = dict(sorted(plays_ctr.items()))
 
     trend_detail: dict[str, tuple[int, int]] = {
-        g: (first_genres.get(g, 0), second_genres.get(g, 0))
-        for g in all_genre_keys
+        g: (first_genres.get(g, 0), second_genres.get(g, 0)) for g in all_genre_keys
     }
 
     return {
@@ -324,25 +340,30 @@ def build_profile(period: str = "weekly", source: str | None = None) -> dict:
 
 
 _PERIOD_LABELS: dict[str, str] = {
-    "daily":   "今日听歌报告",
-    "weekly":  "本周听歌报告",
+    "daily": "今日听歌报告",
+    "weekly": "本周听歌报告",
     "monthly": "本月听歌报告",
-    "yearly":  "年度听歌报告",
+    "yearly": "年度听歌报告",
 }
 
 _BAND_LABELS: dict[str, str] = {
-    "morning":   "早晨",
+    "morning": "早晨",
     "afternoon": "下午",
-    "evening":   "傍晚",
-    "night":     "深夜",
+    "evening": "傍晚",
+    "night": "深夜",
 }
 
 _LANG_LABELS: dict[str, str] = {
-    "zh": "中文", "en": "英文", "instrumental": "纯音乐",
+    "zh": "中文",
+    "en": "英文",
+    "instrumental": "纯音乐",
 }
 
 _PERIOD_ZH: dict[str, str] = {
-    "daily": "天", "weekly": "周", "monthly": "月", "yearly": "年",
+    "daily": "天",
+    "weekly": "周",
+    "monthly": "月",
+    "yearly": "年",
 }
 
 
@@ -355,17 +376,17 @@ def build_report(profile: dict) -> str:
     end = generated_at.strftime("%Y-%m-%d")
     label = _PERIOD_LABELS.get(period, "听歌报告")
 
-    top_artists  = profile.get("top_artists", [])
-    top_genres   = profile.get("top_genres", [])
+    top_artists = profile.get("top_artists", [])
+    top_genres = profile.get("top_genres", [])
     language_pref = profile.get("language_pref", {})
     recent_trend = profile.get("recent_trend", [])
-    stable_pref  = profile.get("stable_pref", [])
+    stable_pref = profile.get("stable_pref", [])
     declining_pref = profile.get("declining_pref", [])
     time_pattern = profile.get("time_pattern", {})
-    play_count   = profile.get("play_count", 0)
+    play_count = profile.get("play_count", 0)
 
     artists_str = " · ".join(a for a, _ in top_artists[:3]) if top_artists else "—"
-    genres_str  = " · ".join(g for g, _ in top_genres[:3]) if top_genres else "—"
+    genres_str = " · ".join(g for g, _ in top_genres[:3]) if top_genres else "—"
 
     lang_parts = [
         f"{_LANG_LABELS.get(lang, lang)} {int(ratio * 100)}%"
@@ -423,10 +444,10 @@ def build_recommendation_queries(profile: dict, context: str = "") -> list[str]:
     Slot 2: recent trend genre for exploration (falls back to 2nd top genre)
     Slot 3: top artist extension
     """
-    top_genres   = profile.get("top_genres", [])
+    top_genres = profile.get("top_genres", [])
     recent_trend = profile.get("recent_trend", [])
-    top_artists  = profile.get("top_artists", [])
-    stable_pref  = profile.get("stable_pref", [])
+    top_artists = profile.get("top_artists", [])
+    stable_pref = profile.get("stable_pref", [])
 
     queries: list[str] = []
 
@@ -438,9 +459,7 @@ def build_recommendation_queries(profile: dict, context: str = "") -> list[str]:
         queries.append(slot1.strip())
 
     # Slot 2: recent trend for exploration; fall back to second top genre
-    trend = recent_trend[0] if recent_trend else (
-        top_genres[1][0] if len(top_genres) > 1 else None
-    )
+    trend = recent_trend[0] if recent_trend else (top_genres[1][0] if len(top_genres) > 1 else None)
     if trend:
         queries.append(f"{trend} night coding focus electronic")
 
@@ -474,33 +493,35 @@ def _personality_scores(
     top3_plays = sum(c for _, c in top_artists[:3])
 
     return {
-        "focus":     _clamp(instrumental * 60 + genre_conc * 40),
-        "explore":   _clamp(unique_artist_count / max(play_count, 1) * 500),  # 500: hits 100 when ~1 in 5 plays is a new artist
-        "mood":      _clamp(len(genre_counter) / 5 * 100),
+        "focus": _clamp(instrumental * 60 + genre_conc * 40),
+        "explore": _clamp(
+            unique_artist_count / max(play_count, 1) * 500
+        ),  # 500: hits 100 when ~1 in 5 plays is a new artist
+        "mood": _clamp(len(genre_counter) / 5 * 100),
         "night_owl": _clamp(night_plays / max(play_count, 1) * 100),
-        "loyalty":   _clamp(top3_plays / max(play_count, 1) * 100),
+        "loyalty": _clamp(top3_plays / max(play_count, 1) * 100),
     }
 
 
 def _music_personality(profile: dict) -> tuple[str, str, str]:
     """Derive a fun music personality title. Returns (emoji, title, description)."""
-    time_pattern  = profile.get("time_pattern", {})
+    time_pattern = profile.get("time_pattern", {})
     language_pref = profile.get("language_pref", {})
-    top_genres    = profile.get("top_genres", [])
+    top_genres = profile.get("top_genres", [])
 
     time_counts = {band: len(genres) for band, genres in time_pattern.items()}
     dom_time = max(time_counts, key=time_counts.get) if time_counts else "night"
 
     _BUCKETS = [
-        ("lofi",       ["lofi", "lo-fi", "chillhop"]),
+        ("lofi", ["lofi", "lo-fi", "chillhop"]),
         ("electronic", ["electronic", "synthwave", "edm", "techno", "house", "cyberpunk", "赛博"]),
-        ("classical",  ["classical", "piano", "orchestra", "古典"]),
-        ("jazz",       ["jazz", "bossa"]),
-        ("hiphop",     ["hip-hop", "hip hop", "rap", "trap", "嘻哈"]),
-        ("ambient",    ["ambient", "drone", "meditation"]),
-        ("rnb",        ["rnb", "r&b", "soul"]),
-        ("chinese",    ["华语", "国风", "民谣", "古风"]),
-        ("pop",        ["pop", "indie"]),
+        ("classical", ["classical", "piano", "orchestra", "古典"]),
+        ("jazz", ["jazz", "bossa"]),
+        ("hiphop", ["hip-hop", "hip hop", "rap", "trap", "嘻哈"]),
+        ("ambient", ["ambient", "drone", "meditation"]),
+        ("rnb", ["rnb", "r&b", "soul"]),
+        ("chinese", ["华语", "国风", "民谣", "古风"]),
+        ("pop", ["pop", "indie"]),
     ]
     bucket_scores: dict[str, int] = {}
     for genre, count in top_genres:
@@ -515,77 +536,79 @@ def _music_personality(profile: dict) -> tuple[str, str, str]:
         top_bucket = "chinese"
 
     _TABLE: dict[tuple[str, str], tuple[str, str, str]] = {
-        ("night",     "lofi"):       ("🌙", "深夜lofi主义者",  "代码与旋律在午夜交融，这是属于你的静谧时光"),
-        ("night",     "electronic"): ("⚡", "赛博夜行先锋",    "在霓虹与合成器之间，划破深夜的电波"),
-        ("night",     "ambient"):    ("🌌", "深夜氛围冥想者",  "用环境音为思绪构建一片宁静的宇宙"),
-        ("night",     "classical"):  ("🎹", "深夜古典守夜人",  "琴键陪伴每个不眠之夜，音符是最好的伴侣"),
-        ("night",     "hiphop"):     ("🎤", "深夜嘻哈游侠",    "节拍与黑夜是最忠实的搭档"),
-        ("night",     "jazz"):       ("🎷", "午夜爵士幽灵",    "在蓝调的忧郁里，感受那份慵懒的美"),
-        ("night",     "chinese"):    ("🏮", "夜色华语诗人",    "在华语旋律里寻找那份独有的共鸣"),
-        ("night",     "rnb"):        ("💙", "深夜灵魂歌者",    "R&B的丝滑节奏是深夜最好的慰藉"),
-        ("night",     "pop"):        ("🌙", "深夜流行漫游者",  "在旋律里流浪，在深夜里做梦"),
-        ("morning",   "pop"):        ("🌅", "清晨活力先行者",  "用音乐点亮每一个崭新的早晨"),
-        ("morning",   "classical"):  ("☀️", "清晨古典主义者",  "晨光里，音符比咖啡更能唤醒灵魂"),
-        ("morning",   "lofi"):       ("🌤️","晨曦lofi漫步者",  "轻柔的旋律陪伴每一个从容的早晨"),
-        ("morning",   "chinese"):    ("🌸", "清晨华语吟游者",  "用熟悉的中文旋律开启每一天"),
-        ("afternoon", "jazz"):       ("☕", "午后爵士常客",    "一杯咖啡，一段爵士，完美的下午"),
-        ("afternoon", "pop"):        ("✨", "午后流行探索者",  "在阳光下随着旋律自由漂流"),
-        ("afternoon", "lofi"):       ("📖", "午后lofi阅读者", "lofi的节拍让午后的专注更持久"),
-        ("evening",   "electronic"): ("🌆", "傍晚电子巡游者", "华灯初上，电子音浪开始涌动"),
-        ("evening",   "chinese"):    ("🌸", "傍晚华语漫想家", "夕阳西下，用华语旋律填满思绪"),
-        ("evening",   "jazz"):       ("🌇", "黄昏爵士追随者", "在落日余晖里享受蓝调的余韵"),
+        ("night", "lofi"): ("🌙", "深夜lofi主义者", "代码与旋律在午夜交融，这是属于你的静谧时光"),
+        ("night", "electronic"): ("⚡", "赛博夜行先锋", "在霓虹与合成器之间，划破深夜的电波"),
+        ("night", "ambient"): ("🌌", "深夜氛围冥想者", "用环境音为思绪构建一片宁静的宇宙"),
+        ("night", "classical"): ("🎹", "深夜古典守夜人", "琴键陪伴每个不眠之夜，音符是最好的伴侣"),
+        ("night", "hiphop"): ("🎤", "深夜嘻哈游侠", "节拍与黑夜是最忠实的搭档"),
+        ("night", "jazz"): ("🎷", "午夜爵士幽灵", "在蓝调的忧郁里，感受那份慵懒的美"),
+        ("night", "chinese"): ("🏮", "夜色华语诗人", "在华语旋律里寻找那份独有的共鸣"),
+        ("night", "rnb"): ("💙", "深夜灵魂歌者", "R&B的丝滑节奏是深夜最好的慰藉"),
+        ("night", "pop"): ("🌙", "深夜流行漫游者", "在旋律里流浪，在深夜里做梦"),
+        ("morning", "pop"): ("🌅", "清晨活力先行者", "用音乐点亮每一个崭新的早晨"),
+        ("morning", "classical"): ("☀️", "清晨古典主义者", "晨光里，音符比咖啡更能唤醒灵魂"),
+        ("morning", "lofi"): ("🌤️", "晨曦lofi漫步者", "轻柔的旋律陪伴每一个从容的早晨"),
+        ("morning", "chinese"): ("🌸", "清晨华语吟游者", "用熟悉的中文旋律开启每一天"),
+        ("afternoon", "jazz"): ("☕", "午后爵士常客", "一杯咖啡，一段爵士，完美的下午"),
+        ("afternoon", "pop"): ("✨", "午后流行探索者", "在阳光下随着旋律自由漂流"),
+        ("afternoon", "lofi"): ("📖", "午后lofi阅读者", "lofi的节拍让午后的专注更持久"),
+        ("evening", "electronic"): ("🌆", "傍晚电子巡游者", "华灯初上，电子音浪开始涌动"),
+        ("evening", "chinese"): ("🌸", "傍晚华语漫想家", "夕阳西下，用华语旋律填满思绪"),
+        ("evening", "jazz"): ("🌇", "黄昏爵士追随者", "在落日余晖里享受蓝调的余韵"),
     }
     key = (dom_time, top_bucket)
     if key in _TABLE:
         return _TABLE[key]
 
     _FALLBACK: dict[str, tuple[str, str, str]] = {
-        "lofi":       ("🎧", "lofi冥想主义者",  "在节奏与宁静之间，找到专属的心流状态"),
-        "electronic": ("⚡", "电子音浪冲浪者",  "骑着合成器的浪潮，探索声音的边界"),
-        "classical":  ("🎼", "古典浪漫主义者",  "在跨越时代的旋律里，寻找灵魂的共鸣"),
-        "jazz":       ("☕", "爵士咖啡馆常客",  "蓝调与爵士是你永恒的精神食粮"),
-        "hiphop":     ("🎤", "嘻哈文化信徒",    "节拍与韵脚是你表达世界的方式"),
-        "ambient":    ("🌌", "氛围音景建筑师",  "用声音构建属于自己的内心宇宙"),
-        "rnb":        ("💙", "R&B灵魂共鸣者",   "丝滑的节奏直抵内心最柔软的角落"),
-        "chinese":    ("🏮", "华语情怀守护者",  "在中文旋律里找到了最深的情感共鸣"),
-        "pop":        ("🎵", "流行音乐探险家",  "广泛探索各种风格，音乐品味包罗万象"),
+        "lofi": ("🎧", "lofi冥想主义者", "在节奏与宁静之间，找到专属的心流状态"),
+        "electronic": ("⚡", "电子音浪冲浪者", "骑着合成器的浪潮，探索声音的边界"),
+        "classical": ("🎼", "古典浪漫主义者", "在跨越时代的旋律里，寻找灵魂的共鸣"),
+        "jazz": ("☕", "爵士咖啡馆常客", "蓝调与爵士是你永恒的精神食粮"),
+        "hiphop": ("🎤", "嘻哈文化信徒", "节拍与韵脚是你表达世界的方式"),
+        "ambient": ("🌌", "氛围音景建筑师", "用声音构建属于自己的内心宇宙"),
+        "rnb": ("💙", "R&B灵魂共鸣者", "丝滑的节奏直抵内心最柔软的角落"),
+        "chinese": ("🏮", "华语情怀守护者", "在中文旋律里找到了最深的情感共鸣"),
+        "pop": ("🎵", "流行音乐探险家", "广泛探索各种风格，音乐品味包罗万象"),
     }
     return _FALLBACK.get(top_bucket, ("🎵", "音乐探险家", "广泛探索各种风格，音乐品味包罗万象"))
 
 
 def build_html_report(profile: dict) -> str:
     """Generate a self-contained dark-theme HTML dashboard listening report."""
-    period            = profile.get("period", "weekly")
-    generated_at      = profile.get("generated_at", datetime.datetime.now())
-    days              = _PERIOD_DAYS.get(period, 7)
-    start             = (generated_at - datetime.timedelta(days=days)).strftime("%Y-%m-%d")
-    end               = generated_at.strftime("%Y-%m-%d")
-    label             = _PERIOD_LABELS.get(period, "听歌报告")
-    play_count        = profile.get("play_count", 0)
-    top_artists       = profile.get("top_artists", [])
-    top_genres        = profile.get("top_genres", [])
-    language_pref     = profile.get("language_pref", {})
-    recent_trend      = profile.get("recent_trend", [])
-    stable_pref       = profile.get("stable_pref", [])
-    declining_pref    = profile.get("declining_pref", [])
-    time_pattern      = profile.get("time_pattern", {})
-    top_search_terms  = profile.get("top_search_terms", [])
-    loved_artists     = profile.get("loved_artists", [])
-    tracks_by_artist  = profile.get("tracks_by_artist", {})
-    tracks_by_genre   = profile.get("tracks_by_genre", {})
+    period = profile.get("period", "weekly")
+    generated_at = profile.get("generated_at", datetime.datetime.now())
+    days = _PERIOD_DAYS.get(period, 7)
+    start = (generated_at - datetime.timedelta(days=days)).strftime("%Y-%m-%d")
+    end = generated_at.strftime("%Y-%m-%d")
+    label = _PERIOD_LABELS.get(period, "听歌报告")
+    play_count = profile.get("play_count", 0)
+    top_artists = profile.get("top_artists", [])
+    top_genres = profile.get("top_genres", [])
+    language_pref = profile.get("language_pref", {})
+    recent_trend = profile.get("recent_trend", [])
+    stable_pref = profile.get("stable_pref", [])
+    declining_pref = profile.get("declining_pref", [])
+    time_pattern = profile.get("time_pattern", {})
+    top_search_terms = profile.get("top_search_terms", [])
+    loved_artists = profile.get("loved_artists", [])
+    tracks_by_artist = profile.get("tracks_by_artist", {})
+    tracks_by_genre = profile.get("tracks_by_genre", {})
     unique_artist_count = profile.get("unique_artist_count", 0)
-    estimated_hours   = profile.get("estimated_hours", 0.0)
-    peak_band         = profile.get("peak_band", "night")
+    estimated_hours = profile.get("estimated_hours", 0.0)
+    peak_band = profile.get("peak_band", "night")
     band_track_counts = profile.get("band_track_counts", {})
-    daily_plays       = profile.get("daily_plays", {})
+    daily_plays = profile.get("daily_plays", {})
     personality_scores = profile.get("personality_scores", {})
-    trend_detail      = profile.get("trend_detail", {})
-    queries           = build_recommendation_queries(profile)
+    trend_detail = profile.get("trend_detail", {})
+    queries = build_recommendation_queries(profile)
     p_emoji, p_title, p_desc = _music_personality(profile)
 
     _PEAK_LABELS = {
-        "morning": "🌅 早晨", "afternoon": "☀️ 下午",
-        "evening": "🌆 傍晚", "night": "🌙 深夜",
+        "morning": "🌅 早晨",
+        "afternoon": "☀️ 下午",
+        "evening": "🌆 傍晚",
+        "night": "🌙 深夜",
     }
     peak_label = _PEAK_LABELS.get(peak_band, "🌙 深夜")
 
@@ -598,15 +621,21 @@ def build_html_report(profile: dict) -> str:
         summary_parts.append(f"{'、'.join(html.escape(x) for x in declining_pref[:2])} 播放次数有所下降")
     if recent_trend:
         summary_parts.append(f"{'、'.join(html.escape(x) for x in recent_trend[:2])} 开始走高")
-    summary = "，".join(summary_parts) + "。" if summary_parts else (
-        f"本{_PERIOD_ZH.get(period, '周')}共播放 {play_count} 首，继续保持！"
+    summary = (
+        "，".join(summary_parts) + "。"
+        if summary_parts
+        else (f"本{_PERIOD_ZH.get(period, '周')}共播放 {play_count} 首，继续保持！")
     )
 
     # ── JSON for modal drill-down ─────────────────────────────────────────────
-    track_data_json = json.dumps(
-        {"artists": tracks_by_artist, "genres": tracks_by_genre},
-        ensure_ascii=False,
-    ).replace("</script>", "<\\/script>").replace("<!--", "<\\!--")
+    track_data_json = (
+        json.dumps(
+            {"artists": tracks_by_artist, "genres": tracks_by_genre},
+            ensure_ascii=False,
+        )
+        .replace("</script>", "<\\/script>")
+        .replace("<!--", "<\\!--")
+    )
 
     # ── Helper: bar chart with medals ─────────────────────────────────────────
     def _bar_html(items: list, data_type: str, max_items: int = 5) -> str:
@@ -628,7 +657,7 @@ def build_html_report(profile: dict) -> str:
                 f'<div class="bar-track">'
                 f'<div class="bar-bg"><div class="bar-fill" style="width:{pct}%"></div></div>'
                 f'<span class="bar-count">{count}</span>'
-                f'</div></div>'
+                f"</div></div>"
             )
         return "".join(rows)
 
@@ -668,19 +697,19 @@ def build_html_report(profile: dict) -> str:
                 f'<g transform="translate({cx},{ly})">'
                 f'<rect x="-33" y="0" width="10" height="10" rx="2" fill="{c}"/>'
                 f'<text x="-19" y="9" fill="#cec8bc" font-size="11">'
-                f'{LABELS.get(lang, lang)} {int(val * 100)}%</text>'
-                f'</g>'
+                f"{LABELS.get(lang, lang)} {int(val * 100)}%</text>"
+                f"</g>"
             )
         total_h = legend_top + len(items) * 20 + 4
         return (
             f'<svg width="160" height="{total_h}"'
             f' style="overflow:visible;font-family:monospace">'
-            f'{"".join(paths)}'
+            f"{''.join(paths)}"
             f'<text x="{cx}" y="{cy - 5}" text-anchor="middle" fill="#a78bfa"'
             f' font-size="15" font-weight="bold">{dom_pct}%</text>'
             f'<text x="{cx}" y="{cy + 12}" text-anchor="middle" fill="#cec8bc"'
             f' font-size="11">{LABELS.get(dom_lang, dom_lang)}</text>'
-            f'{"".join(legend)}</svg>'
+            f"{''.join(legend)}</svg>"
         )
 
     # ── Helper: daily plays bar chart ─────────────────────────────────────────
@@ -688,8 +717,13 @@ def build_html_report(profile: dict) -> str:
         if not plays:
             return '<p style="color:#68687a;font-size:12px;margin:0">暂无数据</p>'
         _DAY_CN = {
-            "Mon": "周一", "Tue": "周二", "Wed": "周三", "Thu": "周四",
-            "Fri": "周五", "Sat": "周六", "Sun": "周日",
+            "Mon": "周一",
+            "Tue": "周二",
+            "Wed": "周三",
+            "Thu": "周四",
+            "Fri": "周五",
+            "Sat": "周六",
+            "Sun": "周日",
         }
         items = sorted(plays.items())
         max_val = max(v for _, v in items) or 1
@@ -714,10 +748,10 @@ def build_html_report(profile: dict) -> str:
                 f'<div style="width:100%;height:60px;display:flex;align-items:flex-end">'
                 f'<div style="width:100%;height:{bar_h}px;background:#8b5cf6;opacity:.8;'
                 f'border-radius:2px 2px 0 0" title="{lbl}: {v}首"></div>'
-                f'</div>'
+                f"</div>"
                 f'<span style="font-size:9px;color:#68687a;white-space:nowrap;'
                 f'overflow:hidden;text-overflow:ellipsis;max-width:28px">{lbl}</span>'
-                f'</div>'
+                f"</div>"
             )
         return f'<div style="display:flex;gap:2px;align-items:flex-end">{"".join(bars)}</div>'
 
@@ -735,17 +769,17 @@ def build_html_report(profile: dict) -> str:
             tags.append(
                 f'<span style="font-size:{size}px;color:rgba(139,92,246,{opacity});'
                 f'font-family:monospace;margin:2px 4px;display:inline-block">'
-                f'{html.escape(term)}</span>'
+                f"{html.escape(term)}</span>"
             )
         return f'<div style="line-height:2">{"".join(tags)}</div>'
 
     # ── Helper: time band heatmap ─────────────────────────────────────────────
     def _time_heatmap_html(tp: dict, btc: dict) -> str:
         bands = [
-            ("morning",   "🌅", "早晨"),
+            ("morning", "🌅", "早晨"),
             ("afternoon", "☀️", "下午"),
-            ("evening",   "🌆", "傍晚"),
-            ("night",     "🌙", "深夜"),
+            ("evening", "🌆", "傍晚"),
+            ("night", "🌙", "深夜"),
         ]
         max_count = max(btc.values()) if btc else 1
         cols = []
@@ -762,12 +796,12 @@ def build_html_report(profile: dict) -> str:
             cols.append(
                 f'<div style="display:flex;flex-direction:column;align-items:center;gap:6px;flex:1">'
                 f'<div style="width:100%;height:44px;background:rgba(139,92,246,{opacity});'
-                f'border-radius:8px;display:flex;align-items:center;'
+                f"border-radius:8px;display:flex;align-items:center;"
                 f'justify-content:center;font-size:18px">{emoji}</div>'
                 f'<span style="font-size:10px;color:#68687a">{short}</span>'
                 f'<div style="display:flex;flex-wrap:wrap;gap:2px;justify-content:center">'
-                f'{genre_tags}</div>'
-                f'</div>'
+                f"{genre_tags}</div>"
+                f"</div>"
             )
         return f'<div style="display:flex;gap:8px">{"".join(cols)}</div>'
 
@@ -782,12 +816,12 @@ def build_html_report(profile: dict) -> str:
             color = "#a78bfa" if count > 0 else "#68687a"
             rows.append(
                 f'<div style="display:flex;justify-content:space-between;'
-                f'align-items:center;padding:5px 0;'
+                f"align-items:center;padding:5px 0;"
                 f'border-bottom:1px solid rgba(139,92,246,.1)">'
                 f'<span style="font-size:12px;color:{color};font-family:monospace">'
-                f'{html.escape(artist)}</span>'
+                f"{html.escape(artist)}</span>"
                 f'<span style="font-size:11px;color:#68687a">{count} 次</span>'
-                f'</div>'
+                f"</div>"
             )
         return "".join(rows)
 
@@ -808,7 +842,7 @@ def build_html_report(profile: dict) -> str:
                 badge = (
                     f'<span style="background:{clr};color:#fff;font-size:9px;'
                     f'padding:1px 5px;border-radius:4px;margin-left:4px">'
-                    f'{sign}{pct}%</span>'
+                    f"{sign}{pct}%</span>"
                 )
             else:
                 badge = ""
@@ -816,44 +850,44 @@ def build_html_report(profile: dict) -> str:
         return (
             f'<div style="display:flex;align-items:center;margin-bottom:4px">'
             f'<span style="font-size:12px;color:{color};font-family:monospace">'
-            f'{html.escape(genre)}</span>{badge}'
-            f'</div>'
+            f"{html.escape(genre)}</span>{badge}"
+            f"</div>"
         )
 
     def _trends_col(title: str, items: list, direction: str, header_color: str) -> str:
         if not items:
             return (
-                f'<div>'
+                f"<div>"
                 f'<div style="font-size:10px;color:{header_color};'
                 f'letter-spacing:.08em;margin-bottom:8px">{title}</div>'
                 f'<span style="font-size:11px;color:#68687a">—</span>'
-                f'</div>'
+                f"</div>"
             )
         pills = "".join(_trend_pill(g, direction) for g in items[:3])
         return (
-            f'<div>'
+            f"<div>"
             f'<div style="font-size:10px;color:{header_color};'
             f'letter-spacing:.08em;margin-bottom:8px">{title}</div>'
-            f'{pills}'
-            f'</div>'
+            f"{pills}"
+            f"</div>"
         )
 
     trends_section = (
         f'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">'
-        f'{_trends_col("↑ 新增", recent_trend,  "new",  "#16a34a")}'
-        f'{_trends_col("→ 稳定", stable_pref,   "stable","#a78bfa")}'
-        f'{_trends_col("↓ 下降", declining_pref,"gone",  "#b91c1c")}'
-        f'</div>'
+        f"{_trends_col('↑ 新增', recent_trend, 'new', '#16a34a')}"
+        f"{_trends_col('→ 稳定', stable_pref, 'stable', '#a78bfa')}"
+        f"{_trends_col('↓ 下降', declining_pref, 'gone', '#b91c1c')}"
+        f"</div>"
     )
 
     # ── Helper: pentagon radar SVG ────────────────────────────────────────────
     def _radar_svg(scores: dict) -> str:
         dims = [
-            ("focus",     "专注力"),
-            ("explore",   "探索欲"),
-            ("mood",      "情绪"),
+            ("focus", "专注力"),
+            ("explore", "探索欲"),
+            ("mood", "情绪"),
             ("night_owl", "夜猫"),
-            ("loyalty",   "忠诚"),
+            ("loyalty", "忠诚"),
         ]
         N = len(dims)
         cx, cy, R = 100, 105, 60
@@ -872,8 +906,7 @@ def build_html_report(profile: dict) -> str:
             pts_str = " ".join(f"{pt(i, level)[0]:.1f},{pt(i, level)[1]:.1f}" for i in range(N))
             op = "0.12" if level < 1.0 else "0.25"
             grid_paths.append(
-                f'<polygon points="{pts_str}" fill="none" stroke="#8b5cf6"'
-                f' stroke-width="1" opacity="{op}"/>'
+                f'<polygon points="{pts_str}" fill="none" stroke="#8b5cf6" stroke-width="1" opacity="{op}"/>'
             )
 
         spokes = []
@@ -885,14 +918,10 @@ def build_html_report(profile: dict) -> str:
             )
 
         data_pts = " ".join(
-            f"{pt(i, scores.get(k, 0) / 100)[0]:.1f},"
-            f"{pt(i, scores.get(k, 0) / 100)[1]:.1f}"
+            f"{pt(i, scores.get(k, 0) / 100)[0]:.1f},{pt(i, scores.get(k, 0) / 100)[1]:.1f}"
             for i, (k, _) in enumerate(dims)
         )
-        data_poly = (
-            f'<polygon points="{data_pts}"'
-            f' fill="rgba(139,92,246,0.3)" stroke="#8b5cf6" stroke-width="2"/>'
-        )
+        data_poly = f'<polygon points="{data_pts}" fill="rgba(139,92,246,0.3)" stroke="#8b5cf6" stroke-width="2"/>'
 
         dots = []
         for i, (k, _) in enumerate(dims):
@@ -911,18 +940,21 @@ def build_html_report(profile: dict) -> str:
         return (
             f'<svg width="200" height="{total_h}"'
             f' style="overflow:visible;font-family:monospace">'
-            + "".join(grid_paths) + "".join(spokes) + data_poly
-            + "".join(dots) + "".join(labels)
+            + "".join(grid_paths)
+            + "".join(spokes)
+            + data_poly
+            + "".join(dots)
+            + "".join(labels)
             + "</svg>"
         )
 
     # ── Radar score bars (right side of radar card) ───────────────────────────
     _DIM_LABELS = {
-        "focus":     "专注力",
-        "explore":   "探索欲",
-        "mood":      "情绪起伏",
+        "focus": "专注力",
+        "explore": "探索欲",
+        "mood": "情绪起伏",
         "night_owl": "夜猫指数",
-        "loyalty":   "忠诚度",
+        "loyalty": "忠诚度",
     }
     radar_scores_html = "".join(
         f'<div style="margin-bottom:8px">'
@@ -930,19 +962,18 @@ def build_html_report(profile: dict) -> str:
         f'font-size:11px;margin-bottom:3px">'
         f'<span style="color:#cec8bc">{_DIM_LABELS[k]}</span>'
         f'<span style="color:#a78bfa">{personality_scores.get(k, 0)}</span>'
-        f'</div>'
+        f"</div>"
         f'<div style="height:5px;background:rgba(139,92,246,.15);border-radius:3px;overflow:hidden">'
         f'<div style="width:{personality_scores.get(k, 0)}%;height:100%;'
         f'background:#8b5cf6;border-radius:3px"></div>'
-        f'</div>'
-        f'</div>'
+        f"</div>"
+        f"</div>"
         for k in ("focus", "explore", "mood", "night_owl", "loyalty")
     )
 
     # ── Recommendation cards ──────────────────────────────────────────────────
     rec_cards = "".join(
-        f'<div class="rec-card"><span class="rec-n">{i}</span>'
-        f'<span class="rec-q">{html.escape(q)}</span></div>'
+        f'<div class="rec-card"><span class="rec-n">{i}</span><span class="rec-q">{html.escape(q)}</span></div>'
         for i, q in enumerate(queries, 1)
     )
 
@@ -984,10 +1015,10 @@ def build_html_report(profile: dict) -> str:
         "for(var i=0;i<data.length;i++){"
         "var d=data[i];"
         "if(type==='artist'){"
-        "rows+='<div class=\"modal-row\"><span class=\"modal-track\">'+esc(d.t)+'</span>"
+        'rows+=\'<div class="modal-row"><span class="modal-track">\'+esc(d.t)+\'</span>'
         "<span class=\"modal-sub\">'+esc(d.c)+'次</span></div>';}"
         "else{"
-        "rows+='<div class=\"modal-row\"><span class=\"modal-track\">'+esc(d.t)+'</span>"
+        'rows+=\'<div class="modal-row"><span class="modal-track">\'+esc(d.t)+\'</span>'
         "<span class=\"modal-sub\">'+esc(d.a)+'</span></div>';}}"
         "}else{"
         "rows='<div style=\"color:#68687a;font-size:12px;padding:8px 0\">暂无详细记录</div>';}"
@@ -1109,8 +1140,8 @@ body{{background:#080810;color:#cec8bc;font-family:'JetBrains Mono',monospace,sa
   </div>
 
   <div class="two-col">
-    <div class="card"><div class="ctitle">🎤 常听歌手</div>{_bar_html(top_artists, 'artist')}</div>
-    <div class="card"><div class="ctitle">🎵 主要曲风</div>{_bar_html(top_genres, 'genre')}</div>
+    <div class="card"><div class="ctitle">🎤 常听歌手</div>{_bar_html(top_artists, "artist")}</div>
+    <div class="card"><div class="ctitle">🎵 主要曲风</div>{_bar_html(top_genres, "genre")}</div>
   </div>
 
   <div class="two-col">

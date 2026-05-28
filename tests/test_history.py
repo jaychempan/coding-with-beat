@@ -1,14 +1,10 @@
 # tests/test_history.py
 import datetime
-from pathlib import Path
-from unittest import mock
-
-import pytest
 
 from coding_with_beat import history
 
-
 # ── write / read ──────────────────────────────────────────────────────────────
+
 
 def test_read_returns_empty_when_no_log(tmp_path, monkeypatch):
     monkeypatch.setattr(history, "_LOG_FILE", tmp_path / "history.log")
@@ -44,6 +40,7 @@ def test_read_respects_limit(tmp_path, monkeypatch):
 
 
 # ── summarize ─────────────────────────────────────────────────────────────────
+
 
 def _make_track(title, artist, album="Album", days_ago=1):
     ts = datetime.datetime.now() - datetime.timedelta(days=days_ago)
@@ -102,7 +99,7 @@ def test_summarize_discards_corrupt_ts_string():
 
 def test_summarize_question_mark_artist_not_in_recent_artists():
     """'?' placeholder artist should not suppress unheard candidates."""
-    recent = [_make_track("Song", "?", days_ago=1)]   # recent entry with no real artist
+    recent = [_make_track("Song", "?", days_ago=1)]  # recent entry with no real artist
     older = [_make_track("Old Song", "?", days_ago=30)]  # older entry also with '?'
     result = history.summarize(recent + older, window_days=14)
     # '?' artist should not block unheard_candidates for other '?' entries
@@ -129,15 +126,14 @@ def test_read_malformed_lines_are_skipped(tmp_path, monkeypatch):
 
 # ── apple_music.play_history ───────────────────────────────────────────────────
 
+
 def test_play_history_parses_applescript_output():
     import datetime
     from unittest.mock import patch
+
     from coding_with_beat.sources.apple_music import AppleMusic as AppleMusicSource
 
-    fake_osa_output = (
-        "Clair de Lune|||Debussy|||Suite bergamasque|||5|||3\n"
-        "夜曲|||周杰伦|||十一月的萧邦|||12|||0\n"
-    )
+    fake_osa_output = "Clair de Lune|||Debussy|||Suite bergamasque|||5|||3\n夜曲|||周杰伦|||十一月的萧邦|||12|||0\n"
 
     with patch("coding_with_beat.sources.apple_music._osa", return_value=fake_osa_output):
         src = AppleMusicSource()
@@ -154,6 +150,7 @@ def test_play_history_parses_applescript_output():
 
 def test_play_history_returns_empty_on_applescript_error():
     from unittest.mock import patch
+
     from coding_with_beat.sources.apple_music import AppleMusic as AppleMusicSource
 
     with patch("coding_with_beat.sources.apple_music._osa", side_effect=RuntimeError("fail")):
@@ -165,6 +162,7 @@ def test_play_history_returns_empty_on_applescript_error():
 
 # ── server._refresh_now_playing writes history for non-AM ─────────────────────
 
+
 def test_refresh_now_playing_writes_history_for_non_am_source(tmp_path, monkeypatch):
     from types import SimpleNamespace
     from unittest.mock import MagicMock, patch
@@ -173,17 +171,30 @@ def test_refresh_now_playing_writes_history_for_non_am_source(tmp_path, monkeypa
     monkeypatch.setattr(history, "ensure_dirs", lambda: None)
 
     fake_np = SimpleNamespace(
-        title="New Song", artist="Artist", album="Album",
-        duration=180.0, position=0.0, playing=True,
-        artwork_path=None, source="qq_music", unsupported_reason=None,
+        title="New Song",
+        artist="Artist",
+        album="Album",
+        duration=180.0,
+        position=0.0,
+        playing=True,
+        artwork_path=None,
+        source="qq_music",
+        unsupported_reason=None,
     )
     fake_state = SimpleNamespace(
         source="qq_music",
         track=SimpleNamespace(
-            title="Old Song", artist="Old Artist", album="Old Album",
-            duration=200.0, position=0.0, artwork_path=None,
-            source="qq_music", lyrics_key="", lyrics_text="",
-            lyrics_pending=False, position_sampled_at=0.0,
+            title="Old Song",
+            artist="Old Artist",
+            album="Old Album",
+            duration=200.0,
+            position=0.0,
+            artwork_path=None,
+            source="qq_music",
+            lyrics_key="",
+            lyrics_text="",
+            lyrics_pending=False,
+            position_sampled_at=0.0,
         ),
         playing=False,
     )
@@ -197,6 +208,7 @@ def test_refresh_now_playing_writes_history_for_non_am_source(tmp_path, monkeypa
         src.now_playing.return_value = fake_np
         mock_gs.return_value = src
         from coding_with_beat.server import _refresh_now_playing
+
         _refresh_now_playing()
 
     entries = history.read()
@@ -212,17 +224,30 @@ def test_refresh_now_playing_skips_history_for_apple_music(tmp_path, monkeypatch
     monkeypatch.setattr(history, "ensure_dirs", lambda: None)
 
     fake_np = SimpleNamespace(
-        title="New Song", artist="Artist", album="Album",
-        duration=180.0, position=0.0, playing=True,
-        artwork_path=None, source="apple_music", unsupported_reason=None,
+        title="New Song",
+        artist="Artist",
+        album="Album",
+        duration=180.0,
+        position=0.0,
+        playing=True,
+        artwork_path=None,
+        source="apple_music",
+        unsupported_reason=None,
     )
     fake_state = SimpleNamespace(
         source="apple_music",
         track=SimpleNamespace(
-            title="Old Song", artist="Old Artist", album="Old Album",
-            duration=200.0, position=0.0, artwork_path=None,
-            source="apple_music", lyrics_key="", lyrics_text="",
-            lyrics_pending=False, position_sampled_at=0.0,
+            title="Old Song",
+            artist="Old Artist",
+            album="Old Album",
+            duration=200.0,
+            position=0.0,
+            artwork_path=None,
+            source="apple_music",
+            lyrics_key="",
+            lyrics_text="",
+            lyrics_pending=False,
+            position_sampled_at=0.0,
         ),
         playing=False,
     )
@@ -236,12 +261,14 @@ def test_refresh_now_playing_skips_history_for_apple_music(tmp_path, monkeypatch
         src.now_playing.return_value = fake_np
         mock_gs.return_value = src
         from coding_with_beat.server import _refresh_now_playing
+
         _refresh_now_playing()
 
     assert not (tmp_path / "history.log").exists()
 
 
 # ── list_history MCP tool ─────────────────────────────────────────────────────
+
 
 def test_list_history_apple_music_source():
     import asyncio
@@ -251,18 +278,24 @@ def test_list_history_apple_music_source():
 
     fake_tracks = [
         {"title": "天空之城", "artist": "久石譲", "album": "OST", "played_count": 9, "ts": datetime.datetime.now()},
-        {"title": "夜曲", "artist": "周杰伦", "album": "十一月的萧邦", "played_count": 3, "ts": datetime.datetime.now()},
+        {
+            "title": "夜曲",
+            "artist": "周杰伦",
+            "album": "十一月的萧邦",
+            "played_count": 3,
+            "ts": datetime.datetime.now(),
+        },
     ]
 
     with (
-        patch("coding_with_beat.server.state.load",
-              return_value=SimpleNamespace(source="apple_music")),
+        patch("coding_with_beat.server.state.load", return_value=SimpleNamespace(source="apple_music")),
         patch("coding_with_beat.server.get_source") as mock_gs,
     ):
         src = MagicMock()
         src.play_history.return_value = fake_tracks
         mock_gs.return_value = src
         from coding_with_beat.server import list_history
+
         result = asyncio.run(list_history())
 
     assert "天空之城" in result
@@ -277,14 +310,14 @@ def test_list_history_empty_returns_friendly_message():
     from unittest.mock import MagicMock, patch
 
     with (
-        patch("coding_with_beat.server.state.load",
-              return_value=SimpleNamespace(source="apple_music")),
+        patch("coding_with_beat.server.state.load", return_value=SimpleNamespace(source="apple_music")),
         patch("coding_with_beat.server.get_source") as mock_gs,
     ):
         src = MagicMock()
         src.play_history.return_value = []
         mock_gs.return_value = src
         from coding_with_beat.server import list_history
+
         result = asyncio.run(list_history())
 
     assert "还没有" in result
@@ -299,15 +332,16 @@ def test_list_history_non_am_reads_log(tmp_path, monkeypatch):
     monkeypatch.setattr(history, "ensure_dirs", lambda: None)
     history.write("Log Track", "Log Artist", "Log Album")
 
-    with patch("coding_with_beat.server.state.load",
-               return_value=SimpleNamespace(source="local")):
+    with patch("coding_with_beat.server.state.load", return_value=SimpleNamespace(source="local")):
         from coding_with_beat.server import list_history
+
         result = asyncio.run(list_history())
 
     assert "Log Track" in result
 
 
 # ── history_search MCP tool ───────────────────────────────────────────────────
+
 
 def test_history_search_builds_queries_from_history():
     import asyncio
@@ -327,8 +361,7 @@ def test_history_search_builds_queries_from_history():
         return "1. Result Track — Artist"
 
     with (
-        patch("coding_with_beat.server.state.load",
-              return_value=SimpleNamespace(source="apple_music")),
+        patch("coding_with_beat.server.state.load", return_value=SimpleNamespace(source="apple_music")),
         patch("coding_with_beat.server.get_source") as mock_gs,
         patch("coding_with_beat.server._multi_angle_search", side_effect=_fake_multi_angle),
     ):
@@ -336,6 +369,7 @@ def test_history_search_builds_queries_from_history():
         src.play_history.return_value = recent_tracks
         mock_gs.return_value = src
         from coding_with_beat.server import history_search
+
         asyncio.run(history_search())
 
     assert len(captured_queries) >= 1
@@ -348,20 +382,21 @@ def test_history_search_empty_history_returns_message():
     from unittest.mock import MagicMock, patch
 
     with (
-        patch("coding_with_beat.server.state.load",
-              return_value=SimpleNamespace(source="apple_music")),
+        patch("coding_with_beat.server.state.load", return_value=SimpleNamespace(source="apple_music")),
         patch("coding_with_beat.server.get_source") as mock_gs,
     ):
         src = MagicMock()
         src.play_history.return_value = []
         mock_gs.return_value = src
         from coding_with_beat.server import history_search
+
         result = asyncio.run(history_search())
 
     assert "还没有" in result
 
 
 # ── write_search / read_search ────────────────────────────────────────────────
+
 
 def test_read_search_returns_empty_when_no_log(tmp_path, monkeypatch):
     monkeypatch.setattr(history, "_SEARCH_LOG_FILE", tmp_path / "search_history.log")

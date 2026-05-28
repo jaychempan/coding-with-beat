@@ -241,11 +241,11 @@ def install_skill(repo: Path, codex_dir: Path) -> None:
 def remove_skill(codex_dir: Path) -> None:
     import shutil
 
-    skills_src_names = {
-        d.name
-        for d in (Path(__file__).parent.parent / "codex_skills").iterdir()
-        if d.is_dir()
-    } if (Path(__file__).parent.parent / "codex_skills").exists() else {"cwb"}
+    skills_src_names = (
+        {d.name for d in (Path(__file__).parent.parent / "codex_skills").iterdir() if d.is_dir()}
+        if (Path(__file__).parent.parent / "codex_skills").exists()
+        else {"cwb"}
+    )
     for name in skills_src_names:
         skill_dir = codex_dir / "skills" / name
         if skill_dir.exists():

@@ -129,10 +129,13 @@ class CliCommandTest(unittest.TestCase):
 
 # ── cwb profile ───────────────────────────────────────────────────────────────
 
+
 def test_cmd_profile_invalid_period(monkeypatch, capsys):
     import sys
+
     monkeypatch.setattr(sys, "argv", ["cwb", "profile", "quarterly"])
     from coding_with_beat.__main__ import cmd_profile
+
     rc = cmd_profile()
     out = capsys.readouterr().out
     assert rc == 2
@@ -141,6 +144,7 @@ def test_cmd_profile_invalid_period(monkeypatch, capsys):
 
 def test_cmd_profile_insufficient_history(monkeypatch, capsys):
     import sys
+
     monkeypatch.setattr(sys, "argv", ["cwb", "profile", "weekly"])
     from coding_with_beat import profile as _profile
 
@@ -149,6 +153,7 @@ def test_cmd_profile_insufficient_history(monkeypatch, capsys):
 
     monkeypatch.setattr(_profile, "build_profile", _raise)
     from coding_with_beat.__main__ import cmd_profile
+
     rc = cmd_profile()
     out = capsys.readouterr().out
     assert rc == 0
@@ -156,7 +161,9 @@ def test_cmd_profile_insufficient_history(monkeypatch, capsys):
 
 
 def test_cmd_profile_weekly_success(monkeypatch, capsys):
-    import sys, datetime
+    import datetime
+    import sys
+
     monkeypatch.setattr(sys, "argv", ["cwb", "profile", "weekly"])
 
     fake_profile = {
@@ -174,10 +181,12 @@ def test_cmd_profile_weekly_success(monkeypatch, capsys):
         "time_pattern": {},
     }
     from coding_with_beat import profile as _profile
+
     monkeypatch.setattr(_profile, "build_profile", lambda period, **kw: fake_profile)
     monkeypatch.setattr("builtins.input", lambda _: "n")
 
     from coding_with_beat.__main__ import cmd_profile
+
     rc = cmd_profile()
     out = capsys.readouterr().out
     assert rc == 0
@@ -186,7 +195,9 @@ def test_cmd_profile_weekly_success(monkeypatch, capsys):
 
 
 def test_cmd_profile_html_flag_writes_file(monkeypatch, tmp_path):
-    import sys, datetime
+    import datetime
+    import sys
+
     monkeypatch.setattr(sys, "argv", ["cwb", "profile", "weekly", "--html"])
 
     fake_profile = {
@@ -204,17 +215,21 @@ def test_cmd_profile_html_flag_writes_file(monkeypatch, tmp_path):
         "time_pattern": {},
     }
     from coding_with_beat import profile as _profile
+
     monkeypatch.setattr(_profile, "build_profile", lambda period, **kw: fake_profile)
 
     import subprocess
+
     opened = []
     monkeypatch.setattr(subprocess, "run", lambda cmd, **kw: opened.append(cmd))
 
     import coding_with_beat.config as _cfg
+
     real_data_dir = _cfg.DATA_DIR
     _cfg.DATA_DIR = tmp_path
     try:
         from coding_with_beat.__main__ import cmd_profile
+
         rc = cmd_profile()
     finally:
         _cfg.DATA_DIR = real_data_dir
@@ -227,6 +242,7 @@ def test_cmd_profile_html_flag_writes_file(monkeypatch, tmp_path):
 
 def test_cmd_profile_html_flag_insufficient_history(monkeypatch, capsys):
     import sys
+
     monkeypatch.setattr(sys, "argv", ["cwb", "profile", "weekly", "--html"])
     from coding_with_beat import profile as _profile
 
@@ -235,6 +251,7 @@ def test_cmd_profile_html_flag_insufficient_history(monkeypatch, capsys):
 
     monkeypatch.setattr(_profile, "build_profile", _raise)
     from coding_with_beat.__main__ import cmd_profile
+
     rc = cmd_profile()
     out = capsys.readouterr().out
     assert rc == 0
