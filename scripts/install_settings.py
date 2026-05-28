@@ -65,8 +65,9 @@ def session_hook_entry(python: str, repo: str) -> dict:
 
 
 def cwb_expansion_hook_entry(python: str, repo: str) -> dict:
-    # UserPromptExpansion does not support "matcher" — filtering is done
-    # inside the hook command itself (cwb_agent checks for /cwb prefix).
+    # UserPromptExpansion only allows {"hooks": [...]} — no "matcher" or
+    # extra keys. Filtering is done inside the hook command itself.
+    # _owner is omitted; _owned() falls back to command-signature detection.
     return {
         "hooks": [
             {
@@ -75,7 +76,6 @@ def cwb_expansion_hook_entry(python: str, repo: str) -> dict:
                 "timeout": HOOK_TIMEOUT,
             }
         ],
-        "_owner": TAG,
     }
 
 
