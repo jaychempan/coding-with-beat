@@ -14,9 +14,6 @@
 [![Website](https://img.shields.io/badge/website-codebeat.top-9bbc0f?style=flat-square)](https://codebeat.top)
 [![Technical Report](https://img.shields.io/badge/Technical_Report-coming_soon-8b5cf6?style=flat-square)](#)
 
-> [!NOTE]
-> Want to try the latest features before release? Check out the **[dev branch](https://github.com/jaychempan/coding-with-beat/blob/dev/README.md)** for cutting-edge updates.
-
 > **When was the last time you sang and danced while vibecoding?**（上次 vibecoding 时又唱又跳是什么时候？）
 >
 > Right. You can't remember.（对，你已经不记得了。）
@@ -120,6 +117,9 @@ cwb profile yearly
 ---
 
 ## Installation
+
+> [!NOTE]
+> Want to try the latest features before release? Check out the **[dev branch](https://github.com/jaychempan/coding-with-beat/blob/dev/README.md)** for cutting-edge updates.
 
 ### Claude Code
 

@@ -13,9 +13,6 @@
 ![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)
 [![Website](https://img.shields.io/badge/website-codebeat.top-9bbc0f?style=flat-square)](https://codebeat.top)
 
-> [!NOTE]
-> 想提前体验最新功能？前往 **[dev 分支](https://github.com/jaychempan/coding-with-beat/blob/dev/README_CN.md)** 查看最新进展。
-
 > **你上一次 vibecoding 的时候又唱又跳是什么时候？**
 >
 > 对，你已经不记得了。
@@ -43,6 +40,9 @@
 ---
 
 ## 安装
+
+> [!NOTE]
+> 想提前体验最新功能？前往 **[dev 分支](https://github.com/jaychempan/coding-with-beat/blob/dev/README_CN.md)** 查看最新进展。
 
 ### Claude Code
 
