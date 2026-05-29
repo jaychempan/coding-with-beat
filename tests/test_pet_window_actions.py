@@ -43,3 +43,26 @@ def test_builtin_pet_window_applies_pending_result():
         assert "思考中" in window._bubble.text()
     finally:
         window.close()
+
+
+def test_builtin_pet_window_context_menu_keeps_music_and_skin_actions():
+    app = QApplication.instance() or QApplication([])
+    window = PetWindow()
+    try:
+        assert app is not None
+        menu = window._build_context_menu()
+        labels = [action.text() for action in menu.actions() if action.text()]
+
+        assert labels == [
+            "按心情推荐",
+            "按当前状态推荐",
+            "自动开播",
+            "播放编号",
+            "当前播放",
+            "暂停/继续",
+            "下一首",
+            "切换皮肤",
+            "退出",
+        ]
+    finally:
+        window.close()

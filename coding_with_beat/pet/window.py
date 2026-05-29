@@ -37,6 +37,12 @@ from .settings import load_settings, save_settings
 from .sprites import BUILTIN_SKINS, Frame
 
 
+def _quit_application() -> None:
+    app = QApplication.instance()
+    if app is not None:
+        app.quit()
+
+
 class PetWindow(QWidget):
     @classmethod
     def from_petdex(cls, slug: str):
@@ -205,7 +211,7 @@ class PetWindow(QWidget):
         for skin_id, skin in BUILTIN_SKINS.items():
             skin_menu.addAction(_action(skin.name, lambda sid=skin_id: self.set_skin(sid), self))
         menu.addSeparator()
-        menu.addAction(_action("退出", self.close, self))
+        menu.addAction(_action("退出", _quit_application, self))
         return menu
 
     def _show_more_menu(self) -> None:
@@ -486,7 +492,7 @@ class PetdexWindow(QWidget):
             pet_menu.addAction(_action("未发现本地宠物", lambda: self._show_bubble("未发现本地 Petdex 宠物"), self))
         menu.addAction(_action(f"Petdex: {self.pet.name}", lambda: self._show_bubble(str(self.pet.folder)), self))
         menu.addSeparator()
-        menu.addAction(_action("退出", self.close, self))
+        menu.addAction(_action("退出", _quit_application, self))
         return menu
 
     def _show_more_menu(self) -> None:
