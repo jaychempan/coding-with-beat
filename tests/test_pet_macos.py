@@ -11,9 +11,11 @@ from PySide6.QtWidgets import QApplication
 
 from coding_with_beat.pet.macos import (
     APP_NAME,
+    CodeBeatControlWindow,
     PetMenuBarController,
     app_icon_path,
     hide_dock_icon,
+    menu_bar_icon,
     pet_icon_path,
 )
 
@@ -67,6 +69,14 @@ def test_app_icon_path_uses_padded_waveform_logo():
     assert path.exists()
 
 
+def test_menu_bar_icon_is_not_null():
+    app = QApplication.instance() or QApplication([])
+    icon = menu_bar_icon()
+
+    assert app is not None
+    assert not icon.isNull()
+
+
 def test_hide_dock_icon_returns_false_on_non_macos(monkeypatch):
     monkeypatch.setattr(sys, "platform", "linux")
 
@@ -94,3 +104,16 @@ def test_menu_bar_controller_toggles_window_visibility():
 
     controller.toggle_window()
     assert window.visible is True
+
+
+def test_control_window_exposes_fallback_actions():
+    app = QApplication.instance() or QApplication([])
+    window = DummyWindow()
+    control = CodeBeatControlWindow(app, window)
+
+    labels = [button.text() for button in control.findChildren(type(control.show_hide_button))]
+
+    assert "显示/隐藏" in labels
+    assert "当前播放" in labels
+    assert "推荐" in labels
+    assert "下一首" in labels

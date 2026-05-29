@@ -6,4 +6,4 @@ from .pet.app import run as run_pet_app
 
 
 def run() -> int:
-    return run_pet_app(petdex_slug=None, hide_dock=True)
+    return run_pet_app(petdex_slug=None, hide_dock=True, show_control=True)

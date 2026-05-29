@@ -7,8 +7,18 @@ import ctypes.util
 import sys
 from pathlib import Path
 
-from PySide6.QtGui import QIcon
-from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QColor, QIcon, QPainter, QPixmap
+from PySide6.QtWidgets import (
+    QApplication,
+    QHBoxLayout,
+    QLabel,
+    QMenu,
+    QPushButton,
+    QSystemTrayIcon,
+    QVBoxLayout,
+    QWidget,
+)
 
 APP_NAME = "CodeBeat"
 
@@ -19,6 +29,28 @@ def app_icon_path() -> Path | None:
 
 def pet_icon_path() -> Path | None:
     return _first_existing_asset(("waveform_menu_bar.svg", "waveform_logo.svg", "logo_icon.png"))
+
+
+def menu_bar_icon() -> QIcon:
+    pixmap = QPixmap(22, 22)
+    pixmap.fill(Qt.GlobalColor.transparent)
+    painter = QPainter(pixmap)
+    try:
+        color = QColor("#8b5cf6")
+        bars = (
+            (4, 9, 3, 8, 130),
+            (8, 6, 3, 14, 190),
+            (12, 3, 4, 18, 255),
+            (17, 7, 3, 13, 190),
+        )
+        for x, y, w, h, alpha in bars:
+            color.setAlpha(alpha)
+            painter.setBrush(color)
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.drawRoundedRect(x, y, w, h, 2, 2)
+    finally:
+        painter.end()
+    return QIcon(pixmap)
 
 
 def _first_existing_asset(names: tuple[str, ...]) -> Path | None:
@@ -91,7 +123,7 @@ class PetMenuBarController:
     def __init__(self, app: QApplication, window, icon: QIcon | None = None) -> None:
         self.app = app
         self.window = window
-        self.icon = icon if icon is not None and not icon.isNull() else QIcon()
+        self.icon = icon if icon is not None and not icon.isNull() else menu_bar_icon()
         self.menu = QMenu()
         self.tray = QSystemTrayIcon(self.icon, app)
         self.tray.setToolTip(APP_NAME)
@@ -99,6 +131,7 @@ class PetMenuBarController:
         self.tray.setContextMenu(self.menu)
         self.tray.activated.connect(self._handle_activation)
         self.tray.show()
+        self.available = QSystemTrayIcon.isSystemTrayAvailable()
 
     def toggle_window(self) -> None:
         if self.window.isVisible():
@@ -126,3 +159,60 @@ class PetMenuBarController:
             QSystemTrayIcon.ActivationReason.DoubleClick,
         }:
             self.toggle_window()
+
+
+class CodeBeatControlWindow(QWidget):
+    def __init__(self, app: QApplication, window) -> None:
+        super().__init__()
+        self.app = app
+        self.window = window
+        self.setWindowTitle(APP_NAME)
+        self.setWindowFlags(Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.Tool)
+        self.setFixedWidth(184)
+
+        title = QLabel(APP_NAME)
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        title.setStyleSheet("QLabel { color: #8b5cf6; font-weight: 700; padding: 4px; }")
+
+        self.show_hide_button = _control_button("显示/隐藏", self.toggle_window)
+        now_button = _control_button("当前播放", self.window.show_now_playing)
+        recommend_button = _control_button("推荐", self._recommend)
+        next_button = _control_button("下一首", self.window.next_track)
+        quit_button = _control_button("退出", self.app.quit)
+
+        row1 = QHBoxLayout()
+        row1.addWidget(self.show_hide_button)
+        row1.addWidget(now_button)
+        row2 = QHBoxLayout()
+        row2.addWidget(recommend_button)
+        row2.addWidget(next_button)
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(8, 8, 8, 8)
+        layout.setSpacing(6)
+        layout.addWidget(title)
+        layout.addLayout(row1)
+        layout.addLayout(row2)
+        layout.addWidget(quit_button)
+
+    def toggle_window(self) -> None:
+        if self.window.isVisible():
+            self.window.hide()
+            return
+        self.window.show()
+        self.window.raise_()
+        self.window.activateWindow()
+
+    def _recommend(self) -> None:
+        self.window._run_pet_command(self.window.interactions.double_click, "正在按当前状态找歌...")
+
+
+def _control_button(text: str, callback) -> QPushButton:
+    button = QPushButton(text)
+    button.clicked.connect(callback)
+    button.setStyleSheet(
+        "QPushButton { color: #f8fafc; background: rgba(15, 23, 42, 220);"
+        " border: 1px solid rgba(139, 92, 246, 160); border-radius: 4px; padding: 5px 7px; }"
+        "QPushButton:hover { border-color: rgba(167, 139, 250, 230); }"
+    )
+    return button

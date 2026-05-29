@@ -5,17 +5,24 @@ from __future__ import annotations
 import sys
 
 
-def run(*, petdex_slug: str | None = None, hide_dock: bool = True) -> int:
+def run(*, petdex_slug: str | None = None, hide_dock: bool = True, show_control: bool = False) -> int:
     try:
         from PySide6.QtWidgets import QApplication
     except Exception as e:
         raise RuntimeError("PySide6 is required") from e
 
-    from .macos import PetMenuBarController, apply_app_metadata, hide_dock_icon
+    from .macos import (
+        CodeBeatControlWindow,
+        PetMenuBarController,
+        apply_app_metadata,
+        hide_dock_icon,
+        menu_bar_icon,
+        pet_icon_path,
+    )
     from .window import PetWindow
 
     app = QApplication.instance() or QApplication(sys.argv)
-    icon = apply_app_metadata(app)
+    apply_app_metadata(app)
     if petdex_slug:
         try:
             window = PetWindow.from_petdex(petdex_slug)
@@ -25,9 +32,18 @@ def run(*, petdex_slug: str | None = None, hide_dock: bool = True) -> int:
     else:
         window = PetWindow()
 
-    menu_bar = PetMenuBarController(app, window, icon)
+    menu_bar = PetMenuBarController(app, window, menu_bar_icon())
     app._cwb_pet_menu_bar = menu_bar
     app.setQuitOnLastWindowClosed(False)
+    print(
+        f"CodeBeat tray available={menu_bar.available} visible={menu_bar.tray.isVisible()} icon={pet_icon_path()}",
+        flush=True,
+    )
+    if show_control or not menu_bar.available:
+        control_window = CodeBeatControlWindow(app, window)
+        control_window.show()
+        app._cwb_control_window = control_window
+        print("CodeBeat control window shown.", flush=True)
     if hide_dock:
         hide_dock_icon()
 

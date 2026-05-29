@@ -22,7 +22,7 @@ def test_cmd_pet_prints_install_hint_when_pyside_missing(capsys):
 def test_cmd_pet_defaults_to_curated_petdex_pet(monkeypatch):
     called = {}
 
-    def fake_run(*, petdex_slug=None, hide_dock=True):
+    def fake_run(*, petdex_slug=None, hide_dock=True, show_control=False):
         called["petdex_slug"] = petdex_slug
         called["hide_dock"] = hide_dock
         return 0
@@ -37,7 +37,7 @@ def test_cmd_pet_defaults_to_curated_petdex_pet(monkeypatch):
 def test_cmd_pet_uses_saved_petdex_pet(monkeypatch):
     called = {}
 
-    def fake_run(*, petdex_slug=None, hide_dock=True):
+    def fake_run(*, petdex_slug=None, hide_dock=True, show_control=False):
         called["petdex_slug"] = petdex_slug
         called["hide_dock"] = hide_dock
         return 0
@@ -55,7 +55,7 @@ def test_cmd_pet_uses_saved_petdex_pet(monkeypatch):
 def test_cmd_pet_passes_petdex_slug(monkeypatch):
     called = {}
 
-    def fake_run(*, petdex_slug=None, hide_dock=True):
+    def fake_run(*, petdex_slug=None, hide_dock=True, show_control=False):
         called["petdex_slug"] = petdex_slug
         called["hide_dock"] = hide_dock
         return 0
@@ -70,7 +70,7 @@ def test_cmd_pet_passes_petdex_slug(monkeypatch):
 def test_cmd_pet_builtin_disables_petdex_default(monkeypatch):
     called = {}
 
-    def fake_run(*, petdex_slug=None, hide_dock=True):
+    def fake_run(*, petdex_slug=None, hide_dock=True, show_control=False):
         called["petdex_slug"] = petdex_slug
         called["hide_dock"] = hide_dock
         return 0
@@ -85,7 +85,7 @@ def test_cmd_pet_builtin_disables_petdex_default(monkeypatch):
 def test_cmd_pet_show_dock_disables_dock_hiding(monkeypatch):
     called = {}
 
-    def fake_run(*, petdex_slug=None, hide_dock=True):
+    def fake_run(*, petdex_slug=None, hide_dock=True, show_control=False):
         called["petdex_slug"] = petdex_slug
         called["hide_dock"] = hide_dock
         return 0
