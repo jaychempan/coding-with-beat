@@ -17,7 +17,7 @@ class PetSettings:
     x: int = 80
     y: int = 120
     skin_id: str = "dj"
-    petdex_slug: str = "boba"
+    petdex_slug: str = "codebeat-buddy"
     scale: int = 5
 
 

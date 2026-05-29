@@ -18,8 +18,12 @@ from PIL import Image
 from coding_with_beat.config import DATA_DIR, ensure_dirs
 
 MANIFEST_URL = "https://petdex.crafter.run/api/manifest"
+BUNDLED_PETDEX_DIR = Path(__file__).resolve().parents[2] / "assets" / "pets"
+DEFAULT_PETDEX_SLUG = "codebeat-buddy"
+LEGACY_DEFAULT_PETDEX_SLUGS = {"boba"}
 PETDEX_CACHE_DIR = DATA_DIR / "petdex"
 PETDEX_LIBRARY_DIRS = (
+    BUNDLED_PETDEX_DIR,
     PETDEX_CACHE_DIR,
     Path.home() / ".petdex" / "pets",
     Path.home() / ".codex" / "pets",
@@ -80,11 +84,21 @@ class PetdexAnimator:
         return PETDEX_ACTION_ROWS.get(self.action, 0), self.frame_index % frame_count
 
 
+def default_petdex_slug(saved_slug: str | None) -> str:
+    normalized = (saved_slug or "").strip().lower()
+    if not normalized or normalized in LEGACY_DEFAULT_PETDEX_SLUGS:
+        return DEFAULT_PETDEX_SLUG
+    return normalized
+
+
 def ensure_petdex_pet(slug: str, cache_dir: Path = PETDEX_CACHE_DIR) -> PetdexPet:
     """Download and cache a public Petdex pet by slug."""
     normalized = slug.strip().lower()
     if not normalized:
         raise ValueError("Petdex slug is required")
+    bundled_pet = _read_installed_pet(BUNDLED_PETDEX_DIR / normalized)
+    if bundled_pet is not None:
+        return bundled_pet
     manifest = _json_get(MANIFEST_URL)
     pets = manifest.get("pets") or []
     entry = next((pet for pet in pets if pet.get("slug") == normalized), None)

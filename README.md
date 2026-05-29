@@ -140,7 +140,7 @@ python -m pip install "coding-with-beat[pet]"
 cwb pet
 ```
 
-By default, `cwb pet` uses a high-quality public Petdex spritesheet pet (`boba`) and downloads it to `~/.coding-with-beat/petdex/` at runtime. The CWB music controls stay attached, while the sprite rendering follows Petdex Desktop's small fixed-window animation style.
+By default, `cwb pet` uses the bundled official CodeBeat Buddy spritesheet pet. The CWB music controls stay attached, while the sprite rendering follows Petdex Desktop's small fixed-window animation style.
 
 When running from a local checkout:
 
@@ -397,7 +397,7 @@ cwb seek <t>            # seek: seconds (90) or mm:ss (1:30)
 cwb mode <mode>         # shuffle | sequential | repeat | repeat_one
 cwb player              # full pixel player
 cwb watch               # live TUI (q to quit)
-cwb pet                 # native desktop pet, defaults to Petdex boba
+cwb pet                 # native desktop pet, defaults to CodeBeat Buddy
 cwb pet --petdex boba   # run a Petdex spritesheet pet with CWB controls
 cwb pet --builtin       # use the built-in CWB pixel skins
 cwb karaoke             # full-screen karaoke (q to quit)

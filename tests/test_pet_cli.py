@@ -28,9 +28,12 @@ def test_cmd_pet_defaults_to_curated_petdex_pet(monkeypatch):
         return 0
 
     monkeypatch.setattr("sys.argv", ["cwb", "pet"])
-    with mock.patch("coding_with_beat.pet.app.run", side_effect=fake_run):
+    with (
+        mock.patch("coding_with_beat.pet.settings.load_settings", return_value=PetSettings(petdex_slug="")),
+        mock.patch("coding_with_beat.pet.app.run", side_effect=fake_run),
+    ):
         assert cmd_pet() == 0
-    assert called["petdex_slug"] == "boba"
+    assert called["petdex_slug"] == "codebeat-buddy"
     assert called["hide_dock"] is True
 
 
@@ -91,7 +94,10 @@ def test_cmd_pet_show_dock_disables_dock_hiding(monkeypatch):
         return 0
 
     monkeypatch.setattr("sys.argv", ["cwb", "pet", "--show-dock"])
-    with mock.patch("coding_with_beat.pet.app.run", side_effect=fake_run):
+    with (
+        mock.patch("coding_with_beat.pet.settings.load_settings", return_value=PetSettings(petdex_slug="")),
+        mock.patch("coding_with_beat.pet.app.run", side_effect=fake_run),
+    ):
         assert cmd_pet() == 0
-    assert called["petdex_slug"] == "boba"
+    assert called["petdex_slug"] == "codebeat-buddy"
     assert called["hide_dock"] is False

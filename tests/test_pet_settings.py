@@ -4,7 +4,7 @@ from coding_with_beat.pet.settings import PetSettings, load_settings, save_setti
 def test_missing_settings_returns_defaults(tmp_path):
     settings = load_settings(tmp_path / "pet.json")
     assert settings.skin_id == "dj"
-    assert settings.petdex_slug == "boba"
+    assert settings.petdex_slug == "codebeat-buddy"
     assert settings.scale == 5
 
 

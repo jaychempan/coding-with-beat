@@ -1,10 +1,16 @@
+from PIL import Image
+
 from coding_with_beat.pet.petdex import (
+    BUNDLED_PETDEX_DIR,
+    DEFAULT_PETDEX_SLUG,
     FRAME_COLUMNS,
     FRAME_ROWS,
     PETDEX_ACTION_ROWS,
     PetdexAnimator,
     PetdexPet,
+    default_petdex_slug,
     display_size,
+    ensure_petdex_pet,
     frame_size,
     installed_petdex_pets,
     resolve_spritesheet_path,
@@ -24,6 +30,39 @@ def test_petdex_action_mapping_covers_internal_actions():
 def test_petdex_grid_is_eight_columns_by_nine_rows():
     assert FRAME_COLUMNS == 8
     assert FRAME_ROWS == 9
+
+
+def test_default_petdex_slug_is_codebeat_buddy():
+    assert DEFAULT_PETDEX_SLUG == "codebeat-buddy"
+
+
+def test_default_petdex_slug_migrates_legacy_boba_default():
+    assert default_petdex_slug("") == "codebeat-buddy"
+    assert default_petdex_slug("boba") == "codebeat-buddy"
+    assert default_petdex_slug("mochi") == "mochi"
+
+
+def test_bundled_codebeat_buddy_is_resolved_without_network():
+    pet = ensure_petdex_pet("codebeat-buddy")
+
+    assert pet.slug == "codebeat-buddy"
+    assert pet.name == "CodeBeat Buddy"
+    assert pet.folder == BUNDLED_PETDEX_DIR / "codebeat-buddy"
+    assert resolve_spritesheet_path(pet).exists()
+
+
+def test_bundled_codebeat_buddy_spritesheet_matches_petdex_grid():
+    pet = ensure_petdex_pet("codebeat-buddy")
+
+    with Image.open(resolve_spritesheet_path(pet)) as image:
+        assert image.mode == "RGBA"
+        assert image.size == (FRAME_COLUMNS * 192, FRAME_ROWS * 208)
+
+
+def test_installed_petdex_pets_includes_bundled_codebeat_buddy():
+    pets = installed_petdex_pets()
+
+    assert any(pet.slug == "codebeat-buddy" and pet.name == "CodeBeat Buddy" for pet in pets)
 
 
 def test_petdex_idle_animator_uses_six_frame_loop():
