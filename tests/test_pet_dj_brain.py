@@ -70,6 +70,15 @@ def test_user_text_overrides_state():
     ]
 
 
+def test_whitespace_text_uses_empty_free_text_title():
+    brain = PetDjBrain(now=lambda: 1000.0)
+
+    intent = brain.intent_from_text("   \n\t  ")
+
+    assert intent.title == ""
+    assert intent.message == "按你的心情找："
+
+
 def test_queries_for_debug_focus_have_reroll_sets():
     brain = PetDjBrain(now=lambda: 1000.0)
     intent = brain.intent_from_state(state(vibe="debug"))

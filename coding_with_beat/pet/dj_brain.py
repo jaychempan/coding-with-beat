@@ -32,7 +32,7 @@ class PetDjBrain:
 
     def intent_from_text(self, text: str, st: object | None = None) -> DjIntent:
         clean = (text or "").strip()
-        title = clean[:18] or "想听点什么"
+        title = clean[:18]
         return DjIntent(
             name="free_text",
             title=title,
