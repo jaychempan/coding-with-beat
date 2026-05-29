@@ -2,13 +2,13 @@
 
 ## Goal
 
-Build a local macOS app entry point for Coding With Beat while preserving the existing terminal-first `cwb` workflow. The app should be double-clickable, live in the menu bar, use the waveform logo, and provide controls for the pet and background service. The CLI should remain available for all terminal and AI-agent workflows.
+Build a local macOS app entry point for Coding With Beat while preserving the existing terminal-first `cwb` workflow. The app should be double-clickable as `CodeBeat.app`, live in the menu bar, use a visually restrained waveform logo, and provide controls for the pet and background service. The CLI should remain available for all terminal and AI-agent workflows.
 
 ## Recommended Shape
 
 Use a hybrid installer-managed app:
 
-- `Coding With Beat.app` is a lightweight local app wrapper, generated from the current checkout.
+- `CodeBeat.app` is a lightweight local app wrapper, generated from the current checkout.
 - `cwb` remains installed through the existing venv and symlink flow:
   - venv: `~/.coding-with-beat/venv`
   - CLI link: `~/.local/bin/cwb`
@@ -18,10 +18,10 @@ Use a hybrid installer-managed app:
 
 ## User Experience
 
-Double-clicking `Coding With Beat.app` should:
+Double-clicking `CodeBeat.app` should:
 
 - start the app without requiring Terminal to stay open
-- show a waveform menu-bar icon
+- show a waveform menu-bar icon that is visually smaller than the current full-size logo and does not look larger than nearby menu-bar icons
 - hide the Dock/Python identity by default
 - show or summon the desktop pet
 - keep `cwb` commands usable in Terminal
@@ -42,12 +42,13 @@ The menu bar should expose:
 Add a local app builder:
 
 - `scripts/build_macos_app.py`
-- output: `dist/Coding With Beat.app`
-- app icon: waveform logo
+- output: `dist/CodeBeat.app`
+- app icon: waveform logo with enough transparent padding that it does not appear oversized in Finder, Launchpad, or the Dock
+- menu-bar icon: a dedicated transparent waveform mark with a smaller visual footprint than the app icon
 - app bundle metadata:
-  - `CFBundleName`: `Coding With Beat`
-  - `CFBundleDisplayName`: `Coding With Beat`
-  - `CFBundleIdentifier`: `top.codebeat.coding-with-beat`
+  - `CFBundleName`: `CodeBeat`
+  - `CFBundleDisplayName`: `CodeBeat`
+  - `CFBundleIdentifier`: `top.codebeat.CodeBeat`
   - `LSUIElement`: `true`
 
 The app bundle can use a shell launcher at first:
@@ -128,8 +129,9 @@ Automated tests should cover:
 Manual local verification:
 
 - run `python scripts/build_macos_app.py`
-- open `dist/Coding With Beat.app`
+- open `dist/CodeBeat.app`
 - confirm menu-bar waveform icon appears
+- confirm the app icon and menu-bar icon do not look larger than neighboring macOS icons
 - confirm pet can be shown/hidden
 - confirm `cwb` still works in Terminal
 - confirm no traceback in app logs
