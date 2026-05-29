@@ -154,11 +154,14 @@ You can choose another Petdex pet by slug, or force the simpler built-in pixel s
 ```bash
 python -m coding_with_beat pet --petdex boba
 python -m coding_with_beat pet --builtin
+python -m coding_with_beat pet --show-dock  # keep the Dock/Cmd-Tab icon visible for debugging
 ```
 
 Petdex mode:
 
 - The pet stays compact by default: sprite animation plus a short current-status line.
+- On macOS, the pet installs a Coding With Beat menu bar icon. Use it to show/hide the pet after it is hidden.
+- The pet tries to hide the Python Dock/Cmd-Tab identity by default. Use `--show-dock` if you want to keep it visible.
 - Single-click shows the current playback/status bubble.
 - Double-click asks DJ Buddy to recommend from the current coding vibe.
 - Long-press auto-starts music from the current coding vibe.

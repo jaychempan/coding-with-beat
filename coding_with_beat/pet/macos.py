@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import ctypes
+import ctypes.util
 import sys
 from pathlib import Path
 
@@ -35,8 +37,38 @@ def hide_dock_icon() -> bool:
 
         NSApplication.sharedApplication().setActivationPolicy_(NSApplicationActivationPolicyAccessory)
     except Exception:
-        return False
+        return _hide_dock_icon_with_ctypes()
     return True
+
+
+def _hide_dock_icon_with_ctypes() -> bool:
+    library = ctypes.util.find_library("objc")
+    if not library:
+        return False
+    try:
+        objc = ctypes.cdll.LoadLibrary(library)
+        objc.objc_getClass.restype = ctypes.c_void_p
+        objc.objc_getClass.argtypes = [ctypes.c_char_p]
+        objc.sel_registerName.restype = ctypes.c_void_p
+        objc.sel_registerName.argtypes = [ctypes.c_char_p]
+
+        ns_application = objc.objc_getClass(b"NSApplication")
+        shared_application = objc.sel_registerName(b"sharedApplication")
+        set_activation_policy = objc.sel_registerName(b"setActivationPolicy:")
+        if not ns_application or not shared_application or not set_activation_policy:
+            return False
+
+        objc.objc_msgSend.restype = ctypes.c_void_p
+        objc.objc_msgSend.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+        app = objc.objc_msgSend(ns_application, shared_application)
+        if not app:
+            return False
+
+        objc.objc_msgSend.restype = ctypes.c_bool
+        objc.objc_msgSend.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_long]
+        return bool(objc.objc_msgSend(app, set_activation_policy, 1))
+    except Exception:
+        return False
 
 
 class PetMenuBarController:
