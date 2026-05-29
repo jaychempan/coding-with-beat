@@ -162,6 +162,8 @@ Petdex mode:
 - Single-click shows the current playback/status bubble.
 - Double-click asks DJ Buddy to recommend from the current coding vibe.
 - Long-press auto-starts music from the current coding vibe.
+- Music actions run in the background, so the pet keeps animating while recommendations load.
+- Bubbles are display-only pixel cards: no white editor background and no scrollbars.
 - The compact action strip uses `♪`, `✨`, `🎲`, and `⋯` for now playing, recommend, reroll, and more.
 - Right-click remains available for play/pause, next track, play by number, pet switching, and quit.
 - The `⋯` menu cycles local Petdex pets discovered in `~/.coding-with-beat/petdex/`, `~/.petdex/pets/`, and `~/.codex/pets/`.
