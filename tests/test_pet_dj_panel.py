@@ -7,6 +7,7 @@ import pytest
 
 pytest.importorskip("PySide6")
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication, QFrame, QLabel, QPushButton
 
 from coding_with_beat.pet.bubble import PetBubbleCard, PetResultItem
@@ -239,6 +240,15 @@ def test_dj_panel_motion_timer_runs_only_while_visible():
     panel.hide()
     app.processEvents()
     assert panel._animation_timer.isActive() is False
+
+
+def test_dj_panel_is_not_a_deactivating_tool_window():
+    app = QApplication.instance() or QApplication([])
+    panel = CodeBeatDjPanel(FakeHost())
+
+    assert app is not None
+    assert panel.windowType() == Qt.WindowType.Window
+    assert panel.windowFlags() & Qt.WindowType.WindowStaysOnTopHint
 
 
 def test_dj_panel_reasserts_native_top_level_when_shown(monkeypatch):

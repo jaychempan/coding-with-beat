@@ -321,9 +321,9 @@ def _style_sprite_label(label: QLabel) -> None:
 
 def _style_pet_window(window: QWidget) -> None:
     window.setWindowFlags(
-        Qt.WindowType.FramelessWindowHint
+        Qt.WindowType.Window
+        | Qt.WindowType.FramelessWindowHint
         | Qt.WindowType.WindowStaysOnTopHint
-        | Qt.WindowType.Tool
         | Qt.WindowType.NoDropShadowWindowHint
     )
     window.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)

@@ -153,6 +153,7 @@ def test_builtin_pet_window_disables_system_backdrop_and_shadow():
     try:
         assert app is not None
         assert window.windowFlags() & Qt.WindowType.NoDropShadowWindowHint
+        assert window.windowType() == Qt.WindowType.Window
         assert window.testAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         assert window.testAttribute(Qt.WidgetAttribute.WA_NoSystemBackground)
     finally:
@@ -203,6 +204,7 @@ def test_petdex_window_disables_system_backdrop_and_shadow():
     try:
         assert app is not None
         assert window.windowFlags() & Qt.WindowType.NoDropShadowWindowHint
+        assert window.windowType() == Qt.WindowType.Window
         assert window.testAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         assert window.testAttribute(Qt.WidgetAttribute.WA_NoSystemBackground)
     finally:

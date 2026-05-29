@@ -203,7 +203,7 @@ class CodeBeatDjPanel(QWidget):
         self._motion_phase = 0
         self.setObjectName("CodeBeatDjPanel")
         self.setWindowTitle("CodeBeat DJ")
-        self.setWindowFlags(Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.Tool)
+        self.setWindowFlags(Qt.WindowType.Window | Qt.WindowType.WindowStaysOnTopHint)
         self.setMinimumSize(390, 560)
         self.setAutoFillBackground(False)
         self.setStyleSheet(PANEL_STYLE)
