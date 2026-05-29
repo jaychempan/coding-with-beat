@@ -80,7 +80,7 @@ def test_menu_bar_controller_builds_expected_menu_actions():
     controller = PetMenuBarController(app, window)
 
     labels = [action.text() for action in controller.menu.actions() if action.text()]
-    assert APP_NAME == "Coding With Beat Pet"
+    assert APP_NAME == "CodeBeat"
     assert labels == ["显示/隐藏宠物", "当前播放", "推荐歌曲", "下一首", "退出"]
 
 

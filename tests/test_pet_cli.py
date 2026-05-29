@@ -1,11 +1,15 @@
 from unittest import mock
 
-from coding_with_beat.__main__ import COMMANDS, cmd_pet
+from coding_with_beat.__main__ import COMMANDS, cmd_app, cmd_pet
 from coding_with_beat.pet.settings import PetSettings
 
 
 def test_pet_command_registered():
     assert COMMANDS["pet"] is cmd_pet
+
+
+def test_app_command_registered():
+    assert COMMANDS["app"] is cmd_app
 
 
 def test_cmd_pet_prints_install_hint_when_pyside_missing(capsys):

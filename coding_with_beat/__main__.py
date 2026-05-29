@@ -17,6 +17,7 @@ Commands:
     player       — render the full live player (cover + progress + lyrics + buddy)
     watch        — real-time ticking player in an alt-screen TUI (Ctrl-C to exit)
     pet          — launch the desktop pet; defaults to Petdex boba, use --builtin for built-in pixels
+    app          — launch the CodeBeat macOS menu-bar app
     source [name] — print or set source (apple_music | local | qq_music)
     karaoke      — full-screen centred lyrics from the MCP server (Ctrl-C to exit)
     play [query] — resume current track, or search & play if a query is given
@@ -198,6 +199,23 @@ def cmd_pet() -> int:
         if "PySide6" in str(e):
             print(
                 "cwb pet requires the optional desktop dependency.\n"
+                "Install it with: pip install 'coding-with-beat[pet]'",
+                file=sys.stderr,
+            )
+            return 1
+        print(str(e), file=sys.stderr)
+        return 1
+
+
+def cmd_app() -> int:
+    try:
+        from .app import run
+
+        return run()
+    except RuntimeError as e:
+        if "PySide6" in str(e):
+            print(
+                "cwb app requires the optional desktop dependency.\n"
                 "Install it with: pip install 'coding-with-beat[pet]'",
                 file=sys.stderr,
             )
@@ -884,6 +902,7 @@ COMMANDS = {
     "player": cmd_player,
     "watch": cmd_watch,
     "pet": cmd_pet,
+    "app": cmd_app,
     "source": cmd_source,
     "karaoke": cmd_karaoke,
     "list": cmd_list,

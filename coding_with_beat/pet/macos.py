@@ -10,7 +10,7 @@ from pathlib import Path
 from PySide6.QtGui import QIcon
 from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
 
-APP_NAME = "Coding With Beat Pet"
+APP_NAME = "CodeBeat"
 
 
 def app_icon_path() -> Path | None:
