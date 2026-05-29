@@ -28,6 +28,22 @@ def test_recommendation_card_caps_at_five_results():
     assert "6. Track 6" not in card.text
 
 
+def test_recommendation_card_accepts_mixed_numbered_formats():
+    raw = """1. Track Dot
+2) Track Paren
+3、Track Chinese"""
+
+    card = PetBubbleView().recommendations("Mixed", "Formats", raw)
+
+    assert [item.number for item in card.items] == [1, 2, 3]
+    assert [item.label for item in card.items] == [
+        "Track Dot",
+        "Track Paren",
+        "Track Chinese",
+    ]
+    assert card.text == ("Mixed\nFormats\n\n1. Track Dot\n2. Track Paren\n3. Track Chinese\n\n点编号播放 · 🎲 换一组")
+
+
 def test_recommendation_card_handles_no_results():
     card = PetBubbleView().recommendations(
         "Debug flow",
@@ -46,6 +62,14 @@ def test_status_card_is_short():
     assert card.kind == "status"
     assert card.action == "idle"
     assert card.text == "Working\nsearching for tracks"
+
+
+def test_confirmation_card_formats_exact_text():
+    card = PetBubbleView().confirmation("已开播", "playing 1")
+
+    assert card.kind == "confirmation"
+    assert card.action == "dance"
+    assert card.text == "已开播\nplaying 1\n\n下一首 · 🎲 换一组"
 
 
 def test_error_card_trims_long_output():
