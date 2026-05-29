@@ -1,5 +1,6 @@
 {
   "id": "codebeat-buddy",
   "displayName": "CodeBeat Buddy",
+  "visualVersion": 2,
   "spritesheetPath": "spritesheet.png"
 }

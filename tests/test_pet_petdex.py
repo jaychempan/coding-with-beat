@@ -1,3 +1,5 @@
+import json
+
 from PIL import Image
 
 from coding_with_beat.pet.petdex import (
@@ -57,6 +59,28 @@ def test_bundled_codebeat_buddy_spritesheet_matches_petdex_grid():
     with Image.open(resolve_spritesheet_path(pet)) as image:
         assert image.mode == "RGBA"
         assert image.size == (FRAME_COLUMNS * 192, FRAME_ROWS * 208)
+
+
+def test_bundled_codebeat_buddy_declares_visual_v2():
+    data = json.loads((BUNDLED_PETDEX_DIR / "codebeat-buddy" / "pet.json").read_text(encoding="utf-8"))
+
+    assert data["visualVersion"] == 2
+
+
+def test_bundled_codebeat_buddy_idle_frame_has_cute_head_body_ratio():
+    pet = ensure_petdex_pet("codebeat-buddy")
+
+    with Image.open(resolve_spritesheet_path(pet)).convert("RGBA") as image:
+        idle = image.crop((0, 0, 192, 208)).getchannel("A")
+        head_pixels = _visible_pixels(idle.crop((36, 0, 156, 86)))
+        body_pixels = _visible_pixels(idle.crop((36, 86, 156, 168)))
+
+    assert head_pixels >= body_pixels * 0.85
+
+
+def _visible_pixels(alpha_channel: Image.Image) -> int:
+    histogram = alpha_channel.histogram()
+    return sum(histogram[1:])
 
 
 def test_installed_petdex_pets_includes_bundled_codebeat_buddy():
