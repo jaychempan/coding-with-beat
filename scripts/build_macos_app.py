@@ -102,6 +102,8 @@ def _render_waveform_icon(size: int) -> Image.Image:
     image = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     draw = ImageDraw.Draw(image)
     scale = size / 256
+    logo_offset = 46
+    logo_scale = 0.82
 
     def box(x: float, y: float, w: float, h: float, radius: float, fill) -> None:
         draw.rounded_rectangle(
@@ -110,12 +112,22 @@ def _render_waveform_icon(size: int) -> Image.Image:
             fill=fill,
         )
 
-    box(28, 28, 200, 200, 40, (8, 8, 16, 255))
-    box(70, 112, 16, 50, 8, (139, 92, 246, 140))
-    box(98, 86, 17, 104, 8.5, (139, 92, 246, 195))
-    box(119, 62, 18, 132, 9, (139, 92, 246, 255))
-    box(141, 86, 17, 104, 8.5, (139, 92, 246, 195))
-    box(170, 112, 16, 50, 8, (139, 92, 246, 140))
+    def original_box(x: float, y: float, w: float, h: float, radius: float, fill) -> None:
+        box(
+            logo_offset + x * logo_scale,
+            logo_offset + y * logo_scale,
+            w * logo_scale,
+            h * logo_scale,
+            radius * logo_scale,
+            fill,
+        )
+
+    original_box(0, 0, 200, 200, 32, (8, 8, 16, 255))
+    original_box(38, 80, 18, 40, 9, (139, 92, 246, 128))
+    original_box(67, 58, 18, 84, 9, (139, 92, 246, 191))
+    original_box(91, 30, 18, 140, 9, (139, 92, 246, 255))
+    original_box(115, 52, 18, 96, 9, (139, 92, 246, 191))
+    original_box(144, 80, 18, 40, 9, (139, 92, 246, 128))
     return image
 
 

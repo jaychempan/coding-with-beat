@@ -37,13 +37,20 @@ def menu_bar_icon() -> QIcon:
     painter = QPainter(pixmap)
     try:
         color = QColor("#8b5cf6")
-        bars = (
-            (4, 9, 3, 8, 130),
-            (8, 6, 3, 14, 190),
-            (12, 3, 4, 18, 255),
-            (17, 7, 3, 13, 190),
+        offset = 1.0
+        scale = 0.1
+        source_bars = (
+            (38, 80, 18, 40, 128),
+            (67, 58, 18, 84, 191),
+            (91, 30, 18, 140, 255),
+            (115, 52, 18, 96, 191),
+            (144, 80, 18, 40, 128),
         )
-        for x, y, w, h, alpha in bars:
+        for source_x, source_y, source_w, source_h, alpha in source_bars:
+            x = round(offset + source_x * scale)
+            y = round(offset + source_y * scale)
+            w = max(2, round(source_w * scale))
+            h = max(2, round(source_h * scale))
             color.setAlpha(alpha)
             painter.setBrush(color)
             painter.setPen(Qt.PenStyle.NoPen)
