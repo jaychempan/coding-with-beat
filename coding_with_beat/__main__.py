@@ -16,6 +16,7 @@ Commands:
     lyrics       — render a karaoke window for the current track
     player       — render the full live player (cover + progress + lyrics + buddy)
     watch        — real-time ticking player in an alt-screen TUI (Ctrl-C to exit)
+    pet          — launch the native desktop pixel pet (requires coding-with-beat[pet])
     source [name] — print or set source (apple_music | local | qq_music)
     karaoke      — full-screen centred lyrics from the MCP server (Ctrl-C to exit)
     play [query] — resume current track, or search & play if a query is given
@@ -174,6 +175,23 @@ def cmd_watch() -> int:
 
     width = int(sys.argv[2]) if len(sys.argv) > 2 else 44
     return run(width=width)
+
+
+def cmd_pet() -> int:
+    try:
+        from .pet.app import run
+
+        return run()
+    except RuntimeError as e:
+        if "PySide6" in str(e):
+            print(
+                "cwb pet requires the optional desktop dependency.\n"
+                "Install it with: pip install 'coding-with-beat[pet]'",
+                file=sys.stderr,
+            )
+            return 1
+        print(str(e), file=sys.stderr)
+        return 1
 
 
 def cmd_source() -> int:
@@ -853,6 +871,7 @@ COMMANDS = {
     "lyrics": cmd_lyrics,
     "player": cmd_player,
     "watch": cmd_watch,
+    "pet": cmd_pet,
     "source": cmd_source,
     "karaoke": cmd_karaoke,
     "list": cmd_list,
@@ -901,6 +920,7 @@ COMMANDS = {
     "收藏": cmd_like,
     "歌词": cmd_lyrics,
     "播放器": cmd_player,
+    "桌面宠物": cmd_pet,
     "状态": cmd_status,
     "历史": cmd_history,
     "画像": cmd_profile,

@@ -16,6 +16,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+pet = [
+    "PySide6>=6.7",
+]
 dev = [
     "pre-commit>=4.0",
     "pytest>=8.0",
