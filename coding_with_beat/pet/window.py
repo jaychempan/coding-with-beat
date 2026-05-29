@@ -104,13 +104,13 @@ class PetWindow(QWidget):
             self._more_button,
         )
         self._controls_widget.hide()
+        self._pet_body = _pet_body(self._sprite_stage, self._controls_widget)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(6, 6, 6, 6)
         layout.addWidget(self._bubble)
         layout.addWidget(self._track_label)
-        layout.addWidget(self._sprite_stage, alignment=Qt.AlignmentFlag.AlignHCenter)
-        layout.addWidget(self._controls_widget, alignment=Qt.AlignmentFlag.AlignHCenter)
+        layout.addWidget(self._pet_body, alignment=Qt.AlignmentFlag.AlignHCenter)
 
         _style_pet_window(self)
         self.move(self.settings.x, self.settings.y)
@@ -158,8 +158,9 @@ class PetWindow(QWidget):
         self._aura.set_sprite_size((pixmap.width(), pixmap.height()))
         self._aura.advance()
         _layout_sprite_stage(self._sprite_stage, self._aura, self._label)
-        extra = _pet_extra_height(self._bubble, self._controls_widget, base=34)
-        self.resize(max(172, self._sprite_stage.width() + 12), self._sprite_stage.height() + extra)
+        _layout_pet_body(self._pet_body, self._sprite_stage, self._controls_widget)
+        extra = _pet_extra_height(self._bubble, base=34)
+        self.resize(_pet_window_width(self._pet_body, self._bubble, minimum=96), self._pet_body.height() + extra)
 
     def mousePressEvent(self, event) -> None:
         if event.button() == Qt.MouseButton.LeftButton:
@@ -394,6 +395,25 @@ def _layout_sprite_stage(stage: QWidget, aura: MusicAuraWidget, label: QLabel) -
     stage.layout().setAlignment(label, Qt.AlignmentFlag.AlignCenter)
 
 
+def _pet_body(sprite_stage: QWidget, controls: QWidget) -> QWidget:
+    widget = QWidget()
+    widget.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+    widget.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground, True)
+    widget.setAutoFillBackground(False)
+    layout = QHBoxLayout(widget)
+    layout.setContentsMargins(0, 0, 0, 0)
+    layout.setSpacing(4)
+    layout.addWidget(sprite_stage)
+    layout.addWidget(controls, alignment=Qt.AlignmentFlag.AlignVCenter)
+    return widget
+
+
+def _layout_pet_body(body: QWidget, sprite_stage: QWidget, controls: QWidget) -> None:
+    controls_width = 0 if controls.isHidden() else controls.width() + 4
+    controls_height = 0 if controls.isHidden() else controls.height()
+    body.setFixedSize(sprite_stage.width() + controls_width, max(sprite_stage.height(), controls_height))
+
+
 def _add_display_settings_menu(menu: QMenu, owner) -> None:
     settings_menu = menu.addMenu("显示设置")
     menu_bar_action = QAction("显示菜单栏图标", owner)
@@ -451,10 +471,12 @@ def _icon_button(text: str, tooltip: str) -> QPushButton:
 
 def _controls_widget(*buttons: QPushButton) -> QWidget:
     widget = QWidget()
-    width = 22 * len(buttons) + 2 * max(0, len(buttons) - 1)
-    widget.setFixedWidth(width)
-    widget.setMaximumWidth(width)
-    layout = QHBoxLayout(widget)
+    height = 22 * len(buttons) + 2 * max(0, len(buttons) - 1)
+    widget.setFixedWidth(22)
+    widget.setFixedHeight(height)
+    widget.setMaximumWidth(22)
+    widget.setMaximumHeight(height)
+    layout = QVBoxLayout(widget)
     layout.setContentsMargins(0, 0, 0, 0)
     layout.setSpacing(2)
     for button in buttons:
@@ -462,12 +484,15 @@ def _controls_widget(*buttons: QPushButton) -> QWidget:
     return widget
 
 
-def _pet_extra_height(bubble: PixelBubbleLabel, controls: QWidget, *, base: int) -> int:
+def _pet_window_width(body: QWidget, bubble: PixelBubbleLabel, *, minimum: int) -> int:
+    bubble_width = bubble.sizeHint().width() + 12 if bubble.isVisible() else 0
+    return max(minimum, body.width() + 12, bubble_width)
+
+
+def _pet_extra_height(bubble: PixelBubbleLabel, *, base: int) -> int:
     extra = base
     if bubble.isVisible():
         extra += bubble.sizeHint().height() + 8
-    if not controls.isHidden():
-        extra += controls.height() + 6
     return extra
 
 
@@ -622,13 +647,13 @@ class PetdexWindow(QWidget):
             self._more_button,
         )
         self._controls_widget.hide()
+        self._pet_body = _pet_body(self._sprite_stage, self._controls_widget)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(6, 6, 6, 6)
         layout.addWidget(self._bubble)
         layout.addWidget(self._track_label)
-        layout.addWidget(self._sprite_stage, alignment=Qt.AlignmentFlag.AlignHCenter)
-        layout.addWidget(self._controls_widget, alignment=Qt.AlignmentFlag.AlignHCenter)
+        layout.addWidget(self._pet_body, alignment=Qt.AlignmentFlag.AlignHCenter)
 
         _style_pet_window(self)
         self.move(self.settings.x, self.settings.y)
@@ -670,9 +695,10 @@ class PetdexWindow(QWidget):
         self._resize_shell()
 
     def _resize_shell(self) -> None:
-        extra = _pet_extra_height(self._bubble, self._controls_widget, base=30)
-        width = max(150, self._sprite_stage.width() + 12)
-        height = self._sprite_stage.height() + extra
+        _layout_pet_body(self._pet_body, self._sprite_stage, self._controls_widget)
+        extra = _pet_extra_height(self._bubble, base=30)
+        width = _pet_window_width(self._pet_body, self._bubble, minimum=96)
+        height = self._pet_body.height() + extra
         if self.width() != width or self.height() != height:
             self.resize(width, height)
 

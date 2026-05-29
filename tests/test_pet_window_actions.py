@@ -181,10 +181,11 @@ def test_builtin_pet_window_centers_pet_sprite_widget():
     window = PetWindow()
     try:
         assert app is not None
-        label_item = window.layout().itemAt(2)
+        body_item = window.layout().itemAt(2)
 
-        assert label_item.widget() is window._sprite_stage
-        assert label_item.alignment() & Qt.AlignmentFlag.AlignHCenter
+        assert body_item.widget() is window._pet_body
+        assert body_item.alignment() & Qt.AlignmentFlag.AlignHCenter
+        assert window._sprite_stage.parent() is window._pet_body
     finally:
         window.close()
 
@@ -195,25 +196,25 @@ def test_builtin_pet_window_owns_centered_music_aura():
     try:
         assert app is not None
         assert isinstance(window._aura, MusicAuraWidget)
-        stage_item = window.layout().itemAt(2)
-        assert stage_item.widget() is window._sprite_stage
-        assert stage_item.alignment() & Qt.AlignmentFlag.AlignHCenter
+        body_item = window.layout().itemAt(2)
+        assert body_item.widget() is window._pet_body
+        assert body_item.alignment() & Qt.AlignmentFlag.AlignHCenter
         assert window._aura.parent() is window._sprite_stage
         assert window._label.parent() is window._sprite_stage
     finally:
         window.close()
 
 
-def test_builtin_pet_window_keeps_controls_cluster_compact_and_centered():
+def test_builtin_pet_window_keeps_controls_as_compact_sidecar():
     app = QApplication.instance() or QApplication([])
     window = PetWindow()
     try:
         assert app is not None
-        controls_item = window.layout().itemAt(3)
 
-        assert controls_item.widget() is window._controls_widget
-        assert controls_item.alignment() & Qt.AlignmentFlag.AlignHCenter
-        assert window._controls_widget.maximumWidth() == 94
+        assert window.layout().count() == 3
+        assert window._controls_widget.parent() is window._pet_body
+        assert window._controls_widget.maximumWidth() == 22
+        assert window._controls_widget.maximumHeight() == 94
         assert window._controls_widget.isHidden() is True
         assert window._more_button.text() == "⋮"
     finally:
@@ -236,19 +237,23 @@ def test_builtin_pet_window_shows_and_hides_controls_temporarily(monkeypatch):
         window.close()
 
 
-def test_builtin_hidden_controls_do_not_reserve_bottom_space(monkeypatch):
+def test_builtin_hidden_controls_expand_sidecar_without_reserving_bottom_space(monkeypatch):
     app = QApplication.instance() or QApplication([])
     window = PetWindow()
     try:
         assert app is not None
         monkeypatch.setattr(window, "underMouse", lambda: False)
+        compact_width = window.width()
         compact_height = window.height()
 
         window._show_controls_temporarily()
+        expanded_width = window.width()
         expanded_height = window.height()
 
         window._hide_controls_if_idle()
-        assert expanded_height > compact_height
+        assert expanded_width > compact_width
+        assert expanded_height == compact_height
+        assert window.width() == compact_width
         assert window.height() == compact_height
     finally:
         window.close()
@@ -297,10 +302,11 @@ def test_petdex_window_centers_pet_sprite_widget():
     window = PetdexWindow(ensure_petdex_pet("codebeat-buddy"))
     try:
         assert app is not None
-        label_item = window.layout().itemAt(2)
+        body_item = window.layout().itemAt(2)
 
-        assert label_item.widget() is window._sprite_stage
-        assert label_item.alignment() & Qt.AlignmentFlag.AlignHCenter
+        assert body_item.widget() is window._pet_body
+        assert body_item.alignment() & Qt.AlignmentFlag.AlignHCenter
+        assert window._sprite_stage.parent() is window._pet_body
     finally:
         window.close()
 
@@ -311,9 +317,9 @@ def test_petdex_window_owns_centered_music_aura():
     try:
         assert app is not None
         assert isinstance(window._aura, MusicAuraWidget)
-        stage_item = window.layout().itemAt(2)
-        assert stage_item.widget() is window._sprite_stage
-        assert stage_item.alignment() & Qt.AlignmentFlag.AlignHCenter
+        body_item = window.layout().itemAt(2)
+        assert body_item.widget() is window._pet_body
+        assert body_item.alignment() & Qt.AlignmentFlag.AlignHCenter
         assert window._aura.parent() is window._sprite_stage
         assert window._label.parent() is window._sprite_stage
     finally:
@@ -413,16 +419,16 @@ def test_petdex_sprite_has_transparent_label_background():
         window.close()
 
 
-def test_petdex_window_keeps_controls_cluster_compact_and_centered():
+def test_petdex_window_keeps_controls_as_compact_sidecar():
     app = QApplication.instance() or QApplication([])
     window = PetdexWindow(ensure_petdex_pet("codebeat-buddy"))
     try:
         assert app is not None
-        controls_item = window.layout().itemAt(3)
 
-        assert controls_item.widget() is window._controls_widget
-        assert controls_item.alignment() & Qt.AlignmentFlag.AlignHCenter
-        assert window._controls_widget.maximumWidth() == 94
+        assert window.layout().count() == 3
+        assert window._controls_widget.parent() is window._pet_body
+        assert window._controls_widget.maximumWidth() == 22
+        assert window._controls_widget.maximumHeight() == 94
         assert window._controls_widget.isHidden() is True
         assert window._more_button.text() == "⋮"
     finally:
@@ -445,19 +451,23 @@ def test_petdex_window_shows_and_hides_controls_temporarily(monkeypatch):
         window.close()
 
 
-def test_petdex_hidden_controls_do_not_reserve_bottom_space(monkeypatch):
+def test_petdex_hidden_controls_expand_sidecar_without_reserving_bottom_space(monkeypatch):
     app = QApplication.instance() or QApplication([])
     window = PetdexWindow(ensure_petdex_pet("codebeat-buddy"))
     try:
         assert app is not None
         monkeypatch.setattr(window, "underMouse", lambda: False)
+        compact_width = window.width()
         compact_height = window.height()
 
         window._show_controls_temporarily()
+        expanded_width = window.width()
         expanded_height = window.height()
 
         window._hide_controls_if_idle()
-        assert expanded_height > compact_height
+        assert expanded_width > compact_width
+        assert expanded_height == compact_height
+        assert window.width() == compact_width
         assert window.height() == compact_height
     finally:
         window.close()
