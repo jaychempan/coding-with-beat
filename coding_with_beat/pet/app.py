@@ -5,7 +5,7 @@ from __future__ import annotations
 import sys
 
 
-def run() -> int:
+def run(*, petdex_slug: str | None = None) -> int:
     try:
         from PySide6.QtWidgets import QApplication
     except Exception as e:
@@ -14,6 +14,6 @@ def run() -> int:
     from .window import PetWindow
 
     app = QApplication.instance() or QApplication(sys.argv)
-    window = PetWindow()
+    window = PetWindow.from_petdex(petdex_slug) if petdex_slug else PetWindow()
     window.show()
     return int(app.exec())

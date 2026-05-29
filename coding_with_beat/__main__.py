@@ -181,7 +181,14 @@ def cmd_pet() -> int:
     try:
         from .pet.app import run
 
-        return run()
+        petdex_slug = None
+        if "--petdex" in sys.argv[2:]:
+            idx = sys.argv.index("--petdex")
+            if idx + 1 >= len(sys.argv):
+                print("error: usage: cwb pet --petdex <slug>", file=sys.stderr)
+                return 2
+            petdex_slug = sys.argv[idx + 1]
+        return run(petdex_slug=petdex_slug)
     except RuntimeError as e:
         if "PySide6" in str(e):
             print(

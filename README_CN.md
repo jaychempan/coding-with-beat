@@ -110,6 +110,13 @@ python -m pip install "PySide6>=6.7"
 python -m coding_with_beat pet
 ```
 
+也可以直接运行 Petdex 的公开宠物素材。素材会在运行时下载到
+`~/.coding-with-beat/petdex/`，但当前播放、推荐、播放控制仍然使用 CWB：
+
+```bash
+python -m coding_with_beat pet --petdex boba
+```
+
 ### 直接跟 AI 说
 
 ```
@@ -277,6 +284,7 @@ cwb mode <mode>         # 播放模式：shuffle | sequential | repeat | repeat_
 cwb player              # 完整像素播放器
 cwb watch               # 实时 TUI（q 退出）
 cwb pet                 # 原生桌面像素宠物
+cwb pet --petdex boba   # 使用 Petdex spritesheet 宠物，并接入 CWB 控制
 cwb karaoke             # 全屏卡拉 OK（q 退出）
 cwb lyrics              # 歌词窗口
 cwb history [n]         # 最近播放的 n 首歌

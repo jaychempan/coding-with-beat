@@ -12,3 +12,16 @@ def test_cmd_pet_prints_install_hint_when_pyside_missing(capsys):
         rc = cmd_pet()
     assert rc == 1
     assert "pip install" in capsys.readouterr().err
+
+
+def test_cmd_pet_passes_petdex_slug(monkeypatch):
+    called = {}
+
+    def fake_run(*, petdex_slug=None):
+        called["petdex_slug"] = petdex_slug
+        return 0
+
+    monkeypatch.setattr("sys.argv", ["cwb", "pet", "--petdex", "boba"])
+    with mock.patch("coding_with_beat.pet.app.run", side_effect=fake_run):
+        assert cmd_pet() == 0
+    assert called["petdex_slug"] == "boba"

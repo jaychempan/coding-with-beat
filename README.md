@@ -147,6 +147,13 @@ python -m pip install "PySide6>=6.7"
 python -m coding_with_beat pet
 ```
 
+You can also run a public Petdex pet by slug. The pet is downloaded at runtime
+to `~/.coding-with-beat/petdex/` and the CWB music controls stay attached:
+
+```bash
+python -m coding_with_beat pet --petdex boba
+```
+
 ### Codex CLI
 
 ```bash
@@ -364,6 +371,7 @@ cwb mode <mode>         # shuffle | sequential | repeat | repeat_one
 cwb player              # full pixel player
 cwb watch               # live TUI (q to quit)
 cwb pet                 # native desktop pixel pet
+cwb pet --petdex boba   # run a Petdex spritesheet pet with CWB controls
 cwb karaoke             # full-screen karaoke (q to quit)
 cwb lyrics              # lyrics window
 cwb history [n]         # last n played tracks
