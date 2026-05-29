@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Callable
+from typing import Any, Callable
 
 from coding_with_beat.mcp_client import call_tool as _call_tool
 
-ToolCaller = Callable[[str, dict], str]
+ToolCaller = Callable[..., str]
+
+DEFAULT_PET_MUSIC_TIMEOUT = 20.0
 
 
 @dataclass(frozen=True)
@@ -17,8 +19,9 @@ class MusicResult:
 
 
 class PetMusicClient:
-    def __init__(self, call_tool: ToolCaller | None = None) -> None:
+    def __init__(self, call_tool: ToolCaller | None = None, timeout: float = DEFAULT_PET_MUSIC_TIMEOUT) -> None:
         self._call_tool = call_tool or _call_tool
+        self.timeout = timeout
 
     def recommend(self, queries: list[str]) -> MusicResult:
         return self._call("smart_search", {"queries": queries})
@@ -37,6 +40,15 @@ class PetMusicClient:
 
     def _call(self, name: str, kwargs: dict) -> MusicResult:
         try:
-            return MusicResult(True, self._call_tool(name, kwargs))
+            return MusicResult(True, _call_with_timeout(self._call_tool, name, kwargs, self.timeout))
         except Exception as e:
             return MusicResult(False, str(e))
+
+
+def _call_with_timeout(call_tool: ToolCaller, name: str, kwargs: dict[str, Any], timeout: float) -> str:
+    try:
+        return call_tool(name, kwargs, timeout=timeout)
+    except TypeError as e:
+        if "timeout" not in str(e):
+            raise
+        return call_tool(name, kwargs)
