@@ -18,7 +18,9 @@ from coding_with_beat.pet.macos import (
     hide_dock_icon,
     menu_bar_icon,
     pet_icon_path,
+    set_dock_icon_visible,
 )
+from coding_with_beat.pet.settings import PetSettings
 
 
 class DummyWindow:
@@ -54,11 +56,12 @@ class DummyWindow:
         self.next_track_called = True
 
 
-def test_pet_icon_path_uses_repo_logo():
+def test_pet_icon_path_matches_app_icon():
     path = pet_icon_path()
 
     assert path is not None
-    assert path.name == "waveform_menu_bar.svg"
+    assert path == app_icon_path()
+    assert path.name == "waveform_app_icon.svg"
     assert path.exists()
 
 
@@ -84,6 +87,13 @@ def test_hide_dock_icon_returns_false_on_non_macos(monkeypatch):
     assert hide_dock_icon() is False
 
 
+def test_set_dock_icon_visible_returns_false_on_non_macos(monkeypatch):
+    monkeypatch.setattr(sys, "platform", "linux")
+
+    assert set_dock_icon_visible(True) is False
+    assert set_dock_icon_visible(False) is False
+
+
 def test_pet_window_collection_behavior_joins_spaces_and_full_screen():
     current_behavior = (1 << 1) | (1 << 6)
 
@@ -104,7 +114,33 @@ def test_menu_bar_controller_builds_expected_menu_actions():
 
     labels = [action.text() for action in controller.menu.actions() if action.text()]
     assert APP_NAME == "CodeBeat"
-    assert labels == ["显示/隐藏宠物", "当前播放", "推荐歌曲", "下一首", "退出"]
+    assert labels == ["显示/隐藏宠物", "当前播放", "推荐歌曲", "下一首", "显示设置", "退出"]
+
+
+def test_menu_bar_controller_persists_display_settings():
+    app = QApplication.instance() or QApplication([])
+    window = DummyWindow()
+    saved = []
+    dock_calls = []
+    settings = PetSettings(show_menu_bar_icon=True, show_dock_icon=True)
+
+    controller = PetMenuBarController(
+        app,
+        window,
+        settings=settings,
+        save_settings_func=saved.append,
+        dock_visibility_func=dock_calls.append,
+    )
+
+    controller.set_menu_bar_visible(False)
+    assert settings.show_menu_bar_icon is False
+    assert saved[-1].show_menu_bar_icon is False
+    assert controller.tray.isVisible() is False
+
+    controller.set_dock_icon_visible(False)
+    assert settings.show_dock_icon is False
+    assert saved[-1].show_dock_icon is False
+    assert dock_calls[-1] is False
 
 
 def test_menu_bar_controller_toggles_window_visibility():

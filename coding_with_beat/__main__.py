@@ -185,7 +185,8 @@ def cmd_pet() -> int:
         from .pet.settings import load_settings
 
         args = sys.argv[2:]
-        petdex_slug = default_petdex_slug(load_settings().petdex_slug)
+        settings = load_settings()
+        petdex_slug = default_petdex_slug(settings.petdex_slug)
         if "--builtin" in args:
             petdex_slug = None
         if "--petdex" in sys.argv[2:]:
@@ -194,7 +195,12 @@ def cmd_pet() -> int:
                 print("error: usage: cwb pet --petdex <slug>", file=sys.stderr)
                 return 2
             petdex_slug = sys.argv[idx + 1]
-        return run(petdex_slug=petdex_slug, hide_dock="--show-dock" not in args)
+        hide_dock = not settings.show_dock_icon
+        if "--show-dock" in args:
+            hide_dock = False
+        if "--hide-dock" in args:
+            hide_dock = True
+        return run(petdex_slug=petdex_slug, hide_dock=hide_dock, show_menu_bar=settings.show_menu_bar_icon)
     except RuntimeError as e:
         if "PySide6" in str(e):
             print(

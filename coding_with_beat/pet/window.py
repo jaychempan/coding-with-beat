@@ -23,7 +23,7 @@ from .bubble import PetBubbleCard
 from .controller import PetController
 from .dj_panel import CodeBeatDjPanel
 from .interactions import PetInteractionController
-from .macos import keep_window_above_apps
+from .macos import keep_window_above_apps, set_dock_icon_visible
 from .petdex import (
     PetdexAnimator,
     PetdexPet,
@@ -227,6 +227,8 @@ class PetWindow(QWidget):
         for skin_id, skin in BUILTIN_SKINS.items():
             skin_menu.addAction(_action(skin.name, lambda sid=skin_id: self.set_skin(sid), self))
         menu.addSeparator()
+        _add_display_settings_menu(menu, self)
+        menu.addSeparator()
         menu.addAction(_action("退出", _quit_application, self))
         return menu
 
@@ -324,6 +326,54 @@ def _action(text: str, callback, parent) -> QAction:
     action = QAction(text, parent)
     action.triggered.connect(lambda _checked=False: callback())
     return action
+
+
+def _add_display_settings_menu(menu: QMenu, owner) -> None:
+    settings_menu = menu.addMenu("显示设置")
+    menu_bar_action = QAction("显示菜单栏图标", owner)
+    menu_bar_action.setCheckable(True)
+    menu_bar_action.setChecked(owner.settings.show_menu_bar_icon)
+    menu_bar_action.toggled.connect(lambda checked: _set_menu_bar_from_pet(owner, checked))
+    settings_menu.addAction(menu_bar_action)
+
+    dock_action = QAction("显示程序坞图标", owner)
+    dock_action.setCheckable(True)
+    dock_action.setChecked(owner.settings.show_dock_icon)
+    dock_action.toggled.connect(lambda checked: _set_dock_from_pet(owner, checked))
+    settings_menu.addAction(dock_action)
+
+
+def _set_menu_bar_from_pet(owner, visible: bool) -> None:
+    owner.settings.show_menu_bar_icon = bool(visible)
+    controller = _pet_menu_bar_controller()
+    if controller is not None:
+        controller.set_menu_bar_visible(owner.settings.show_menu_bar_icon)
+    else:
+        save_settings(owner.settings)
+    state = "显示" if owner.settings.show_menu_bar_icon else "隐藏"
+    owner._show_bubble(f"菜单栏图标：{state}")
+
+
+def _set_dock_from_pet(owner, visible: bool) -> None:
+    owner.settings.show_dock_icon = bool(visible)
+    controller = _pet_menu_bar_controller()
+    if controller is not None:
+        applied = controller.set_dock_icon_visible(owner.settings.show_dock_icon)
+    else:
+        applied = set_dock_icon_visible(owner.settings.show_dock_icon)
+        save_settings(owner.settings)
+    if applied:
+        state = "显示" if owner.settings.show_dock_icon else "隐藏"
+        owner._show_bubble(f"程序坞图标：{state}")
+        return
+    owner._show_bubble("显示设置已保存，重启 App 后生效")
+
+
+def _pet_menu_bar_controller():
+    app = QApplication.instance()
+    if app is None:
+        return None
+    return getattr(app, "_cwb_pet_menu_bar", None)
 
 
 def _icon_button(text: str, tooltip: str) -> QPushButton:
@@ -600,6 +650,8 @@ class PetdexWindow(QWidget):
             pet_menu.addAction(_action(pet.name, lambda next_pet=pet: self.set_petdex_pet(next_pet), self))
         if not self._installed_pets:
             pet_menu.addAction(_action("未发现本地宠物", lambda: self._show_bubble("未发现本地 Petdex 宠物"), self))
+        menu.addSeparator()
+        _add_display_settings_menu(menu, self)
         menu.addSeparator()
         menu.addAction(_action("退出", _quit_application, self))
         return menu

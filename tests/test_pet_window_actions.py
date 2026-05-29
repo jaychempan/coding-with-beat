@@ -331,6 +331,7 @@ def test_builtin_pet_window_context_menu_keeps_music_and_skin_actions():
             "暂停/继续",
             "下一首",
             "切换皮肤",
+            "显示设置",
             "退出",
         ]
     finally:

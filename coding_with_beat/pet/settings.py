@@ -19,6 +19,8 @@ class PetSettings:
     skin_id: str = "dj"
     petdex_slug: str = "codebeat-buddy"
     scale: int = 5
+    show_menu_bar_icon: bool = True
+    show_dock_icon: bool = True
 
 
 def load_settings(path: Path = SETTINGS_FILE) -> PetSettings:

@@ -8,5 +8,11 @@ from .pet.settings import load_settings
 
 
 def run() -> int:
-    petdex_slug = default_petdex_slug(load_settings().petdex_slug)
-    return run_pet_app(petdex_slug=petdex_slug, hide_dock=False, show_control=False)
+    settings = load_settings()
+    petdex_slug = default_petdex_slug(settings.petdex_slug)
+    return run_pet_app(
+        petdex_slug=petdex_slug,
+        hide_dock=not settings.show_dock_icon,
+        show_control=False,
+        show_menu_bar=settings.show_menu_bar_icon,
+    )

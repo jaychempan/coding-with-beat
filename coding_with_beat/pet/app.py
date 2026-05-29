@@ -5,7 +5,13 @@ from __future__ import annotations
 import sys
 
 
-def run(*, petdex_slug: str | None = None, hide_dock: bool = True, show_control: bool = False) -> int:
+def run(
+    *,
+    petdex_slug: str | None = None,
+    hide_dock: bool = True,
+    show_control: bool = False,
+    show_menu_bar: bool = True,
+) -> int:
     try:
         from PySide6.QtWidgets import QApplication
     except Exception as e:
@@ -32,7 +38,8 @@ def run(*, petdex_slug: str | None = None, hide_dock: bool = True, show_control:
     else:
         window = PetWindow()
 
-    menu_bar = PetMenuBarController(app, window, menu_bar_icon())
+    settings = window.settings
+    menu_bar = PetMenuBarController(app, window, menu_bar_icon(), settings=settings, show_menu_bar=show_menu_bar)
     app._cwb_pet_menu_bar = menu_bar
     app.setQuitOnLastWindowClosed(False)
     print(

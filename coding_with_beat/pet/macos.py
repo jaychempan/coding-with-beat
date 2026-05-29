@@ -5,10 +5,11 @@ from __future__ import annotations
 import ctypes
 import ctypes.util
 import sys
+from collections.abc import Callable
 from pathlib import Path
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QColor, QGuiApplication, QIcon, QPainter, QPixmap
+from PySide6.QtGui import QAction, QColor, QGuiApplication, QIcon, QPainter, QPixmap
 from PySide6.QtWidgets import (
     QApplication,
     QHBoxLayout,
@@ -20,7 +21,11 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from .settings import PetSettings, load_settings, save_settings
+
 APP_NAME = "CodeBeat"
+_NS_APPLICATION_ACTIVATION_POLICY_REGULAR = 0
+_NS_APPLICATION_ACTIVATION_POLICY_ACCESSORY = 1
 _NS_STATUS_WINDOW_LEVEL = 25
 _NS_WINDOW_COLLECTION_BEHAVIOR_CAN_JOIN_ALL_SPACES = 1 << 0
 _NS_WINDOW_COLLECTION_BEHAVIOR_MOVE_TO_ACTIVE_SPACE = 1 << 1
@@ -33,10 +38,19 @@ def app_icon_path() -> Path | None:
 
 
 def pet_icon_path() -> Path | None:
-    return _first_existing_asset(("waveform_menu_bar.svg", "waveform_logo.svg", "logo_icon.png"))
+    return app_icon_path()
 
 
 def menu_bar_icon() -> QIcon:
+    path = pet_icon_path()
+    if path is not None:
+        icon = QIcon(str(path))
+        if not icon.isNull():
+            return icon
+    return _fallback_menu_bar_icon()
+
+
+def _fallback_menu_bar_icon() -> QIcon:
     pixmap = QPixmap(22, 22)
     pixmap.fill(Qt.GlobalColor.transparent)
     painter = QPainter(pixmap)
@@ -90,14 +104,19 @@ def apply_app_metadata(app: QApplication) -> QIcon:
 
 
 def hide_dock_icon() -> bool:
+    return set_dock_icon_visible(False)
+
+
+def set_dock_icon_visible(visible: bool) -> bool:
     if sys.platform != "darwin":
         return False
     try:
-        from AppKit import NSApplication, NSApplicationActivationPolicyAccessory
+        from AppKit import NSApplication
 
-        NSApplication.sharedApplication().setActivationPolicy_(NSApplicationActivationPolicyAccessory)
+        policy = _NS_APPLICATION_ACTIVATION_POLICY_REGULAR if visible else _NS_APPLICATION_ACTIVATION_POLICY_ACCESSORY
+        NSApplication.sharedApplication().setActivationPolicy_(policy)
     except Exception:
-        return _hide_dock_icon_with_ctypes()
+        return _set_dock_icon_visible_with_ctypes(visible)
     return True
 
 
@@ -185,7 +204,7 @@ def _objc_send_void_ulong(objc, receiver: int, selector_name: bytes, value: int)
     objc.objc_msgSend(receiver, _objc_selector(objc, selector_name), int(value))
 
 
-def _hide_dock_icon_with_ctypes() -> bool:
+def _set_dock_icon_visible_with_ctypes(visible: bool) -> bool:
     library = ctypes.util.find_library("objc")
     if not library:
         return False
@@ -208,17 +227,31 @@ def _hide_dock_icon_with_ctypes() -> bool:
         if not app:
             return False
 
+        policy = _NS_APPLICATION_ACTIVATION_POLICY_REGULAR if visible else _NS_APPLICATION_ACTIVATION_POLICY_ACCESSORY
         objc.objc_msgSend.restype = ctypes.c_bool
         objc.objc_msgSend.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_long]
-        return bool(objc.objc_msgSend(app, set_activation_policy, 1))
+        return bool(objc.objc_msgSend(app, set_activation_policy, policy))
     except Exception:
         return False
 
 
 class PetMenuBarController:
-    def __init__(self, app: QApplication, window, icon: QIcon | None = None) -> None:
+    def __init__(
+        self,
+        app: QApplication,
+        window,
+        icon: QIcon | None = None,
+        *,
+        settings: PetSettings | None = None,
+        save_settings_func: Callable[[PetSettings], object] = save_settings,
+        dock_visibility_func: Callable[[bool], object] = set_dock_icon_visible,
+        show_menu_bar: bool = True,
+    ) -> None:
         self.app = app
         self.window = window
+        self.settings = settings or load_settings()
+        self.save_settings_func = save_settings_func
+        self.dock_visibility_func = dock_visibility_func
         self.icon = icon if icon is not None and not icon.isNull() else menu_bar_icon()
         self.menu = QMenu()
         self.tray = QSystemTrayIcon(self.icon, app)
@@ -226,7 +259,10 @@ class PetMenuBarController:
         self._build_menu()
         self.tray.setContextMenu(self.menu)
         self.tray.activated.connect(self._handle_activation)
-        self.tray.show()
+        if show_menu_bar:
+            self.tray.show()
+        else:
+            self.tray.hide()
         self.available = QSystemTrayIcon.isSystemTrayAvailable()
 
     def toggle_window(self) -> None:
@@ -244,8 +280,35 @@ class PetMenuBarController:
         self.menu.addAction("当前播放", self.window.show_now_playing)
         self.menu.addAction("推荐歌曲", self._recommend)
         self.menu.addAction("下一首", self.window.next_track)
+        settings_menu = self.menu.addMenu("显示设置")
+        self.menu_bar_action = QAction("显示菜单栏图标", self.menu)
+        self.menu_bar_action.setCheckable(True)
+        self.menu_bar_action.setChecked(self.settings.show_menu_bar_icon)
+        self.menu_bar_action.toggled.connect(self.set_menu_bar_visible)
+        settings_menu.addAction(self.menu_bar_action)
+        self.dock_action = QAction("显示程序坞图标", self.menu)
+        self.dock_action.setCheckable(True)
+        self.dock_action.setChecked(self.settings.show_dock_icon)
+        self.dock_action.toggled.connect(self.set_dock_icon_visible)
+        settings_menu.addAction(self.dock_action)
         self.menu.addSeparator()
         self.menu.addAction("退出", self.app.quit)
+
+    def set_menu_bar_visible(self, visible: bool) -> None:
+        self.settings.show_menu_bar_icon = bool(visible)
+        _set_checked_without_signal(self.menu_bar_action, self.settings.show_menu_bar_icon)
+        if self.settings.show_menu_bar_icon:
+            self.tray.show()
+        else:
+            self.tray.hide()
+        self.save_settings_func(self.settings)
+
+    def set_dock_icon_visible(self, visible: bool) -> bool:
+        self.settings.show_dock_icon = bool(visible)
+        _set_checked_without_signal(self.dock_action, self.settings.show_dock_icon)
+        applied = bool(self.dock_visibility_func(self.settings.show_dock_icon))
+        self.save_settings_func(self.settings)
+        return applied
 
     def _recommend(self) -> None:
         self.window._run_pet_command(self.window.interactions.double_click, "正在按当前状态找歌...")
@@ -314,3 +377,11 @@ def _control_button(text: str, callback) -> QPushButton:
         "QPushButton:hover { border-color: rgba(167, 139, 250, 230); }"
     )
     return button
+
+
+def _set_checked_without_signal(action: QAction, checked: bool) -> None:
+    previous = action.blockSignals(True)
+    try:
+        action.setChecked(checked)
+    finally:
+        action.blockSignals(previous)
