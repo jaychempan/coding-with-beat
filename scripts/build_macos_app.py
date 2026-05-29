@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import plistlib
 import shutil
+import sys
 from pathlib import Path
 
 from PIL import Image, ImageDraw
@@ -51,25 +52,33 @@ def _write_info_plist(path: Path) -> None:
 
 
 def _write_launcher(path: Path) -> None:
-    text = """#!/bin/zsh
+    text = f"""#!/bin/zsh
 set -euo pipefail
 
 LOG_DIR="$HOME/.coding-with-beat/logs"
 mkdir -p "$LOG_DIR"
 
+BUILT_REPO="{ROOT}"
+BUILT_PY="{sys.executable}"
 REPO_FILE="$HOME/.coding-with-beat/repo-path"
-if [ -f "$REPO_FILE" ]; then
+if [ -d "$BUILT_REPO/coding_with_beat" ]; then
+  REPO="$BUILT_REPO"
+elif [ -f "$REPO_FILE" ]; then
   REPO="$(cat "$REPO_FILE")"
 else
   REPO="$(cd "$(dirname "$0")/../../.." && pwd)"
 fi
 
-PY="$HOME/.coding-with-beat/venv/bin/python"
+PY="$BUILT_PY"
+if [ ! -x "$PY" ]; then
+  PY="$HOME/.coding-with-beat/venv/bin/python"
+fi
 if [ ! -x "$PY" ]; then
   PY="$(command -v python3 || command -v python)"
 fi
 
 cd "$REPO"
+export PYTHONPATH="$REPO${{PYTHONPATH:+:$PYTHONPATH}}"
 # Runs the same command users can run manually: python -m coding_with_beat app
 exec "$PY" -m coding_with_beat app >>"$LOG_DIR/app.log" 2>>"$LOG_DIR/app.err.log"
 """

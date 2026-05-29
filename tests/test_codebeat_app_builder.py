@@ -36,6 +36,8 @@ def test_build_app_launcher_runs_codebeat_app_command(tmp_path):
     text = launcher.read_text(encoding="utf-8")
 
     assert "python -m coding_with_beat app" in text
+    assert 'export PYTHONPATH="$REPO${PYTHONPATH:+:$PYTHONPATH}"' in text
+    assert "BUILT_PY=" in text
     assert "~/.coding-with-beat/repo-path" not in text
     assert "$HOME/.coding-with-beat/repo-path" in text
     assert launcher.stat().st_mode & 0o111
