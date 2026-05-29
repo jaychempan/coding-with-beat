@@ -13,7 +13,6 @@ from PySide6.QtWidgets import (
     QLabel,
     QMenu,
     QPushButton,
-    QTextEdit,
     QVBoxLayout,
     QWidget,
 )
@@ -30,6 +29,7 @@ from .petdex import (
     installed_petdex_pets,
     resolve_spritesheet_path,
 )
+from .pixel_ui import PixelBubbleLabel, style_icon_button, style_status_label
 from .session import PetMusicSession, PetSessionResult
 from .settings import load_settings, save_settings
 from .sprites import BUILTIN_SKINS, Frame
@@ -56,16 +56,10 @@ class PetWindow(QWidget):
         self._single_click_timer.setSingleShot(True)
         self._single_click_timer.timeout.connect(self._handle_single_click)
         self._drag_origin: QPoint | None = None
-        self._bubble = QTextEdit(self)
-        self._bubble.setReadOnly(True)
-        self._bubble.setVisible(False)
-        self._bubble.setMaximumHeight(120)
+        self._bubble = PixelBubbleLabel(self)
         self._track_label = QLabel("未播放", self)
         self._track_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._track_label.setStyleSheet(
-            "QLabel { color: #f8fafc; background: rgba(15, 23, 42, 190);"
-            " border-radius: 5px; padding: 3px 6px; font-size: 12px; }"
-        )
+        style_status_label(self._track_label)
         self._label = QLabel(self)
         self._label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._now_button = _icon_button("♪", "当前播放")
@@ -129,7 +123,7 @@ class PetWindow(QWidget):
         frame = self.controller.animator.current_frame()
         pixmap = _frame_pixmap(frame, self.controller.animator.skin.palette, self.settings.scale)
         self._label.setPixmap(pixmap)
-        extra = 82 + (130 if self._bubble.isVisible() else 0)
+        extra = 66 + (self._bubble.sizeHint().height() + 8 if self._bubble.isVisible() else 0)
         self.resize(max(172, pixmap.width() + 12), pixmap.height() + extra)
 
     def mousePressEvent(self, event) -> None:
@@ -246,8 +240,7 @@ class PetWindow(QWidget):
         self._show_bubble(f"皮肤：{self.controller.animator.skin.name}")
 
     def _show_bubble(self, text: str) -> None:
-        self._bubble.setPlainText(_trim_output(text))
-        self._bubble.setVisible(True)
+        self._bubble.set_pixel_text(_trim_output(text))
         self._render()
 
     def _apply_session_result(self, result: PetSessionResult) -> None:
@@ -265,15 +258,7 @@ def _action(text: str, callback, parent) -> QAction:
 def _icon_button(text: str, tooltip: str) -> QPushButton:
     button = QPushButton(text)
     button.setToolTip(tooltip)
-    button.setCursor(Qt.CursorShape.PointingHandCursor)
-    button.setFixedSize(26, 26)
-    button.setStyleSheet(
-        "QPushButton { color: #f8fafc; background: rgba(15, 23, 42, 170);"
-        " border: 1px solid rgba(148, 163, 184, 130); border-radius: 13px; padding: 0;"
-        " font-size: 13px; }"
-        "QPushButton:hover { background: rgba(30, 41, 59, 215); border-color: rgba(203, 213, 225, 190); }"
-        "QPushButton:pressed { background: rgba(2, 6, 23, 230); }"
-    )
+    style_icon_button(button)
     return button
 
 
@@ -324,16 +309,10 @@ class PetdexWindow(QWidget):
         self._press_global_pos: QPoint | None = None
         self._drag_started = False
 
-        self._bubble = QTextEdit(self)
-        self._bubble.setReadOnly(True)
-        self._bubble.setVisible(False)
-        self._bubble.setMaximumHeight(120)
+        self._bubble = PixelBubbleLabel(self)
         self._track_label = QLabel("未播放", self)
         self._track_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._track_label.setStyleSheet(
-            "QLabel { color: #f8fafc; background: rgba(15, 23, 42, 190);"
-            " border-radius: 5px; padding: 3px 6px; font-size: 12px; }"
-        )
+        style_status_label(self._track_label)
         self._label = QLabel(self)
         self._label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._label.setFixedSize(*self._petdex_display_size)
@@ -393,7 +372,7 @@ class PetdexWindow(QWidget):
         self._resize_shell()
 
     def _resize_shell(self) -> None:
-        extra = 82 + (130 if self._bubble.isVisible() else 0)
+        extra = 62 + (self._bubble.sizeHint().height() + 8 if self._bubble.isVisible() else 0)
         width = max(150, self._petdex_display_size[0] + 12)
         height = self._petdex_display_size[1] + extra
         if self.width() != width or self.height() != height:
@@ -536,8 +515,7 @@ class PetdexWindow(QWidget):
             self._render()
 
     def _show_bubble(self, text: str) -> None:
-        self._bubble.setPlainText(_trim_output(text))
-        self._bubble.setVisible(True)
+        self._bubble.set_pixel_text(_trim_output(text))
         self._render()
 
     def _apply_session_result(self, result: PetSessionResult) -> None:
