@@ -90,7 +90,7 @@ Codex 集成完整说明（hooks、代理、情绪通知、状态栏替代方案
 >
 > **实时播放器：** 在另一个终端运行 `cwb watch`，实时查看正在播放的歌曲、歌词和进度条。
 >
-> **桌面宠物：** 在 macOS 上运行 `cwb pet` 打开可拖动像素小人。双击输入心情推荐歌曲，右键可以控制播放、切换皮肤和退出。
+> **桌面宠物：** 在 macOS 上运行 `cwb pet` 打开可拖动像素小人。双击会打开可滚动的 CodeBeat DJ 推荐面板，右键可以打开面板、控制播放、切换宠物和退出。
 >
 > **Apple Music：** 首次播放目录曲目会弹窗，点击**加入资料库**后再重复播放指令即可。
 
@@ -103,7 +103,7 @@ python -m pip install "coding-with-beat[pet]"
 cwb pet
 ```
 
-默认情况下，`cwb pet` 会使用一个更精致的 Petdex 公开 spritesheet 宠物（`boba`），运行时下载到 `~/.coding-with-beat/petdex/`，但当前播放、推荐、播放控制仍然使用 CWB。
+默认情况下，`cwb pet` 会使用随项目打包的官方 CodeBeat Buddy spritesheet 宠物。它保持 Petdex Desktop 风格的小窗口连续动画，但当前播放、推荐、播放控制仍然使用 CWB。
 
 如果你是在本地源码仓库里运行：
 
@@ -118,6 +118,8 @@ python -m coding_with_beat pet
 python -m coding_with_beat pet --petdex boba
 python -m coding_with_beat pet --builtin
 ```
+
+桌面宠物会把身体气泡保持得很短，只显示当前状态和简短反馈。完整推荐结果会进入 CodeBeat DJ 面板，那里可以滚动查看、直接输入心情/风格，也可以点每条结果旁边的 **播放** 按钮，不必再手动输入编号。
 
 ### 直接跟 AI 说
 
@@ -285,7 +287,7 @@ cwb seek <t>            # 跳转进度：秒数（90）或 mm:ss（1:30）
 cwb mode <mode>         # 播放模式：shuffle | sequential | repeat | repeat_one
 cwb player              # 完整像素播放器
 cwb watch               # 实时 TUI（q 退出）
-cwb pet                 # 原生桌面宠物，默认使用 Petdex boba
+cwb pet                 # 原生桌面宠物，默认使用 CodeBeat Buddy
 cwb pet --petdex boba   # 使用 Petdex spritesheet 宠物，并接入 CWB 控制
 cwb pet --builtin       # 使用 CWB 内置像素皮肤
 cwb karaoke             # 全屏卡拉 OK（q 退出）

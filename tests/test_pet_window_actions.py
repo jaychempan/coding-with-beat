@@ -9,7 +9,8 @@ pytest.importorskip("PySide6")
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
 
-from coding_with_beat.pet.bubble import PetBubbleCard
+from coding_with_beat.pet.bubble import PetBubbleCard, PetResultItem
+from coding_with_beat.pet.dj_panel import CodeBeatDjPanel
 from coding_with_beat.pet.petdex import ensure_petdex_pet
 from coding_with_beat.pet.pixel_ui import PixelBubbleLabel
 from coding_with_beat.pet.session import PetSessionResult
@@ -37,6 +38,17 @@ def test_builtin_pet_window_uses_pixel_bubble_label():
         window.close()
 
 
+def test_builtin_pet_window_has_scrollable_dj_panel():
+    app = QApplication.instance() or QApplication([])
+    window = PetWindow()
+    try:
+        assert app is not None
+        assert isinstance(window._dj_panel, CodeBeatDjPanel)
+        assert window._dj_panel.isVisible() is False
+    finally:
+        window.close()
+
+
 def test_builtin_pet_window_applies_pending_result():
     app = QApplication.instance() or QApplication([])
     window = PetWindow()
@@ -44,6 +56,45 @@ def test_builtin_pet_window_applies_pending_result():
         assert app is not None
         window._apply_session_result(PetSessionResult(True, "think", PetBubbleCard("status", "思考中...")))
         assert "思考中" in window._bubble.text()
+    finally:
+        window.close()
+
+
+def test_recommendation_result_goes_to_dj_panel_with_short_pet_bubble():
+    app = QApplication.instance() or QApplication([])
+    window = PetWindow()
+    try:
+        assert app is not None
+        window._dj_panel.show()
+        result = PetSessionResult(
+            True,
+            "recommend",
+            PetBubbleCard(
+                "recommendations",
+                "Debug flow\n1. Night Owl - Luna",
+                items=[PetResultItem(1, "Night Owl - Luna")],
+            ),
+        )
+        window._apply_session_result(result)
+
+        assert "Debug flow" in window._dj_panel.transcript_text()
+        assert "1. Night Owl - Luna" in window._dj_panel.transcript_text()
+        assert window._bubble.text() == "找到 1 首推荐，已放到 DJ 面板"
+    finally:
+        window.close()
+
+
+def test_pending_status_does_not_duplicate_dj_panel_transcript():
+    app = QApplication.instance() or QApplication([])
+    window = PetWindow()
+    try:
+        assert app is not None
+        window._dj_panel.set_pending("正在按当前状态找歌...")
+        window._apply_session_result(
+            PetSessionResult(True, "think", PetBubbleCard("status", "正在按当前状态找歌...", action="think"))
+        )
+
+        assert window._dj_panel.transcript_text().count("正在按当前状态找歌...") == 1
     finally:
         window.close()
 
@@ -121,6 +172,17 @@ def test_petdex_window_centers_pet_sprite_widget():
         window.close()
 
 
+def test_petdex_window_has_scrollable_dj_panel():
+    app = QApplication.instance() or QApplication([])
+    window = PetdexWindow(ensure_petdex_pet("codebeat-buddy"))
+    try:
+        assert app is not None
+        assert isinstance(window._dj_panel, CodeBeatDjPanel)
+        assert window._dj_panel.isVisible() is False
+    finally:
+        window.close()
+
+
 def test_petdex_window_disables_system_backdrop_and_shadow():
     app = QApplication.instance() or QApplication([])
     window = PetdexWindow(ensure_petdex_pet("codebeat-buddy"))
@@ -145,7 +207,7 @@ def test_petdex_window_migrates_legacy_saved_pet_to_current_pet(monkeypatch):
 
         assert window.settings.petdex_slug == "codebeat-buddy"
         assert saved[-1].petdex_slug == "codebeat-buddy"
-        assert "Petdex: CodeBeat Buddy" in labels
+        assert "Petdex: CodeBeat Buddy" not in labels
     finally:
         window.close()
 
@@ -199,6 +261,7 @@ def test_builtin_pet_window_context_menu_keeps_music_and_skin_actions():
             "自动开播",
             "播放编号",
             "当前播放",
+            "打开 DJ 面板",
             "暂停/继续",
             "下一首",
             "切换皮肤",

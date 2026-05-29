@@ -21,6 +21,7 @@ from .animator import PetAnimator
 from .async_runner import PetCommandRunner
 from .bubble import PetBubbleCard
 from .controller import PetController
+from .dj_panel import CodeBeatDjPanel
 from .interactions import PetInteractionController
 from .petdex import (
     PetdexAnimator,
@@ -56,6 +57,7 @@ class PetWindow(QWidget):
         self.interactions = PetInteractionController(session=self.music_session)
         self.command_runner = PetCommandRunner(self)
         self.command_runner.finished.connect(self._apply_session_result)
+        self._dj_panel = CodeBeatDjPanel(self)
         self._long_press_fired = False
         self._drag_started = False
         self._press_global_pos: QPoint | None = None
@@ -75,17 +77,11 @@ class PetWindow(QWidget):
         self._label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         _style_sprite_label(self._label)
         self._now_button = _icon_button("♪", "当前播放")
-        self._now_button.clicked.connect(
-            lambda: self._run_pet_command(lambda: self.interactions.quick_action("now"), "读取当前播放...")
-        )
+        self._now_button.clicked.connect(self._dj_panel.now_playing)
         self._recommend_button = _icon_button("✨", "按当前状态推荐")
-        self._recommend_button.clicked.connect(
-            lambda: self._run_pet_command(lambda: self.interactions.quick_action("recommend"), "正在按当前状态找歌...")
-        )
+        self._recommend_button.clicked.connect(self._dj_panel.recommend_from_context)
         self._reroll_button = _icon_button("🎲", "换一组")
-        self._reroll_button.clicked.connect(
-            lambda: self._run_pet_command(lambda: self.interactions.quick_action("reroll"), "正在换一组...")
-        )
+        self._reroll_button.clicked.connect(self._dj_panel.reroll)
         self._more_button = _icon_button("⋯", "更多")
         self._more_button.clicked.connect(self._show_more_menu)
 
@@ -178,7 +174,7 @@ class PetWindow(QWidget):
             self._single_click_timer.stop()
             self._long_press_fired = True
             self._drag_started = False
-            self._run_pet_command(self.interactions.double_click, "正在按当前状态找歌...")
+            self._dj_panel.recommend_from_context()
         super().mouseDoubleClickEvent(event)
 
     def contextMenuEvent(self, event) -> None:
@@ -190,7 +186,7 @@ class PetWindow(QWidget):
         menu.addAction(
             _action(
                 "按当前状态推荐",
-                lambda: self._run_pet_command(self.interactions.double_click, "正在按当前状态找歌..."),
+                self._dj_panel.recommend_from_context,
                 self,
             )
         )
@@ -201,10 +197,11 @@ class PetWindow(QWidget):
         menu.addAction(
             _action(
                 "当前播放",
-                lambda: self._run_pet_command(lambda: self.interactions.quick_action("now"), "读取当前播放..."),
+                self._dj_panel.now_playing,
                 self,
             )
         )
+        menu.addAction(_action("打开 DJ 面板", self._dj_panel.show, self))
         menu.addAction(_action("暂停/继续", self.toggle_playback, self))
         menu.addAction(_action("下一首", self.next_track, self))
         skin_menu = menu.addMenu("切换皮肤")
@@ -228,10 +225,10 @@ class PetWindow(QWidget):
         text, ok = QInputDialog.getText(self, "DJ Buddy", "想听什么心情？")
         if not ok or not text.strip():
             return
-        self._run_pet_command(lambda: self.music_session.recommend_from_text(text.strip()), "正在按心情找歌...")
+        self._dj_panel.recommend_from_text(text)
 
     def show_now_playing(self) -> None:
-        self._run_pet_command(lambda: self.interactions.quick_action("now"), "读取当前播放...")
+        self._dj_panel.now_playing()
 
     def play_number_dialog(self) -> None:
         number, ok = QInputDialog.getInt(self, "DJ Buddy", "播放第几首？", 1, 1, 999, 1)
@@ -279,7 +276,9 @@ class PetWindow(QWidget):
 
     def _apply_session_result(self, result: PetSessionResult) -> None:
         self.controller.animator.set_action(result.action)
-        self._show_bubble(result.card.text)
+        if self._dj_panel.isVisible() and _should_record_in_dj_panel(result):
+            self._dj_panel.show_result(result)
+        self._show_bubble(_pet_bubble_text(result))
         self._track_label.setText(self.controller.current_track_label())
 
 
@@ -332,6 +331,19 @@ def _trim_output(text: str) -> str:
     return re.sub(r"\n{3,}", "\n\n", clean)[:1200]
 
 
+def _pet_bubble_text(result: PetSessionResult) -> str:
+    if result.card.kind == "recommendations":
+        count = len(result.card.items)
+        if count:
+            return f"找到 {count} 首推荐，已放到 DJ 面板"
+        return "找到推荐结果，已放到 DJ 面板"
+    return result.card.text
+
+
+def _should_record_in_dj_panel(result: PetSessionResult) -> bool:
+    return not (result.action == "think" and result.card.kind == "status")
+
+
 def _frame_pixmap(frame: Frame, palette: dict[str, str], scale: int) -> QPixmap:
     rows = frame.pixels
     width = max(len(row) for row in rows)
@@ -360,6 +372,7 @@ class PetdexWindow(QWidget):
         self.interactions = PetInteractionController(session=self.music_session)
         self.command_runner = PetCommandRunner(self)
         self.command_runner.finished.connect(self._apply_session_result)
+        self._dj_panel = CodeBeatDjPanel(self)
         self._long_press_fired = False
         self._long_press_timer = QTimer(self)
         self._long_press_timer.setSingleShot(True)
@@ -389,17 +402,11 @@ class PetdexWindow(QWidget):
         _style_sprite_label(self._label)
         self._label.setFixedSize(*self._petdex_display_size)
         self._now_button = _icon_button("♪", "当前播放")
-        self._now_button.clicked.connect(
-            lambda: self._run_pet_command(lambda: self.interactions.quick_action("now"), "读取当前播放...")
-        )
+        self._now_button.clicked.connect(self._dj_panel.now_playing)
         self._recommend_button = _icon_button("✨", "按当前状态推荐")
-        self._recommend_button.clicked.connect(
-            lambda: self._run_pet_command(lambda: self.interactions.quick_action("recommend"), "正在按当前状态找歌...")
-        )
+        self._recommend_button.clicked.connect(self._dj_panel.recommend_from_context)
         self._reroll_button = _icon_button("🎲", "换一组")
-        self._reroll_button.clicked.connect(
-            lambda: self._run_pet_command(lambda: self.interactions.quick_action("reroll"), "正在换一组...")
-        )
+        self._reroll_button.clicked.connect(self._dj_panel.reroll)
         self._more_button = _icon_button("⋯", "更多")
         self._more_button.clicked.connect(self._show_more_menu)
 
@@ -490,7 +497,7 @@ class PetdexWindow(QWidget):
             self._single_click_timer.stop()
             self._long_press_fired = True
             self._drag_started = False
-            self._run_pet_command(self.interactions.double_click, "正在按当前状态找歌...")
+            self._dj_panel.recommend_from_context()
         super().mouseDoubleClickEvent(event)
 
     def contextMenuEvent(self, event) -> None:
@@ -502,7 +509,7 @@ class PetdexWindow(QWidget):
         menu.addAction(
             _action(
                 "按当前状态推荐",
-                lambda: self._run_pet_command(self.interactions.double_click, "正在按当前状态找歌..."),
+                self._dj_panel.recommend_from_context,
                 self,
             )
         )
@@ -513,10 +520,11 @@ class PetdexWindow(QWidget):
         menu.addAction(
             _action(
                 "当前播放",
-                lambda: self._run_pet_command(lambda: self.interactions.quick_action("now"), "读取当前播放..."),
+                self._dj_panel.now_playing,
                 self,
             )
         )
+        menu.addAction(_action("打开 DJ 面板", self._dj_panel.show, self))
         menu.addAction(_action("暂停/继续", self.toggle_playback, self))
         menu.addAction(_action("下一首", self.next_track, self))
         pet_menu = menu.addMenu("切换宠物")
@@ -524,7 +532,6 @@ class PetdexWindow(QWidget):
             pet_menu.addAction(_action(pet.name, lambda next_pet=pet: self.set_petdex_pet(next_pet), self))
         if not self._installed_pets:
             pet_menu.addAction(_action("未发现本地宠物", lambda: self._show_bubble("未发现本地 Petdex 宠物"), self))
-        menu.addAction(_action(f"Petdex: {self.pet.name}", lambda: self._show_bubble(str(self.pet.folder)), self))
         menu.addSeparator()
         menu.addAction(_action("退出", _quit_application, self))
         return menu
@@ -543,10 +550,10 @@ class PetdexWindow(QWidget):
         text, ok = QInputDialog.getText(self, "DJ Buddy", "想听什么心情？")
         if not ok or not text.strip():
             return
-        self._run_pet_command(lambda: self.music_session.recommend_from_text(text.strip()), "正在按心情找歌...")
+        self._dj_panel.recommend_from_text(text)
 
     def show_now_playing(self) -> None:
-        self._run_pet_command(lambda: self.interactions.quick_action("now"), "读取当前播放...")
+        self._dj_panel.now_playing()
 
     def play_number_dialog(self) -> None:
         number, ok = QInputDialog.getInt(self, "DJ Buddy", "播放第几首？", 1, 1, 999, 1)
@@ -614,7 +621,9 @@ class PetdexWindow(QWidget):
 
     def _apply_session_result(self, result: PetSessionResult) -> None:
         self.petdex_animator.set_action(result.action)
-        self._show_bubble(result.card.text)
+        if self._dj_panel.isVisible() and _should_record_in_dj_panel(result):
+            self._dj_panel.show_result(result)
+        self._show_bubble(_pet_bubble_text(result))
         self._track_label.setText(self.controller.current_track_label())
 
 
