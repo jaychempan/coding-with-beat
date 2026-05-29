@@ -44,7 +44,7 @@ def _write_info_plist(path: Path) -> None:
         "CFBundleShortVersionString": "0.1.0",
         "CFBundleVersion": "1",
         "LSMinimumSystemVersion": "12.0",
-        "LSUIElement": True,
+        "LSUIElement": False,
         "NSHighResolutionCapable": True,
     }
     with path.open("wb") as f:

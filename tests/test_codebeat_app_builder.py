@@ -26,7 +26,7 @@ def test_build_app_writes_expected_info_plist(tmp_path):
     assert plist["CFBundleIdentifier"] == "top.codebeat.CodeBeat"
     assert plist["CFBundleExecutable"] == "CodeBeat"
     assert plist["CFBundleIconFile"] == "CodeBeat.icns"
-    assert plist["LSUIElement"] is True
+    assert plist["LSUIElement"] is False
 
 
 def test_build_app_launcher_runs_codebeat_app_command(tmp_path):
