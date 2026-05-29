@@ -30,8 +30,8 @@ PETDEX_ACTION_ROWS = {
     "happy": 5,
     "sleep": 7,
 }
-FRAME_COLUMNS = 9
-FRAME_ROWS = 8
+FRAME_COLUMNS = 8
+FRAME_ROWS = 9
 
 
 @dataclass(frozen=True)
@@ -93,6 +93,10 @@ def resolve_spritesheet_path(pet: PetdexPet) -> Path:
     if converted.exists():
         return converted
     return pet.spritesheet_path
+
+
+def frame_size(width: int, height: int) -> tuple[int, int]:
+    return width // FRAME_COLUMNS, height // FRAME_ROWS
 
 
 def _json_get(url: str) -> dict:

@@ -10,7 +10,7 @@ from PySide6.QtWidgets import QHBoxLayout, QInputDialog, QLabel, QMenu, QPushBut
 
 from .animator import PetAnimator
 from .controller import PetController
-from .petdex import FRAME_COLUMNS, FRAME_ROWS, PetdexAnimator, PetdexPet, ensure_petdex_pet, resolve_spritesheet_path
+from .petdex import PetdexAnimator, PetdexPet, ensure_petdex_pet, resolve_spritesheet_path
 from .settings import load_settings, save_settings
 from .sprites import BUILTIN_SKINS, Frame
 
@@ -357,8 +357,9 @@ class PetdexWindow(QWidget):
 
 def _petdex_frame_pixmap(spritesheet: QPixmap, animator: PetdexAnimator, scale: int) -> QPixmap:
     row, col = animator.current_cell()
-    frame_w = spritesheet.width() // FRAME_COLUMNS
-    frame_h = spritesheet.height() // FRAME_ROWS
+    from .petdex import frame_size
+
+    frame_w, frame_h = frame_size(spritesheet.width(), spritesheet.height())
     source = QRect(col * frame_w, row * frame_h, frame_w, frame_h)
     frame = spritesheet.copy(source)
     return frame.scaled(
