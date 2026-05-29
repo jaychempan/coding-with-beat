@@ -26,7 +26,6 @@ CYAN = "#67e8f9"
 SKIN = "#f0c7a2"
 SKIN_SHADE = "#d8a37d"
 WHITE = "#fff7ed"
-SHADOW = (10, 8, 18, 70)
 
 
 def main() -> int:
@@ -65,7 +64,6 @@ def _draw_buddy(draw: ImageDraw.ImageDraw, action: str, frame: int) -> None:
     leg_pose = _leg_pose(action, frame)
     face = _face(action, frame)
 
-    draw.ellipse((48, 174, 144, 190), fill=SHADOW)
     if action == "sleep":
         _draw_sleeping_buddy(draw, frame)
         return

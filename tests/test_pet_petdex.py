@@ -78,9 +78,23 @@ def test_bundled_codebeat_buddy_idle_frame_has_cute_head_body_ratio():
     assert head_pixels >= body_pixels * 0.85
 
 
+def test_bundled_codebeat_buddy_idle_frame_has_no_translucent_backdrop():
+    pet = ensure_petdex_pet("codebeat-buddy")
+
+    with Image.open(resolve_spritesheet_path(pet)).convert("RGBA") as image:
+        idle_alpha = image.crop((0, 0, 192, 208)).getchannel("A")
+
+    assert _translucent_pixels(idle_alpha) == 0
+
+
 def _visible_pixels(alpha_channel: Image.Image) -> int:
     histogram = alpha_channel.histogram()
     return sum(histogram[1:])
+
+
+def _translucent_pixels(alpha_channel: Image.Image) -> int:
+    histogram = alpha_channel.histogram()
+    return sum(histogram[1:255])
 
 
 def test_installed_petdex_pets_includes_bundled_codebeat_buddy():
