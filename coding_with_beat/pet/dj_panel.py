@@ -142,6 +142,24 @@ QPushButton#ActionChip:hover {
   color: #67e8f9;
   border-color: rgba(103, 232, 249, 220);
 }
+QPushButton#PlayerControlButton {
+  color: #ecfeff;
+  background: rgba(15, 23, 42, 96);
+  border: 1px solid rgba(94, 234, 212, 68);
+  border-radius: 11px;
+  min-width: 28px;
+  max-width: 28px;
+  min-height: 24px;
+  max-height: 24px;
+  padding: 0;
+  font-size: 12px;
+  font-weight: 900;
+}
+QPushButton#PlayerControlButton:hover {
+  color: #020617;
+  background: rgba(94, 234, 212, 230);
+  border-color: rgba(236, 254, 255, 150);
+}
 QFrame#QueueRow {
   background: rgba(15, 23, 42, 82);
   border: 1px solid rgba(94, 234, 212, 54);
@@ -632,7 +650,40 @@ class CodeBeatDjPanel(QWidget):
         layout.addWidget(self.now_title)
         layout.addWidget(self.now_meta)
         layout.addWidget(self.now_lyric)
+        layout.addWidget(self._build_player_controls())
         return band
+
+    def _build_player_controls(self) -> QWidget:
+        row = QWidget()
+        layout = QHBoxLayout(row)
+        layout.setContentsMargins(0, 3, 0, 0)
+        layout.setSpacing(6)
+        for text, tooltip, callback in (
+            ("♥", "喜欢当前歌曲", self.like_current),
+            ("⏮", "上一首", self.prev_track),
+            ("⏯", "暂停/继续", self.toggle_playback),
+            ("⏭", "下一首", self.next_track),
+            ("⟳", "刷新当前播放", self.refresh_live_snapshot),
+        ):
+            button = QPushButton(text)
+            button.setObjectName("PlayerControlButton")
+            button.setToolTip(tooltip)
+            button.clicked.connect(callback)
+            layout.addWidget(button)
+        layout.addStretch(1)
+        return row
+
+    def like_current(self) -> None:
+        self._run_cwb_command("like_current", {})
+
+    def prev_track(self) -> None:
+        self._run_cwb_command("prev_track", {})
+
+    def toggle_playback(self) -> None:
+        self._run_cwb_command("toggle", {})
+
+    def next_track(self) -> None:
+        self._run_cwb_command("next_track", {})
 
     def _build_stats_band(self) -> QWidget:
         band = QFrame()

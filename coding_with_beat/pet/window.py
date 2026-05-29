@@ -77,6 +77,9 @@ class PetWindow(QWidget):
         self._controls_hide_timer = QTimer(self)
         self._controls_hide_timer.setSingleShot(True)
         self._controls_hide_timer.timeout.connect(self._hide_controls_if_idle)
+        self._bubble_hide_timer = QTimer(self)
+        self._bubble_hide_timer.setSingleShot(True)
+        self._bubble_hide_timer.timeout.connect(self._hide_bubble)
         self._drag_origin: QPoint | None = None
         self._bubble = PixelBubbleLabel(self)
         self._track_label = QLabel("未播放", self)
@@ -318,9 +321,14 @@ class PetWindow(QWidget):
         save_settings(self.settings)
         self._show_bubble(f"皮肤：{self.controller.animator.skin.name}")
 
-    def _show_bubble(self, text: str) -> None:
+    def _show_bubble(self, text: str, *, duration_ms: int = 4200) -> None:
         self._bubble.set_pixel_text(_trim_output(text))
+        self._bubble_hide_timer.start(duration_ms)
         self._show_controls_temporarily()
+        self._render()
+
+    def _hide_bubble(self) -> None:
+        self._bubble.hide()
         self._render()
 
     def _run_pet_command(self, command, pending_text: str = "思考中...") -> None:
@@ -340,7 +348,7 @@ class PetWindow(QWidget):
         self.controller.animator.set_action(result.action)
         if self._dj_panel.isVisible() and _should_record_in_dj_panel(result):
             self._dj_panel.show_result(result)
-        self._show_bubble(_pet_bubble_text(result))
+        self._show_bubble(_pet_bubble_text(result), duration_ms=_bubble_duration_ms(result))
         self._track_label.setText(self.controller.current_track_label())
         _apply_aura_playback(self, playing=result.action == "dance" and result.ok, changed=result.ok)
 
@@ -485,13 +493,13 @@ def _controls_widget(*buttons: QPushButton) -> QWidget:
 
 
 def _pet_window_width(body: QWidget, bubble: PixelBubbleLabel, *, minimum: int) -> int:
-    bubble_width = bubble.sizeHint().width() + 12 if bubble.isVisible() else 0
+    bubble_width = bubble.sizeHint().width() + 12 if not bubble.isHidden() else 0
     return max(minimum, body.width() + 12, bubble_width)
 
 
 def _pet_extra_height(bubble: PixelBubbleLabel, *, base: int) -> int:
     extra = base
-    if bubble.isVisible():
+    if not bubble.isHidden():
         extra += bubble.sizeHint().height() + 8
     return extra
 
@@ -499,6 +507,7 @@ def _pet_extra_height(bubble: PixelBubbleLabel, *, base: int) -> int:
 def _stop_pet_timers(owner) -> None:
     for name in (
         "_controls_hide_timer",
+        "_bubble_hide_timer",
         "_long_press_timer",
         "_single_click_timer",
         "timer",
@@ -546,6 +555,14 @@ def _pet_bubble_text(result: PetSessionResult) -> str:
             return f"找到 {count} 首推荐，已放到 DJ 面板"
         return "找到推荐结果，已放到 DJ 面板"
     return result.card.text
+
+
+def _bubble_duration_ms(result: PetSessionResult) -> int:
+    if result.card.kind == "error":
+        return 6500
+    if result.card.kind == "empty":
+        return 5200
+    return 4200
 
 
 def _should_record_in_dj_panel(result: PetSessionResult) -> bool:
@@ -608,6 +625,9 @@ class PetdexWindow(QWidget):
         self._controls_hide_timer = QTimer(self)
         self._controls_hide_timer.setSingleShot(True)
         self._controls_hide_timer.timeout.connect(self._hide_controls_if_idle)
+        self._bubble_hide_timer = QTimer(self)
+        self._bubble_hide_timer.setSingleShot(True)
+        self._bubble_hide_timer.timeout.connect(self._hide_bubble)
         self.petdex_animator = PetdexAnimator()
         self._installed_pets = installed_petdex_pets()
         self._spritesheet = QPixmap()
@@ -881,9 +901,14 @@ class PetdexWindow(QWidget):
             self._aura.set_sprite_size(self._petdex_display_size)
             self._render()
 
-    def _show_bubble(self, text: str) -> None:
+    def _show_bubble(self, text: str, *, duration_ms: int = 4200) -> None:
         self._bubble.set_pixel_text(_trim_output(text))
+        self._bubble_hide_timer.start(duration_ms)
         self._show_controls_temporarily()
+        self._render()
+
+    def _hide_bubble(self) -> None:
+        self._bubble.hide()
         self._render()
 
     def _run_pet_command(self, command, pending_text: str = "思考中...") -> None:
@@ -903,7 +928,7 @@ class PetdexWindow(QWidget):
         self.petdex_animator.set_action(result.action)
         if self._dj_panel.isVisible() and _should_record_in_dj_panel(result):
             self._dj_panel.show_result(result)
-        self._show_bubble(_pet_bubble_text(result))
+        self._show_bubble(_pet_bubble_text(result), duration_ms=_bubble_duration_ms(result))
         self._track_label.setText(self.controller.current_track_label())
         _apply_aura_playback(self, playing=result.action == "dance" and result.ok, changed=result.ok)
 

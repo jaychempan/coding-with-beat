@@ -203,6 +203,58 @@ def test_dj_panel_has_library_loved_and_playlist_buttons():
     assert "歌单" in labels
 
 
+def test_dj_panel_has_now_playing_transport_controls():
+    app = QApplication.instance() or QApplication([])
+    panel = CodeBeatDjPanel(FakeHost())
+
+    controls = [button for button in panel.findChildren(QPushButton) if button.objectName() == "PlayerControlButton"]
+
+    assert app is not None
+    assert [button.text() for button in controls] == ["♥", "⏮", "⏯", "⏭", "⟳"]
+
+
+def test_dj_panel_transport_controls_call_music_tools():
+    app = QApplication.instance() or QApplication([])
+    host = FakeHost()
+    panel = CodeBeatDjPanel(host)
+
+    controls = {
+        button.text(): button
+        for button in panel.findChildren(QPushButton)
+        if button.objectName() == "PlayerControlButton"
+    }
+    controls["♥"].click()
+    controls["⏮"].click()
+    controls["⏯"].click()
+    controls["⏭"].click()
+
+    assert app is not None
+    assert host.music_session.music.controls == [
+        ("like_current", {}),
+        ("prev_track", {}),
+        ("toggle", {}),
+        ("next_track", {}),
+    ]
+
+
+def test_dj_panel_refresh_transport_control_refreshes_snapshot_only():
+    app = QApplication.instance() or QApplication([])
+    host = FakeHost()
+    panel = CodeBeatDjPanel(host)
+
+    refresh_button = next(
+        button
+        for button in panel.findChildren(QPushButton)
+        if button.objectName() == "PlayerControlButton" and button.text() == "⟳"
+    )
+    refresh_button.click()
+
+    assert app is not None
+    assert host.music_session.music.controls == []
+    assert host.music_session.music.snapshots == [""]
+    assert panel.findChild(QLabel, "NowTitle").text() == "Night Owl"
+
+
 def test_dj_panel_has_profile_identity_stats_and_chips():
     app = QApplication.instance() or QApplication([])
     panel = CodeBeatDjPanel(FakeHost())

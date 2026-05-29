@@ -237,6 +237,28 @@ def test_builtin_pet_window_shows_and_hides_controls_temporarily(monkeypatch):
         window.close()
 
 
+def test_builtin_pet_window_hides_event_bubble_and_collapses_space():
+    app = QApplication.instance() or QApplication([])
+    window = PetWindow()
+    try:
+        assert app is not None
+        compact_height = window.height()
+
+        window._show_bubble("正在找歌...")
+        expanded_height = window.height()
+
+        assert window._bubble.isHidden() is False
+        assert window._bubble_hide_timer.isActive() is True
+        assert expanded_height > compact_height
+
+        window._hide_bubble()
+
+        assert window._bubble.isHidden() is True
+        assert window.height() == compact_height
+    finally:
+        window.close()
+
+
 def test_builtin_hidden_controls_expand_sidecar_without_reserving_bottom_space(monkeypatch):
     app = QApplication.instance() or QApplication([])
     window = PetWindow()
@@ -447,6 +469,28 @@ def test_petdex_window_shows_and_hides_controls_temporarily(monkeypatch):
 
         window._hide_controls_if_idle()
         assert window._controls_widget.isHidden() is True
+    finally:
+        window.close()
+
+
+def test_petdex_window_hides_event_bubble_and_collapses_space():
+    app = QApplication.instance() or QApplication([])
+    window = PetdexWindow(ensure_petdex_pet("codebeat-buddy"))
+    try:
+        assert app is not None
+        compact_height = window.height()
+
+        window._show_bubble("正在找歌...")
+        expanded_height = window.height()
+
+        assert window._bubble.isHidden() is False
+        assert window._bubble_hide_timer.isActive() is True
+        assert expanded_height > compact_height
+
+        window._hide_bubble()
+
+        assert window._bubble.isHidden() is True
+        assert window.height() == compact_height
     finally:
         window.close()
 
