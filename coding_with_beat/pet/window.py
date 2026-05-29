@@ -10,6 +10,7 @@ from PySide6.QtWidgets import QHBoxLayout, QInputDialog, QLabel, QMenu, QPushBut
 
 from .animator import PetAnimator
 from .controller import PetController
+from .interactions import PetInteractionController
 from .petdex import (
     PetdexAnimator,
     PetdexPet,
@@ -19,6 +20,7 @@ from .petdex import (
     installed_petdex_pets,
     resolve_spritesheet_path,
 )
+from .session import PetMusicSession, PetSessionResult
 from .settings import load_settings, save_settings
 from .sprites import BUILTIN_SKINS, Frame
 
@@ -199,6 +201,21 @@ def _button(text: str) -> QPushButton:
     return button
 
 
+def _icon_button(text: str, tooltip: str) -> QPushButton:
+    button = QPushButton(text)
+    button.setToolTip(tooltip)
+    button.setCursor(Qt.CursorShape.PointingHandCursor)
+    button.setFixedSize(26, 26)
+    button.setStyleSheet(
+        "QPushButton { color: #f8fafc; background: rgba(15, 23, 42, 170);"
+        " border: 1px solid rgba(148, 163, 184, 130); border-radius: 13px; padding: 0;"
+        " font-size: 13px; }"
+        "QPushButton:hover { background: rgba(30, 41, 59, 215); border-color: rgba(203, 213, 225, 190); }"
+        "QPushButton:pressed { background: rgba(2, 6, 23, 230); }"
+    )
+    return button
+
+
 def _trim_output(text: str) -> str:
     clean = text.strip() or "没有返回内容"
     return re.sub(r"\n{3,}", "\n\n", clean)[:1200]
@@ -228,6 +245,12 @@ class PetdexWindow(QWidget):
         self.pet = pet
         self.settings = load_settings()
         self.controller = controller or PetController(PetAnimator(self.settings.skin_id))
+        self.music_session = PetMusicSession(music=self.controller.music, load_state=self.controller.load_state)
+        self.interactions = PetInteractionController(session=self.music_session)
+        self._long_press_fired = False
+        self._long_press_timer = QTimer(self)
+        self._long_press_timer.setSingleShot(True)
+        self._long_press_timer.timeout.connect(self._handle_long_press)
         self.petdex_animator = PetdexAnimator()
         self._installed_pets = installed_petdex_pets()
         self._spritesheet = QPixmap()
@@ -248,19 +271,26 @@ class PetdexWindow(QWidget):
         self._label = QLabel(self)
         self._label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._label.setFixedSize(*self._petdex_display_size)
-        self._recommend_button = _button("推荐")
-        self._recommend_button.clicked.connect(self.ask_mood)
-        self._now_button = _button("在播")
-        self._now_button.clicked.connect(self.show_now_playing)
-        self._pet_button = _button("皮肤")
-        self._pet_button.clicked.connect(self.cycle_petdex_pet)
+        self._now_button = _icon_button("♪", "当前播放")
+        self._now_button.clicked.connect(lambda: self._apply_session_result(self.interactions.quick_action("now")))
+        self._recommend_button = _icon_button("✨", "按当前状态推荐")
+        self._recommend_button.clicked.connect(
+            lambda: self._apply_session_result(self.interactions.quick_action("recommend"))
+        )
+        self._reroll_button = _icon_button("🎲", "换一组")
+        self._reroll_button.clicked.connect(
+            lambda: self._apply_session_result(self.interactions.quick_action("reroll"))
+        )
+        self._more_button = _icon_button("⋯", "更多")
+        self._more_button.clicked.connect(self._show_more_menu)
 
         controls = QHBoxLayout()
         controls.setContentsMargins(0, 0, 0, 0)
         controls.setSpacing(4)
-        controls.addWidget(self._recommend_button)
         controls.addWidget(self._now_button)
-        controls.addWidget(self._pet_button)
+        controls.addWidget(self._recommend_button)
+        controls.addWidget(self._reroll_button)
+        controls.addWidget(self._more_button)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(6, 6, 6, 6)
@@ -305,6 +335,8 @@ class PetdexWindow(QWidget):
 
     def mousePressEvent(self, event) -> None:
         if event.button() == Qt.MouseButton.LeftButton:
+            self._long_press_fired = False
+            self._long_press_timer.start(650)
             self._drag_origin = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
             self.petdex_animator.set_action("dance")
         super().mousePressEvent(event)
@@ -316,22 +348,33 @@ class PetdexWindow(QWidget):
 
     def mouseReleaseEvent(self, event) -> None:
         if event.button() == Qt.MouseButton.LeftButton:
+            self._long_press_timer.stop()
             self._drag_origin = None
             self.settings.x = self.x()
             self.settings.y = self.y()
             save_settings(self.settings)
+            if not self._long_press_fired:
+                self._apply_session_result(self.interactions.single_click())
         super().mouseReleaseEvent(event)
 
     def mouseDoubleClickEvent(self, event) -> None:
         if event.button() == Qt.MouseButton.LeftButton:
-            self.ask_mood()
+            self._long_press_timer.stop()
+            self._long_press_fired = True
+            self._apply_session_result(self.interactions.double_click())
         super().mouseDoubleClickEvent(event)
 
     def contextMenuEvent(self, event) -> None:
+        self._build_context_menu().exec(event.globalPos())
+
+    def _build_context_menu(self) -> QMenu:
         menu = QMenu(self)
-        menu.addAction(_action("推荐歌曲", self.ask_mood, self))
+        menu.addAction(_action("推荐歌曲", lambda: self._apply_session_result(self.interactions.double_click()), self))
+        menu.addAction(_action("自动开播", lambda: self._apply_session_result(self.interactions.long_press()), self))
         menu.addAction(_action("播放编号", self.play_number_dialog, self))
-        menu.addAction(_action("当前播放", self.show_now_playing, self))
+        menu.addAction(
+            _action("当前播放", lambda: self._apply_session_result(self.interactions.quick_action("now")), self)
+        )
         menu.addAction(_action("暂停/继续", self.toggle_playback, self))
         menu.addAction(_action("下一首", self.next_track, self))
         pet_menu = menu.addMenu("切换宠物")
@@ -339,30 +382,34 @@ class PetdexWindow(QWidget):
             pet_menu.addAction(_action(pet.name, lambda next_pet=pet: self.set_petdex_pet(next_pet), self))
         if not self._installed_pets:
             pet_menu.addAction(_action("未发现本地宠物", lambda: self._show_bubble("未发现本地 Petdex 宠物"), self))
-        menu.addAction(_action(f"Petdex: {self.pet.name}", lambda: self._show_bubble(str(self.pet.folder)), self))
         menu.addSeparator()
         menu.addAction(_action("退出", self.close, self))
-        menu.exec(event.globalPos())
+        return menu
+
+    def _show_more_menu(self) -> None:
+        self._build_context_menu().exec(self._more_button.mapToGlobal(QPoint(0, self._more_button.height())))
+
+    def _handle_long_press(self) -> None:
+        self._long_press_fired = True
+        self._apply_session_result(self.interactions.long_press())
 
     def ask_mood(self) -> None:
         text, ok = QInputDialog.getText(self, "DJ Buddy", "想听什么心情？")
         if not ok or not text.strip():
             return
         self.petdex_animator.set_action("think")
-        result = self.controller.handle_mood_text(text.strip())
-        self.petdex_animator.set_action("recommend" if result.ok else "sad")
-        self._show_bubble(result.text)
+        result = self.music_session.recommend_from_text(text.strip())
+        self._apply_session_result(result)
 
     def show_now_playing(self) -> None:
-        self._show_bubble(self.controller.music.now_playing().text)
+        self._apply_session_result(self.interactions.quick_action("now"))
 
     def play_number_dialog(self) -> None:
         number, ok = QInputDialog.getInt(self, "DJ Buddy", "播放第几首？", 1, 1, 999, 1)
         if not ok:
             return
-        result = self.controller.play_number(number)
-        self.petdex_animator.set_action("dance" if result.ok else "sad")
-        self._show_bubble(result.text)
+        result = self.music_session.play_number(number)
+        self._apply_session_result(result)
 
     def toggle_playback(self) -> None:
         self._show_bubble(self.controller.music.toggle().text)
@@ -405,6 +452,11 @@ class PetdexWindow(QWidget):
         self._bubble.setPlainText(_trim_output(text))
         self._bubble.setVisible(True)
         self._render()
+
+    def _apply_session_result(self, result: PetSessionResult) -> None:
+        self.petdex_animator.set_action(result.action)
+        self._show_bubble(result.card.text)
+        self._track_label.setText(self.controller.current_track_label())
 
 
 def _petdex_frame_pixmap(spritesheet: QPixmap, animator: PetdexAnimator, target_size: tuple[int, int]) -> QPixmap:
