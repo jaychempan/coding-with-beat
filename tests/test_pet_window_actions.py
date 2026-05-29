@@ -13,6 +13,7 @@ from coding_with_beat.pet.bubble import PetBubbleCard
 from coding_with_beat.pet.petdex import ensure_petdex_pet
 from coding_with_beat.pet.pixel_ui import PixelBubbleLabel
 from coding_with_beat.pet.session import PetSessionResult
+from coding_with_beat.pet.settings import PetSettings
 from coding_with_beat.pet.window import PetdexWindow, PetWindow, _action
 
 
@@ -128,6 +129,23 @@ def test_petdex_window_disables_system_backdrop_and_shadow():
         assert window.windowFlags() & Qt.WindowType.NoDropShadowWindowHint
         assert window.testAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         assert window.testAttribute(Qt.WidgetAttribute.WA_NoSystemBackground)
+    finally:
+        window.close()
+
+
+def test_petdex_window_migrates_legacy_saved_pet_to_current_pet(monkeypatch):
+    app = QApplication.instance() or QApplication([])
+    saved = []
+    monkeypatch.setattr("coding_with_beat.pet.window.load_settings", lambda: PetSettings(petdex_slug="boba"))
+    monkeypatch.setattr("coding_with_beat.pet.window.save_settings", lambda settings: saved.append(settings))
+    window = PetdexWindow(ensure_petdex_pet("codebeat-buddy"))
+    try:
+        assert app is not None
+        labels = [action.text() for action in window._build_context_menu().actions() if action.text()]
+
+        assert window.settings.petdex_slug == "codebeat-buddy"
+        assert saved[-1].petdex_slug == "codebeat-buddy"
+        assert "Petdex: CodeBeat Buddy" in labels
     finally:
         window.close()
 

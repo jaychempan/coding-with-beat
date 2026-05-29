@@ -372,6 +372,9 @@ class PetdexWindow(QWidget):
         self._spritesheet = QPixmap()
         self._petdex_display_size = (72, 78)
         self._load_petdex_pet(pet)
+        if self.settings.petdex_slug != self.pet.slug:
+            self.settings.petdex_slug = self.pet.slug
+            save_settings(self.settings)
         self._drag_origin: QPoint | None = None
         self._press_global_pos: QPoint | None = None
         self._drag_started = False
