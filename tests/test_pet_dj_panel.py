@@ -31,6 +31,18 @@ class FakeSession:
     def recommend_from_text(self, text):
         return PetSessionResult(True, "recommend", PetBubbleCard("status", text))
 
+    def handle_prompt(self, text):
+        return PetSessionResult(True, "recommend", PetBubbleCard("status", f"handled:{text}"))
+
+    def list_library(self):
+        return PetSessionResult(True, "recommend", PetBubbleCard("status", "library"))
+
+    def list_loved(self):
+        return PetSessionResult(True, "recommend", PetBubbleCard("status", "loved"))
+
+    def list_playlists(self):
+        return PetSessionResult(True, "recommend", PetBubbleCard("status", "playlists"))
+
     def play_number(self, number):
         return PetSessionResult(True, "dance", PetBubbleCard("confirmation", f"play {number}"))
 
@@ -138,8 +150,33 @@ def test_dj_panel_text_prompt_runs_text_recommendation():
     panel.submit_prompt()
 
     assert app is not None
-    assert host.pending[-1] == "正在按你的描述找歌..."
-    assert host.calls[-1].card.text == "来点爵士"
+    assert host.pending[-1] == "正在处理音乐请求..."
+    assert host.calls[-1].card.text == "handled:来点爵士"
+
+
+def test_dj_panel_plain_artist_prompt_uses_shared_music_router():
+    app = QApplication.instance() or QApplication([])
+    host = FakeHost()
+    panel = CodeBeatDjPanel(host)
+
+    panel.prompt_input.setText("周杰伦")
+    panel.submit_prompt()
+
+    assert app is not None
+    assert host.pending[-1] == "正在处理音乐请求..."
+    assert host.calls[-1].card.text == "handled:周杰伦"
+
+
+def test_dj_panel_has_library_loved_and_playlist_buttons():
+    app = QApplication.instance() or QApplication([])
+    panel = CodeBeatDjPanel(FakeHost())
+
+    labels = [button.text() for button in panel.findChildren(QPushButton)]
+
+    assert app is not None
+    assert "资料库" in labels
+    assert "喜欢" in labels
+    assert "歌单" in labels
 
 
 def test_dj_panel_has_profile_identity_stats_and_chips():

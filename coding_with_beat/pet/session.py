@@ -11,6 +11,75 @@ from .bubble import PetBubbleCard, PetBubbleView
 from .dj_brain import DjIntent, DjQuerySet, PetDjBrain
 from .music import MusicResult, PetMusicClient
 
+_LIBRARY_TRIGGERS = (
+    "从资料库找",
+    "资料库里有没有",
+    "资料库里找",
+    "本地库里",
+    "in my library",
+    "library only",
+    "from my library",
+)
+_LIBRARY_LIST_TRIGGERS = ("资料库", "打开资料库", "列出资料库", "library")
+_LOVED_SEARCH_TRIGGERS = ("从喜欢里找", "收藏里找", "收藏里搜", "我喜欢的", "心动歌单", "search loved")
+_LOVED_LIST_TRIGGERS = (
+    "列出收藏",
+    "我的喜欢",
+    "我喜欢的",
+    "心动歌单",
+    "喜欢列表",
+    "收藏列表",
+    "list loved",
+    "show liked",
+)
+_PLAYLIST_LIST_TRIGGERS = ("我的歌单", "有哪些歌单", "歌单列表", "list playlists", "show playlists")
+_PLAYLIST_PLAY_TRIGGERS = ("播放歌单", "播歌单", "play playlist")
+_MOOD_KEYWORDS = (
+    "lofi",
+    "低保真",
+    "深夜",
+    "写代码",
+    "专注",
+    "心流",
+    "ambient",
+    "无人声",
+    "充能",
+    "运动",
+    "高能",
+    "workout",
+    "爵士",
+    "jazz",
+    "咖啡馆",
+    "bossa",
+    "赛博",
+    "synthwave",
+    "电子",
+    "夜驾",
+    "放松",
+    "解压",
+    "下班",
+    "relax",
+    "古典",
+    "钢琴",
+    "弦乐",
+    "classical",
+    "伤感",
+    "失落",
+    "难过",
+    "sad",
+    "派对",
+    "party",
+    "edm",
+    "国风",
+    "华语",
+    "民谣",
+    "古风",
+    "助眠",
+    "睡前",
+    "sleep",
+    "白噪音",
+)
+
 
 @dataclass(frozen=True)
 class PetSessionResult:
@@ -47,6 +116,72 @@ class PetMusicSession:
         self.current_intent = self.brain.intent_from_text(text, st)
         self.reroll_count = 0
         return self._recommend_current()
+
+    def handle_prompt(self, text: str) -> PetSessionResult:
+        query = text.strip()
+        if not query:
+            return PetSessionResult(False, "sad", self.bubble.error("音乐请求为空", "请输入歌手、歌名、歌单或心情。"))
+        playlist_name = _extract_prefixed_query(query, _PLAYLIST_PLAY_TRIGGERS)
+        if playlist_name:
+            return self.play_playlist(playlist_name)
+        library_query = _extract_prefixed_query(query, _LIBRARY_TRIGGERS)
+        if library_query:
+            return self.search_library(library_query)
+        loved_query = _extract_prefixed_query(query, _LOVED_SEARCH_TRIGGERS)
+        if loved_query:
+            return self.search_loved(loved_query)
+        if _matches_exact(query, _LIBRARY_LIST_TRIGGERS):
+            return self.list_library()
+        if _matches_exact(query, _LOVED_LIST_TRIGGERS):
+            return self.list_loved()
+        if _matches_exact(query, _PLAYLIST_LIST_TRIGGERS) or ("歌单" in query and len(query) <= 6):
+            return self.list_playlists()
+        if _looks_like_mood_request(query):
+            return self.recommend_from_text(query)
+        return self.search(query)
+
+    def search(self, query: str) -> PetSessionResult:
+        music_result = self.music.search(query)
+        return self._results_from_music("搜索", query, music_result)
+
+    def search_library(self, query: str) -> PetSessionResult:
+        music_result = self.music.search(query)
+        if not music_result.ok:
+            card = self.bubble.error("资料库搜索失败", music_result.text)
+            return self._remember(PetSessionResult(False, "sad", card))
+        filtered = _filter_library_lines(music_result.text)
+        card = self.bubble.results(
+            f"资料库：{query}",
+            "只显示资料库里的结果",
+            filtered,
+            empty_text="资料库里没找到，要不要搜一下线上？",
+        )
+        self.current_card = card
+        return self._remember(PetSessionResult(bool(card.items), card.action, card))
+
+    def list_library(self, limit: int = 40) -> PetSessionResult:
+        music_result = self.music.list_library(limit)
+        return self._results_from_music("资料库", "", music_result)
+
+    def list_loved(self, limit: int = 40) -> PetSessionResult:
+        music_result = self.music.list_loved(limit)
+        return self._results_from_music("喜欢", "", music_result)
+
+    def search_loved(self, query: str) -> PetSessionResult:
+        music_result = self.music.search_loved(query)
+        return self._results_from_music("喜欢", query, music_result)
+
+    def list_playlists(self) -> PetSessionResult:
+        music_result = self.music.list_playlists()
+        return self._results_from_music("歌单", "", music_result)
+
+    def play_playlist(self, name: str) -> PetSessionResult:
+        music_result = self.music.play_playlist(name)
+        if not _music_result_ok(music_result):
+            card = self.bubble.error("歌单播放失败", music_result.text)
+            return self._remember(PetSessionResult(False, "sad", card))
+        card = self.bubble.confirmation("播放歌单", music_result.text, action="dance")
+        return self._remember(PetSessionResult(True, "dance", card))
 
     def reroll(self) -> PetSessionResult:
         if self.current_intent is None:
@@ -103,6 +238,15 @@ class PetMusicSession:
             return self._remember(PetSessionResult(False, card.action, card))
         return self._remember(PetSessionResult(True, card.action, card))
 
+    def _results_from_music(self, title: str, query: str, music_result: MusicResult) -> PetSessionResult:
+        label = f"{title}：{query}" if query else title
+        if not music_result.ok:
+            card = self.bubble.error(f"{title}失败", music_result.text)
+            return self._remember(PetSessionResult(False, "sad", card))
+        card = self.bubble.results(label, "点 ▶ 或输入编号播放", music_result.text)
+        self.current_card = card
+        return self._remember(PetSessionResult(bool(card.items), card.action, card))
+
     def _remember(self, result: PetSessionResult) -> PetSessionResult:
         self.last_result = result
         return result
@@ -117,3 +261,36 @@ def _music_result_ok(result: MusicResult) -> bool:
 def _textual_failure(text: str) -> bool:
     clean = (text or "").strip().lower()
     return clean.startswith("(unsupported") or clean.startswith("(no match") or "full playback did not start" in clean
+
+
+def _extract_prefixed_query(text: str, prefixes: tuple[str, ...]) -> str:
+    clean = text.strip()
+    lowered = clean.lower()
+    for prefix in prefixes:
+        lower_prefix = prefix.lower()
+        if lowered.startswith(lower_prefix):
+            return clean[len(prefix) :].strip(" ：:，,")
+        if lower_prefix in lowered:
+            before, _, after = clean.partition(prefix)
+            if not before.strip():
+                return after.strip(" ：:，,")
+    return ""
+
+
+def _matches_exact(text: str, triggers: tuple[str, ...]) -> bool:
+    lowered = text.strip().lower()
+    return any(lowered == trigger.lower() for trigger in triggers)
+
+
+def _looks_like_mood_request(text: str) -> bool:
+    lowered = text.lower()
+    return any(keyword.lower() in lowered for keyword in _MOOD_KEYWORDS)
+
+
+def _filter_library_lines(text: str) -> str:
+    lines = []
+    for line in (text or "").splitlines():
+        lowered = line.lower()
+        if "[library]" in lowered or "[资料库]" in lowered:
+            lines.append(line)
+    return "\n".join(lines)

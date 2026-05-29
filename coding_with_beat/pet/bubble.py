@@ -26,11 +26,26 @@ class PetBubbleCard:
 
 class PetBubbleView:
     def recommendations(self, title: str, message: str, raw_results: str) -> PetBubbleCard:
+        return self.results(
+            title,
+            message,
+            raw_results,
+            empty_text="没有找到合适结果。可以换一组，或者说一个更具体的心情。",
+        )
+
+    def results(
+        self,
+        title: str,
+        message: str,
+        raw_results: str,
+        *,
+        empty_text: str = "没有找到结果。可以换个关键词，或者说得更具体一点。",
+    ) -> PetBubbleCard:
         items = _parse_numbered_items(raw_results)
         if not items:
             return PetBubbleCard(
                 kind="empty",
-                text=f"{title}\n没有找到合适结果。可以换一组，或者说一个更具体的心情。",
+                text=f"{title}\n{empty_text}",
                 action="sad",
             )
 

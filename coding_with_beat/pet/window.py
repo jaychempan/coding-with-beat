@@ -339,6 +339,11 @@ def _trim_output(text: str) -> str:
 def _pet_bubble_text(result: PetSessionResult) -> str:
     if result.card.kind == "recommendations":
         count = len(result.card.items)
+        title = result.card.text.splitlines()[0] if result.card.text else ""
+        if title.startswith(("搜索", "资料库", "喜欢", "歌单")):
+            if count:
+                return f"找到 {count} 个结果，已放到 DJ 面板"
+            return "找到结果，已放到 DJ 面板"
         if count:
             return f"找到 {count} 首推荐，已放到 DJ 面板"
         return "找到推荐结果，已放到 DJ 面板"

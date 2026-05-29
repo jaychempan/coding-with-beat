@@ -57,6 +57,31 @@ def test_control_calls_named_cwb_tool():
     assert calls == [("like_current", {}, 9.0)]
 
 
+def test_search_and_library_tools_call_cwb_tools():
+    calls = []
+
+    def call_tool(name, kwargs, *, timeout):
+        calls.append((name, kwargs, timeout))
+        return f"{name}:ok"
+
+    client = PetMusicClient(call_tool=call_tool, timeout=9.0)
+
+    assert client.search("周杰伦").text == "search:ok"
+    assert client.list_library().text == "list_library:ok"
+    assert client.search_loved("周杰伦").text == "search_loved:ok"
+    assert client.list_loved().text == "list_loved:ok"
+    assert client.list_playlists().text == "list_playlists:ok"
+    assert client.play_playlist("Coding Beats").text == "play_playlist:ok"
+    assert calls == [
+        ("search", {"query": "周杰伦"}, 9.0),
+        ("list_library", {"limit": 40}, 9.0),
+        ("search_loved", {"query": "周杰伦"}, 9.0),
+        ("list_loved", {"limit": 40}, 9.0),
+        ("list_playlists", {}, 9.0),
+        ("play_playlist", {"name": "Coding Beats"}, 9.0),
+    ]
+
+
 def test_errors_are_normalized():
     def fail(name, kwargs):
         raise RuntimeError("boom")

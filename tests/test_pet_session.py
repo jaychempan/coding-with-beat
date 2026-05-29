@@ -26,6 +26,11 @@ class FakeMusic:
         play_text=None,
         now_playing_ok=True,
         now_playing_text="▶ 晴天 - 周杰伦",
+        search_text="1. 晴天 — 周杰伦 · 叶惠美 [Library]\n2. 七里香 — 周杰伦 · 七里香 [Apple Music]",
+        loved_text="1. 一路向北 — 周杰伦 · Initial J [♥ Loved]",
+        library_text="1. 晴天 — 周杰伦 · 叶惠美 [Library]",
+        playlists_text="1. Coding Beats [user playlist] — 42 首",
+        playlist_text="▶ now playing playlist 'Coding Beats': Intro — DJ  source=apple_music",
     ):
         self.calls = []
         self.recommend_ok = recommend_ok
@@ -34,6 +39,11 @@ class FakeMusic:
         self.play_text = play_text
         self.now_playing_ok = now_playing_ok
         self.now_playing_text = now_playing_text
+        self.search_text = search_text
+        self.loved_text = loved_text
+        self.library_text = library_text
+        self.playlists_text = playlists_text
+        self.playlist_text = playlist_text
 
     def recommend(self, queries):
         self.calls.append(("recommend", list(queries)))
@@ -46,6 +56,30 @@ class FakeMusic:
     def now_playing(self):
         self.calls.append(("now_playing",))
         return MusicResult(self.now_playing_ok, self.now_playing_text)
+
+    def search(self, query):
+        self.calls.append(("search", query))
+        return MusicResult(True, self.search_text)
+
+    def search_loved(self, query):
+        self.calls.append(("search_loved", query))
+        return MusicResult(True, self.loved_text)
+
+    def list_library(self, limit=40):
+        self.calls.append(("list_library", limit))
+        return MusicResult(True, self.library_text)
+
+    def list_loved(self, limit=40):
+        self.calls.append(("list_loved", limit))
+        return MusicResult(True, self.loved_text)
+
+    def list_playlists(self):
+        self.calls.append(("list_playlists",))
+        return MusicResult(True, self.playlists_text)
+
+    def play_playlist(self, name):
+        self.calls.append(("play_playlist", name))
+        return MusicResult(True, self.playlist_text)
 
 
 def test_recommend_from_context_searches_without_playing():
@@ -224,6 +258,96 @@ def test_recommend_from_text_uses_user_text_over_state():
             ],
         )
     ]
+
+
+def test_handle_prompt_searches_plain_artist_instead_of_mood_recommendation():
+    music = FakeMusic()
+    session = PetMusicSession(music=music, load_state=lambda: state(vibe="debug"))
+
+    result = session.handle_prompt("周杰伦")
+
+    assert result.ok is True
+    assert result.action == "recommend"
+    assert result.card.kind == "recommendations"
+    assert result.card.text.startswith("搜索：周杰伦")
+    assert [item.number for item in result.card.items] == [1, 2]
+    assert music.calls == [("search", "周杰伦")]
+
+
+def test_handle_prompt_keeps_mood_requests_on_smart_search():
+    music = FakeMusic()
+    session = PetMusicSession(music=music, load_state=lambda: state(vibe="debug"))
+
+    result = session.handle_prompt("来点爵士")
+
+    assert result.ok is True
+    assert music.calls == [
+        (
+            "recommend",
+            [
+                "smooth jazz cafe background mellow",
+                "jazz trio acoustic bossa nova guitar",
+                "late night jazz piano bar cool relaxed",
+            ],
+        )
+    ]
+
+
+def test_handle_prompt_filters_library_only_search_results():
+    music = FakeMusic(
+        search_text=(
+            "1. 稻香 — 周杰伦 · 魔杰座 [Apple Music]\n"
+            "2. 晴天 — 周杰伦 · 叶惠美 [Library]\n"
+            "3. 七里香 — 周杰伦 · 七里香 [Apple Music]"
+        )
+    )
+    session = PetMusicSession(music=music, load_state=lambda: state(vibe="debug"))
+
+    result = session.handle_prompt("从资料库找 周杰伦")
+
+    assert result.ok is True
+    assert result.card.text.startswith("资料库：周杰伦")
+    assert "晴天" in result.card.text
+    assert "稻香" not in result.card.text
+    assert [item.number for item in result.card.items] == [2]
+    assert music.calls == [("search", "周杰伦")]
+
+
+def test_handle_prompt_searches_loved_tracks():
+    music = FakeMusic()
+    session = PetMusicSession(music=music, load_state=lambda: state(vibe="debug"))
+
+    result = session.handle_prompt("从喜欢里找 周杰伦")
+
+    assert result.ok is True
+    assert result.card.text.startswith("喜欢：周杰伦")
+    assert "一路向北" in result.card.text
+    assert music.calls == [("search_loved", "周杰伦")]
+
+
+def test_handle_prompt_lists_playlists():
+    music = FakeMusic()
+    session = PetMusicSession(music=music, load_state=lambda: state(vibe="debug"))
+
+    result = session.handle_prompt("我的歌单")
+
+    assert result.ok is True
+    assert result.card.text.startswith("歌单")
+    assert "Coding Beats" in result.card.text
+    assert music.calls == [("list_playlists",)]
+
+
+def test_handle_prompt_plays_named_playlist():
+    music = FakeMusic()
+    session = PetMusicSession(music=music, load_state=lambda: state(vibe="debug"))
+
+    result = session.handle_prompt("播放歌单 Coding Beats")
+
+    assert result.ok is True
+    assert result.action == "dance"
+    assert result.card.kind == "confirmation"
+    assert result.card.text.startswith("播放歌单\n")
+    assert music.calls == [("play_playlist", "Coding Beats")]
 
 
 def test_now_playing_success_returns_status_card():

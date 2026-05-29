@@ -237,9 +237,9 @@ class CodeBeatDjPanel(QWidget):
 
         self.prompt_input = QLineEdit()
         self.prompt_input.setObjectName("DjPromptInput")
-        self.prompt_input.setPlaceholderText("想听什么？比如：来点爵士 / 不要人声 / 换轻松一点")
+        self.prompt_input.setPlaceholderText("搜歌手/歌名/歌单，也可以说：来点爵士 / 从资料库找 周杰伦")
         self.prompt_input.returnPressed.connect(self.submit_prompt)
-        send_button = QPushButton("发送")
+        send_button = QPushButton("搜索")
         send_button.setObjectName("ActionChip")
         send_button.clicked.connect(self.submit_prompt)
 
@@ -258,25 +258,25 @@ class CodeBeatDjPanel(QWidget):
         now_button = QPushButton("当前播放")
         now_button.setObjectName("ActionChip")
         now_button.clicked.connect(self.now_playing)
-        like_button = QPushButton("喜欢")
-        like_button.setObjectName("ActionChip")
-        like_button.clicked.connect(lambda: self._run_cwb_command("like_current", {}))
-        next_button = QPushButton("下一首")
-        next_button.setObjectName("ActionChip")
-        next_button.clicked.connect(lambda: self._run_cwb_command("next_track", {}))
-        lyrics_button = QPushButton("歌词")
-        lyrics_button.setObjectName("ActionChip")
-        lyrics_button.clicked.connect(self.refresh_live_snapshot)
+        library_button = QPushButton("资料库")
+        library_button.setObjectName("ActionChip")
+        library_button.clicked.connect(self.list_library)
+        liked_button = QPushButton("喜欢")
+        liked_button.setObjectName("ActionChip")
+        liked_button.clicked.connect(self.list_loved)
+        playlist_button = QPushButton("歌单")
+        playlist_button.setObjectName("ActionChip")
+        playlist_button.clicked.connect(self.list_playlists)
 
         action_row = QHBoxLayout()
         action_row.setContentsMargins(0, 0, 0, 0)
         action_row.setSpacing(6)
         action_row.addWidget(recommend_button)
-        action_row.addWidget(reroll_button)
+        action_row.addWidget(library_button)
+        action_row.addWidget(liked_button)
+        action_row.addWidget(playlist_button)
         action_row.addWidget(now_button)
-        action_row.addWidget(like_button)
-        action_row.addWidget(next_button)
-        action_row.addWidget(lyrics_button)
+        action_row.addWidget(reroll_button)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(18, 18, 18, 16)
@@ -359,7 +359,16 @@ class CodeBeatDjPanel(QWidget):
         query = text.strip()
         if not query:
             return
-        self._run(lambda: self.host.music_session.recommend_from_text(query), "正在按你的描述找歌...")
+        self._run(lambda: self.host.music_session.handle_prompt(query), "正在处理音乐请求...")
+
+    def list_library(self) -> None:
+        self._run(self.host.music_session.list_library, "正在打开资料库...")
+
+    def list_loved(self) -> None:
+        self._run(self.host.music_session.list_loved, "正在打开喜欢列表...")
+
+    def list_playlists(self) -> None:
+        self._run(self.host.music_session.list_playlists, "正在读取歌单...")
 
     def reroll(self) -> None:
         self._run(self.host.music_session.reroll, "正在换一组...")

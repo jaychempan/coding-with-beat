@@ -27,6 +27,24 @@ class PetMusicClient:
     def recommend(self, queries: list[str]) -> MusicResult:
         return self._call("smart_search", {"queries": queries})
 
+    def search(self, query: str) -> MusicResult:
+        return self._call("search", {"query": query})
+
+    def list_library(self, limit: int = 40) -> MusicResult:
+        return self._call("list_library", {"limit": limit})
+
+    def list_loved(self, limit: int = 40) -> MusicResult:
+        return self._call("list_loved", {"limit": limit})
+
+    def search_loved(self, query: str) -> MusicResult:
+        return self._call("search_loved", {"query": query})
+
+    def list_playlists(self) -> MusicResult:
+        return self._call("list_playlists", {})
+
+    def play_playlist(self, name: str) -> MusicResult:
+        return self._call("play_playlist", {"name": name})
+
     def play_number(self, number: int) -> MusicResult:
         return self._call("play_number", {"number": number})
 
