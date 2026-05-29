@@ -69,7 +69,10 @@ def test_cmd_pet_passes_petdex_slug(monkeypatch):
         return 0
 
     monkeypatch.setattr("sys.argv", ["cwb", "pet", "--petdex", "boba"])
-    with mock.patch("coding_with_beat.pet.app.run", side_effect=fake_run):
+    with (
+        mock.patch("coding_with_beat.pet.settings.load_settings", return_value=PetSettings(petdex_slug="")),
+        mock.patch("coding_with_beat.pet.app.run", side_effect=fake_run),
+    ):
         assert cmd_pet() == 0
     assert called["petdex_slug"] == "boba"
     assert called["hide_dock"] is False
@@ -86,7 +89,10 @@ def test_cmd_pet_builtin_disables_petdex_default(monkeypatch):
         return 0
 
     monkeypatch.setattr("sys.argv", ["cwb", "pet", "--builtin"])
-    with mock.patch("coding_with_beat.pet.app.run", side_effect=fake_run):
+    with (
+        mock.patch("coding_with_beat.pet.settings.load_settings", return_value=PetSettings(petdex_slug="")),
+        mock.patch("coding_with_beat.pet.app.run", side_effect=fake_run),
+    ):
         assert cmd_pet() == 0
     assert called["petdex_slug"] is None
     assert called["hide_dock"] is False
