@@ -309,11 +309,13 @@ class PetWindow(QWidget):
             self._dj_panel.show_result(result)
         self._show_bubble(_pet_bubble_text(result))
         self._track_label.setText(self.controller.current_track_label())
+        _apply_aura_playback(self, playing=result.action == "dance" and result.ok, changed=result.ok)
 
     def _apply_live_result(self, result: PetSessionResult) -> None:
         if result.card.kind != "live":
             return
         self._last_live_playing = result.action == "dance"
+        changed = result.ok and result.card.text != self._last_live_label
         if self._last_live_playing:
             self.controller.animator.set_action("dance")
         elif self.controller.animator.action == "dance":
@@ -322,12 +324,15 @@ class PetWindow(QWidget):
             self._dj_panel.refresh_live_snapshot()
         if not result.ok:
             self._last_live_label = result.card.text
+            _apply_aura_playback(self, playing=False, changed=False)
             return
         if result.card.text == self._last_live_label:
+            _apply_aura_playback(self, playing=self._last_live_playing, changed=False)
             return
         self._last_live_label = result.card.text
         self._show_bubble(result.card.text)
         self._track_label.setText(_live_track_label(result.card.text))
+        _apply_aura_playback(self, playing=self._last_live_playing, changed=changed)
 
 
 def _action(text: str, callback, parent) -> QAction:
@@ -471,6 +476,12 @@ def _live_track_label(text: str) -> str:
     if len(lines) >= 2:
         return lines[1]
     return "未播放"
+
+
+def _apply_aura_playback(owner, *, playing: bool, changed: bool) -> None:
+    owner._aura.set_playing(playing)
+    if playing and changed:
+        owner._aura.burst()
 
 
 def _frame_pixmap(frame: Frame, palette: dict[str, str], scale: int) -> QPixmap:
@@ -780,11 +791,13 @@ class PetdexWindow(QWidget):
             self._dj_panel.show_result(result)
         self._show_bubble(_pet_bubble_text(result))
         self._track_label.setText(self.controller.current_track_label())
+        _apply_aura_playback(self, playing=result.action == "dance" and result.ok, changed=result.ok)
 
     def _apply_live_result(self, result: PetSessionResult) -> None:
         if result.card.kind != "live":
             return
         self._last_live_playing = result.action == "dance"
+        changed = result.ok and result.card.text != self._last_live_label
         if self._last_live_playing:
             self.petdex_animator.set_action("dance")
         elif self.petdex_animator.action == "dance":
@@ -793,12 +806,15 @@ class PetdexWindow(QWidget):
             self._dj_panel.refresh_live_snapshot()
         if not result.ok:
             self._last_live_label = result.card.text
+            _apply_aura_playback(self, playing=False, changed=False)
             return
         if result.card.text == self._last_live_label:
+            _apply_aura_playback(self, playing=self._last_live_playing, changed=False)
             return
         self._last_live_label = result.card.text
         self._show_bubble(result.card.text)
         self._track_label.setText(_live_track_label(result.card.text))
+        _apply_aura_playback(self, playing=self._last_live_playing, changed=changed)
 
 
 def _petdex_frame_pixmap(spritesheet: QPixmap, animator: PetdexAnimator, target_size: tuple[int, int]) -> QPixmap:

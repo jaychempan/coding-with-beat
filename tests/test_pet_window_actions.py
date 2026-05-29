@@ -78,6 +78,38 @@ def test_builtin_pet_window_reacts_to_live_track_change():
         window.close()
 
 
+def test_builtin_live_track_change_updates_aura():
+    app = QApplication.instance() or QApplication([])
+    window = PetWindow()
+    try:
+        assert app is not None
+        result = PetSessionResult(True, "dance", PetBubbleCard("live", "当前播放\n▶ 晴天 — 周杰伦", action="dance"))
+
+        window._apply_live_result(result)
+
+        assert window._aura.is_playing is True
+        assert window._aura.burst_phase == 1.0
+    finally:
+        window.close()
+
+
+def test_builtin_repeated_live_track_does_not_repeat_aura_burst():
+    app = QApplication.instance() or QApplication([])
+    window = PetWindow()
+    try:
+        assert app is not None
+        result = PetSessionResult(True, "dance", PetBubbleCard("live", "当前播放\n▶ 晴天 — 周杰伦", action="dance"))
+
+        window._apply_live_result(result)
+        window._aura.burst_phase = 0.25
+        window._apply_live_result(result)
+
+        assert window._aura.is_playing is True
+        assert window._aura.burst_phase == 0.25
+    finally:
+        window.close()
+
+
 def test_builtin_pet_window_does_not_repeat_same_live_track_bubble():
     app = QApplication.instance() or QApplication([])
     window = PetWindow()
@@ -275,6 +307,21 @@ def test_petdex_window_reacts_to_live_track_change():
         assert "晴天" in window._bubble.text()
         assert window.petdex_animator.action == "dance"
         assert window._last_live_playing is True
+    finally:
+        window.close()
+
+
+def test_petdex_live_track_change_updates_aura():
+    app = QApplication.instance() or QApplication([])
+    window = PetdexWindow(ensure_petdex_pet("codebeat-buddy"))
+    try:
+        assert app is not None
+        result = PetSessionResult(True, "dance", PetBubbleCard("live", "当前播放\n▶ 晴天 — 周杰伦", action="dance"))
+
+        window._apply_live_result(result)
+
+        assert window._aura.is_playing is True
+        assert window._aura.burst_phase == 1.0
     finally:
         window.close()
 
