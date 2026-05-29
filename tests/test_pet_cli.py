@@ -14,6 +14,19 @@ def test_cmd_pet_prints_install_hint_when_pyside_missing(capsys):
     assert "pip install" in capsys.readouterr().err
 
 
+def test_cmd_pet_defaults_to_curated_petdex_pet(monkeypatch):
+    called = {}
+
+    def fake_run(*, petdex_slug=None):
+        called["petdex_slug"] = petdex_slug
+        return 0
+
+    monkeypatch.setattr("sys.argv", ["cwb", "pet"])
+    with mock.patch("coding_with_beat.pet.app.run", side_effect=fake_run):
+        assert cmd_pet() == 0
+    assert called["petdex_slug"] == "boba"
+
+
 def test_cmd_pet_passes_petdex_slug(monkeypatch):
     called = {}
 
@@ -25,3 +38,16 @@ def test_cmd_pet_passes_petdex_slug(monkeypatch):
     with mock.patch("coding_with_beat.pet.app.run", side_effect=fake_run):
         assert cmd_pet() == 0
     assert called["petdex_slug"] == "boba"
+
+
+def test_cmd_pet_builtin_disables_petdex_default(monkeypatch):
+    called = {}
+
+    def fake_run(*, petdex_slug=None):
+        called["petdex_slug"] = petdex_slug
+        return 0
+
+    monkeypatch.setattr("sys.argv", ["cwb", "pet", "--builtin"])
+    with mock.patch("coding_with_beat.pet.app.run", side_effect=fake_run):
+        assert cmd_pet() == 0
+    assert called["petdex_slug"] is None

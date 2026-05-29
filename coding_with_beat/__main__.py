@@ -16,7 +16,7 @@ Commands:
     lyrics       — render a karaoke window for the current track
     player       — render the full live player (cover + progress + lyrics + buddy)
     watch        — real-time ticking player in an alt-screen TUI (Ctrl-C to exit)
-    pet          — launch the native desktop pixel pet (requires coding-with-beat[pet])
+    pet          — launch the desktop pet; defaults to Petdex boba, use --builtin for built-in pixels
     source [name] — print or set source (apple_music | local | qq_music)
     karaoke      — full-screen centred lyrics from the MCP server (Ctrl-C to exit)
     play [query] — resume current track, or search & play if a query is given
@@ -62,6 +62,7 @@ def _env_first(name: str, legacy_name: str, default: str) -> str:
 
 _MCP_ERROR_PREFIXES = ("(unsupported", "(no match")
 _MCP_ERROR_MARKERS = ("full playback did not start",)
+DEFAULT_PETDEX_SLUG = "boba"
 
 
 def _mcp_print(tool: str, kwargs: dict | None = None) -> int:
@@ -181,7 +182,10 @@ def cmd_pet() -> int:
     try:
         from .pet.app import run
 
-        petdex_slug = None
+        args = sys.argv[2:]
+        petdex_slug = DEFAULT_PETDEX_SLUG
+        if "--builtin" in args:
+            petdex_slug = None
         if "--petdex" in sys.argv[2:]:
             idx = sys.argv.index("--petdex")
             if idx + 1 >= len(sys.argv):
