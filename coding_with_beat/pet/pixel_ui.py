@@ -11,21 +11,21 @@ from PySide6.QtWidgets import QLabel, QPushButton
 PIXEL_FONT = "Menlo"
 ELLIPSIS = "..."
 STATUS_STYLE = (
-    "QLabel { color: #67e8f9; background: transparent; border: none;"
+    "QLabel { color: #5eead4; background: transparent; border: none;"
     " padding: 0 2px; font-size: 12px; font-weight: 700; }"
 )
 BUBBLE_STYLE = (
-    "QLabel { color: #f8fafc; background: rgba(8, 13, 31, 142);"
-    " border: 1px solid rgba(167, 139, 250, 145); border-radius: 8px;"
+    "QLabel { color: #f8fafc; background: rgba(5, 9, 18, 176);"
+    " border: 1px solid rgba(94, 234, 212, 128); border-radius: 9px;"
     " padding: 7px 9px; font-size: 11px; }"
 )
 ICON_BUTTON_STYLE = (
-    "QPushButton { color: #f8fafc; background: rgba(2, 6, 23, 92);"
-    " border: 1px solid rgba(103, 232, 249, 115); border-radius: 0px; padding: 0;"
-    " font-size: 13px; }"
-    "QPushButton:hover { color: #22d3ee; background: rgba(2, 6, 23, 150);"
-    " border-color: rgba(34, 211, 238, 210); }"
-    "QPushButton:pressed { color: #facc15; background: rgba(15, 23, 42, 210); }"
+    "QPushButton { color: #ecfeff; background: rgba(5, 9, 18, 150);"
+    " border: 1px solid rgba(94, 234, 212, 118); border-radius: 7px; padding: 0;"
+    " font-size: 12px; }"
+    "QPushButton:hover { color: #5eead4; background: rgba(8, 18, 28, 208);"
+    " border-color: rgba(94, 234, 212, 220); }"
+    "QPushButton:pressed { color: #020617; background: #5eead4; border-color: #99f6e4; }"
 )
 
 
@@ -63,7 +63,7 @@ def style_status_label(label: QLabel) -> None:
 def style_icon_button(button: QPushButton) -> None:
     button.setCursor(Qt.CursorShape.PointingHandCursor)
     button.setFixedSize(26, 26)
-    button.setFont(_pixel_font(13, bold=True))
+    button.setFont(_pixel_font(12, bold=True))
     button.setStyleSheet(ICON_BUTTON_STYLE)
 
 

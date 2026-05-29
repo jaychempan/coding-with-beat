@@ -60,6 +60,40 @@ def test_builtin_pet_window_applies_pending_result():
         window.close()
 
 
+def test_builtin_pet_window_reacts_to_live_track_change():
+    app = QApplication.instance() or QApplication([])
+    window = PetWindow()
+    try:
+        assert app is not None
+        result = PetSessionResult(True, "dance", PetBubbleCard("live", "当前播放\n▶ 晴天 — 周杰伦", action="dance"))
+
+        window._apply_live_result(result)
+
+        assert "晴天" in window._bubble.text()
+        assert window.controller.animator.action == "dance"
+        assert window._last_live_label == "当前播放\n▶ 晴天 — 周杰伦"
+        assert window._last_live_playing is True
+    finally:
+        window.close()
+
+
+def test_builtin_pet_window_does_not_repeat_same_live_track_bubble():
+    app = QApplication.instance() or QApplication([])
+    window = PetWindow()
+    try:
+        assert app is not None
+        result = PetSessionResult(True, "dance", PetBubbleCard("live", "当前播放\n▶ 晴天 — 周杰伦", action="dance"))
+
+        window._apply_live_result(result)
+        window._bubble.set_pixel_text("kept")
+        window._apply_live_result(result)
+
+        assert window._bubble.text() == "kept"
+        assert window.controller.animator.action == "dance"
+    finally:
+        window.close()
+
+
 def test_recommendation_result_goes_to_dj_panel_with_short_pet_bubble():
     app = QApplication.instance() or QApplication([])
     window = PetWindow()
@@ -194,6 +228,22 @@ def test_petdex_window_has_scrollable_dj_panel():
         assert app is not None
         assert isinstance(window._dj_panel, CodeBeatDjPanel)
         assert window._dj_panel.isVisible() is False
+    finally:
+        window.close()
+
+
+def test_petdex_window_reacts_to_live_track_change():
+    app = QApplication.instance() or QApplication([])
+    window = PetdexWindow(ensure_petdex_pet("codebeat-buddy"))
+    try:
+        assert app is not None
+        result = PetSessionResult(True, "dance", PetBubbleCard("live", "当前播放\n▶ 晴天 — 周杰伦", action="dance"))
+
+        window._apply_live_result(result)
+
+        assert "晴天" in window._bubble.text()
+        assert window.petdex_animator.action == "dance"
+        assert window._last_live_playing is True
     finally:
         window.close()
 

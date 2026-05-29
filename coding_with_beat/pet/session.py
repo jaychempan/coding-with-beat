@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
 from typing import Callable
 
@@ -220,6 +221,26 @@ class PetMusicSession:
             return self._remember(PetSessionResult(False, "sad", card))
         card = self.bubble.status("当前播放", music_result.text)
         return self._remember(PetSessionResult(True, card.action, card))
+
+    def live_now_playing(self) -> PetSessionResult:
+        music_result = self.music.now_playing_snapshot("")
+        if not music_result.ok:
+            return PetSessionResult(False, "idle", PetBubbleCard("live", "当前播放\n未播放", action="idle"))
+        try:
+            data = json.loads(music_result.text or "{}")
+        except json.JSONDecodeError:
+            return PetSessionResult(False, "idle", PetBubbleCard("live", "当前播放\n未播放", action="idle"))
+
+        title = str(data.get("title") or "").strip()
+        artist = str(data.get("artist") or "").strip()
+        playing = bool(data.get("playing"))
+        if not title and not artist:
+            return PetSessionResult(False, "idle", PetBubbleCard("live", "当前播放\n未播放", action="idle"))
+
+        marker = "▶" if playing else "▷"
+        label = f"{title} — {artist}" if title and artist else title or artist
+        action = "dance" if playing else "idle"
+        return PetSessionResult(True, action, PetBubbleCard("live", f"当前播放\n{marker} {label}", action=action))
 
     def _recommend_current(self) -> PetSessionResult:
         if self.current_intent is None:

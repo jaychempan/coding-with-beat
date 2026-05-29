@@ -175,6 +175,7 @@ Petdex mode:
 - Double-click asks DJ Buddy to recommend from the current coding vibe and opens the scrollable CodeBeat DJ profile panel.
 - Long-press auto-starts music from the current coding vibe.
 - Music actions run in the background, so the pet keeps animating while recommendations load.
+- Music started from the terminal is reflected back into the pet: it polls the current track, pops a short now-playing bubble when the song changes, and switches into a dance animation while playback is active.
 - Bubbles are display-only pixel cards for short feedback only: no white editor background and no scrollbars.
 - The compact action strip uses `♪`, `✨`, `🎲`, and `⋯` for now playing, recommend, reroll, and more. The first three open/use the CodeBeat DJ panel.
 - The CodeBeat DJ profile panel uses a dark dotted DJ-station layout with identity header, live stats, taste chips, full result text, a scrollable queue, search prompt input, and direct **▶** buttons beside each result.

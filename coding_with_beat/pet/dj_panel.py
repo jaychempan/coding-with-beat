@@ -36,27 +36,33 @@ QLabel {
 }
 QLabel#DjTitle {
   color: #f8fafc;
-  font-size: 34px;
+  font-size: 25px;
   font-weight: 800;
   padding: 0;
 }
 QLabel#DjSubtitle {
   color: #5eead4;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
 }
 QLabel#IntroLine {
   color: rgba(203, 213, 225, 175);
-  font-size: 12px;
+  font-size: 11px;
 }
 QFrame#NowPlayingBand {
-  background: rgba(2, 6, 23, 94);
-  border: 1px solid rgba(94, 234, 212, 48);
-  border-radius: 10px;
+  background: rgba(2, 6, 23, 126);
+  border: 1px solid rgba(94, 234, 212, 64);
+  border-radius: 12px;
+}
+QLabel#SectionKicker {
+  color: rgba(94, 234, 212, 205);
+  font-size: 9px;
+  font-weight: 900;
+  letter-spacing: 1px;
 }
 QLabel#NowTitle {
   color: #f8fafc;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 800;
 }
 QLabel#NowMeta {
@@ -74,60 +80,60 @@ QLabel#LivePillLabel {
   font-weight: 800;
 }
 QFrame#IdentityBadge {
-  background: rgba(15, 23, 42, 170);
-  border: 1px solid rgba(94, 234, 212, 105);
-  border-radius: 29px;
+  background: rgba(15, 23, 42, 150);
+  border: 1px solid rgba(94, 234, 212, 88);
+  border-radius: 12px;
   color: #5eead4;
-  font-size: 24px;
+  font-size: 20px;
 }
 QFrame#IdentityBadge QLabel {
   color: #5eead4;
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 900;
 }
 QFrame#LivePill {
-  background: rgba(20, 184, 166, 28);
-  border: 1px solid rgba(94, 234, 212, 95);
-  border-radius: 11px;
+  background: rgba(20, 184, 166, 22);
+  border: 1px solid rgba(94, 234, 212, 78);
+  border-radius: 10px;
 }
 QFrame#StatsBand {
-  background: rgba(2, 6, 23, 92);
-  border-top: 1px solid rgba(148, 163, 184, 48);
-  border-bottom: 1px solid rgba(148, 163, 184, 48);
+  background: rgba(2, 6, 23, 58);
+  border-top: 1px solid rgba(148, 163, 184, 42);
+  border-bottom: 1px solid rgba(148, 163, 184, 42);
 }
 QLabel#StatLabel {
-  color: rgba(148, 163, 184, 188);
-  font-size: 10px;
+  color: rgba(148, 163, 184, 176);
+  font-size: 9px;
   font-weight: 700;
 }
 QLabel#StatOnAirValue,
 QLabel#StatMoodValue,
 QLabel#StatQueueValue {
   color: #f8fafc;
-  font-size: 24px;
+  font-size: 15px;
   font-weight: 800;
 }
 QLabel#TasteChip {
   color: rgba(226, 232, 240, 205);
-  background: rgba(15, 23, 42, 118);
-  border: 1px solid rgba(148, 163, 184, 62);
-  border-radius: 12px;
-  padding: 5px 10px;
+  background: rgba(15, 23, 42, 86);
+  border: 1px solid rgba(148, 163, 184, 48);
+  border-radius: 10px;
+  padding: 4px 9px;
   font-size: 10px;
   font-weight: 800;
 }
 QLineEdit#DjPromptInput {
   color: #f8fafc;
-  background: rgba(2, 6, 23, 118);
-  border: 1px solid rgba(94, 234, 212, 78);
-  border-radius: 15px;
+  background: rgba(2, 6, 23, 132);
+  border: 1px solid rgba(94, 234, 212, 70);
+  border-radius: 12px;
   padding: 8px 12px;
 }
 QPushButton#ActionChip {
   color: #f8fafc;
-  background: rgba(15, 23, 42, 118);
-  border: 1px solid rgba(148, 163, 184, 58);
-  border-radius: 13px;
+  background: rgba(15, 23, 42, 108);
+  border: 1px solid rgba(148, 163, 184, 54);
+  border-radius: 10px;
   padding: 6px 10px;
   font-size: 11px;
   font-weight: 700;
@@ -137,9 +143,9 @@ QPushButton#ActionChip:hover {
   border-color: rgba(103, 232, 249, 220);
 }
 QFrame#QueueRow {
-  background: rgba(15, 23, 42, 126);
-  border: 1px solid rgba(94, 234, 212, 55);
-  border-radius: 9px;
+  background: rgba(15, 23, 42, 112);
+  border: 1px solid rgba(94, 234, 212, 44);
+  border-radius: 10px;
 }
 QLabel#QueueLabel {
   color: rgba(226, 232, 240, 220);
@@ -148,9 +154,9 @@ QLabel#QueueLabel {
 }
 QLabel#TranscriptBlock {
   color: rgba(203, 213, 225, 205);
-  background: rgba(2, 6, 23, 74);
+  background: rgba(2, 6, 23, 66);
   border: 1px solid rgba(148, 163, 184, 34);
-  border-radius: 8px;
+  border-radius: 10px;
   padding: 7px;
   font-size: 11px;
 }
@@ -158,11 +164,11 @@ QPushButton#QueuePlayButton {
   color: #03151b;
   background: #5eead4;
   border: 1px solid rgba(255, 255, 255, 90);
-  border-radius: 15px;
-  min-width: 30px;
-  max-width: 30px;
-  min-height: 30px;
-  max-height: 30px;
+  border-radius: 14px;
+  min-width: 28px;
+  max-width: 28px;
+  min-height: 28px;
+  max-height: 28px;
   padding: 0;
   font-size: 12px;
   font-weight: 900;
@@ -204,13 +210,13 @@ class CodeBeatDjPanel(QWidget):
         self.setObjectName("CodeBeatDjPanel")
         self.setWindowTitle("CodeBeat DJ")
         self.setWindowFlags(Qt.WindowType.Window | Qt.WindowType.WindowStaysOnTopHint)
-        self.setMinimumSize(390, 560)
+        self.setMinimumSize(410, 580)
         self.setAutoFillBackground(False)
         self.setStyleSheet(PANEL_STYLE)
 
         self.title_label = QLabel("CodeBeat DJ")
         self.title_label.setObjectName("DjTitle")
-        self.subtitle_label = QLabel("Your mood is my prompt.")
+        self.subtitle_label = QLabel("coding state mixer")
         self.subtitle_label.setObjectName("DjSubtitle")
         self.on_air_value = QLabel("LIVE")
         self.on_air_value.setObjectName("StatOnAirValue")
@@ -237,7 +243,7 @@ class CodeBeatDjPanel(QWidget):
 
         self.prompt_input = QLineEdit()
         self.prompt_input.setObjectName("DjPromptInput")
-        self.prompt_input.setPlaceholderText("搜歌手/歌名/歌单，也可以说：来点爵士 / 从资料库找 周杰伦")
+        self.prompt_input.setPlaceholderText("搜歌手、歌名、歌单，或输入：来点爵士")
         self.prompt_input.returnPressed.connect(self.submit_prompt)
         send_button = QPushButton("搜索")
         send_button.setObjectName("ActionChip")
@@ -249,13 +255,13 @@ class CodeBeatDjPanel(QWidget):
         input_row.addWidget(self.prompt_input, 1)
         input_row.addWidget(send_button)
 
-        recommend_button = QPushButton("按当前状态推荐")
+        recommend_button = QPushButton("推荐")
         recommend_button.setObjectName("ActionChip")
         recommend_button.clicked.connect(self.recommend_from_context)
-        reroll_button = QPushButton("换一组")
+        reroll_button = QPushButton("换组")
         reroll_button.setObjectName("ActionChip")
         reroll_button.clicked.connect(self.reroll)
-        now_button = QPushButton("当前播放")
+        now_button = QPushButton("当前")
         now_button.setObjectName("ActionChip")
         now_button.clicked.connect(self.now_playing)
         library_button = QPushButton("资料库")
@@ -268,27 +274,25 @@ class CodeBeatDjPanel(QWidget):
         playlist_button.setObjectName("ActionChip")
         playlist_button.clicked.connect(self.list_playlists)
 
-        action_row = QHBoxLayout()
-        action_row.setContentsMargins(0, 0, 0, 0)
-        action_row.setSpacing(6)
-        action_row.addWidget(recommend_button)
-        action_row.addWidget(library_button)
-        action_row.addWidget(liked_button)
-        action_row.addWidget(playlist_button)
-        action_row.addWidget(now_button)
-        action_row.addWidget(reroll_button)
+        action_grid = QGridLayout()
+        action_grid.setContentsMargins(0, 0, 0, 0)
+        action_grid.setHorizontalSpacing(6)
+        action_grid.setVerticalSpacing(6)
+        for index, button in enumerate(
+            (recommend_button, library_button, liked_button, playlist_button, now_button, reroll_button)
+        ):
+            action_grid.addWidget(button, index // 3, index % 3)
 
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(18, 18, 18, 16)
-        layout.setSpacing(12)
+        layout.setContentsMargins(18, 16, 18, 16)
+        layout.setSpacing(10)
         layout.addWidget(self._build_identity_header())
-        layout.addWidget(self._build_intro())
         layout.addWidget(self._build_now_playing_band())
         layout.addWidget(self._build_stats_band())
         layout.addWidget(self._build_chips_row())
         layout.addWidget(self.scroll_area, 1)
         layout.addLayout(input_row)
-        layout.addLayout(action_row)
+        layout.addLayout(action_grid)
 
         self._animation_timer = QTimer(self)
         self._animation_timer.timeout.connect(self._tick_motion)
@@ -312,15 +316,15 @@ class CodeBeatDjPanel(QWidget):
                 self.height() * 0.22,
                 self.width() * (0.40 + 0.04 * pulse),
             )
-            gradient.setColorAt(0.0, QColor(45, 212, 191, 34 + int(18 * pulse)))
-            gradient.setColorAt(0.45, QColor(45, 212, 191, 14))
+            gradient.setColorAt(0.0, QColor(45, 212, 191, 22 + int(12 * pulse)))
+            gradient.setColorAt(0.45, QColor(45, 212, 191, 9))
             gradient.setColorAt(1.0, QColor(45, 212, 191, 0))
             painter.fillRect(self.rect(), gradient)
 
-            painter.setPen(QPen(QColor(94, 234, 212, 48), 1))
-            offset = self._motion_phase % 18
-            for y in range(14 - offset, self.height(), 18):
-                for x in range(12 + (offset // 2), self.width(), 18):
+            painter.setPen(QPen(QColor(94, 234, 212, 30), 1))
+            offset = self._motion_phase % 22
+            for y in range(16 - offset, self.height(), 22):
+                for x in range(14 + (offset // 2), self.width(), 22):
                     painter.drawPoint(x, y)
 
             if self._live_playing:
@@ -331,8 +335,8 @@ class CodeBeatDjPanel(QWidget):
                     h = 7 + int(12 * (0.5 + 0.5 * math.sin((self._motion_phase + i * 2) / 3)))
                     painter.drawLine(base_x + i * 8, base_y, base_x + i * 8, base_y - h)
 
-            painter.setPen(QPen(QColor(148, 163, 184, 30), 1))
-            painter.drawLine(18, 222, self.width() - 18, 222)
+            painter.setPen(QPen(QColor(148, 163, 184, 24), 1))
+            painter.drawLine(18, 194, self.width() - 18, 194)
         finally:
             painter.end()
         super().paintEvent(event)
@@ -470,10 +474,10 @@ class CodeBeatDjPanel(QWidget):
 
         badge = QFrame()
         badge.setObjectName("IdentityBadge")
-        badge.setFixedSize(58, 58)
+        badge.setFixedSize(48, 48)
         badge_label = QLabel("♪", badge)
         badge_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        badge_label.setGeometry(0, 0, 58, 58)
+        badge_label.setGeometry(0, 0, 48, 48)
 
         title_column = QVBoxLayout()
         title_column.setContentsMargins(0, 0, 0, 0)
@@ -510,8 +514,11 @@ class CodeBeatDjPanel(QWidget):
         band = QFrame()
         band.setObjectName("NowPlayingBand")
         layout = QVBoxLayout(band)
-        layout.setContentsMargins(10, 8, 10, 8)
-        layout.setSpacing(3)
+        layout.setContentsMargins(11, 9, 11, 9)
+        layout.setSpacing(4)
+        kicker = QLabel("NOW PLAYING")
+        kicker.setObjectName("SectionKicker")
+        layout.addWidget(kicker)
         layout.addWidget(self.now_title)
         layout.addWidget(self.now_meta)
         layout.addWidget(self.now_lyric)
@@ -521,8 +528,8 @@ class CodeBeatDjPanel(QWidget):
         band = QFrame()
         band.setObjectName("StatsBand")
         layout = QGridLayout(band)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setHorizontalSpacing(18)
+        layout.setContentsMargins(0, 6, 0, 6)
+        layout.setHorizontalSpacing(14)
         layout.setVerticalSpacing(3)
         for column, (label, value) in enumerate(
             (

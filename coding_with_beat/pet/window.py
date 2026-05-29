@@ -58,7 +58,11 @@ class PetWindow(QWidget):
         self.interactions = PetInteractionController(session=self.music_session)
         self.command_runner = PetCommandRunner(self)
         self.command_runner.finished.connect(self._apply_session_result)
+        self.live_runner = PetCommandRunner(self, timeout_ms=4_000)
+        self.live_runner.finished.connect(self._apply_live_result)
         self._dj_panel = CodeBeatDjPanel(self)
+        self._last_live_label = ""
+        self._last_live_playing = False
         self._long_press_fired = False
         self._drag_started = False
         self._press_global_pos: QPoint | None = None
@@ -79,11 +83,11 @@ class PetWindow(QWidget):
         _style_sprite_label(self._label)
         self._now_button = _icon_button("♪", "当前播放")
         self._now_button.clicked.connect(self._dj_panel.now_playing)
-        self._recommend_button = _icon_button("✨", "按当前状态推荐")
+        self._recommend_button = _icon_button("+", "按当前状态推荐")
         self._recommend_button.clicked.connect(self._dj_panel.recommend_from_context)
-        self._reroll_button = _icon_button("🎲", "换一组")
+        self._reroll_button = _icon_button("↻", "换一组")
         self._reroll_button.clicked.connect(self._dj_panel.reroll)
-        self._more_button = _icon_button("⋯", "更多")
+        self._more_button = _icon_button("...", "更多")
         self._more_button.clicked.connect(self._show_more_menu)
 
         self._controls_widget = _controls_widget(
@@ -112,6 +116,10 @@ class PetWindow(QWidget):
         self.state_timer.timeout.connect(self._refresh_state)
         self.state_timer.start(1500)
 
+        self.live_timer = QTimer(self)
+        self.live_timer.timeout.connect(self._poll_live_music)
+        self.live_timer.start(3500)
+
         self.ambient_timer = QTimer(self)
         self.ambient_timer.timeout.connect(self._ambient_motion)
         self.ambient_timer.start(3200)
@@ -122,7 +130,13 @@ class PetWindow(QWidget):
 
     def _refresh_state(self) -> None:
         self.controller.refresh_action()
+        if self._last_live_playing:
+            self.controller.animator.set_action("dance")
         self._track_label.setText(self.controller.current_track_label())
+
+    def _poll_live_music(self) -> None:
+        if not self.live_runner.busy:
+            self.live_runner.run(self.music_session.live_now_playing)
 
     def _ambient_motion(self) -> None:
         if self.controller.animator.action in {"idle", "walk", "think", "happy"}:
@@ -286,6 +300,25 @@ class PetWindow(QWidget):
         self._show_bubble(_pet_bubble_text(result))
         self._track_label.setText(self.controller.current_track_label())
 
+    def _apply_live_result(self, result: PetSessionResult) -> None:
+        if result.card.kind != "live":
+            return
+        self._last_live_playing = result.action == "dance"
+        if self._last_live_playing:
+            self.controller.animator.set_action("dance")
+        elif self.controller.animator.action == "dance":
+            self.controller.refresh_action()
+        if self._dj_panel.isVisible():
+            self._dj_panel.refresh_live_snapshot()
+        if not result.ok:
+            self._last_live_label = result.card.text
+            return
+        if result.card.text == self._last_live_label:
+            return
+        self._last_live_label = result.card.text
+        self._show_bubble(result.card.text)
+        self._track_label.setText(_live_track_label(result.card.text))
+
 
 def _action(text: str, callback, parent) -> QAction:
     action = QAction(text, parent)
@@ -354,6 +387,13 @@ def _should_record_in_dj_panel(result: PetSessionResult) -> bool:
     return not (result.action == "think" and result.card.kind == "status")
 
 
+def _live_track_label(text: str) -> str:
+    lines = [line.strip() for line in (text or "").splitlines() if line.strip()]
+    if len(lines) >= 2:
+        return lines[1]
+    return "未播放"
+
+
 def _frame_pixmap(frame: Frame, palette: dict[str, str], scale: int) -> QPixmap:
     rows = frame.pixels
     width = max(len(row) for row in rows)
@@ -382,7 +422,11 @@ class PetdexWindow(QWidget):
         self.interactions = PetInteractionController(session=self.music_session)
         self.command_runner = PetCommandRunner(self)
         self.command_runner.finished.connect(self._apply_session_result)
+        self.live_runner = PetCommandRunner(self, timeout_ms=4_000)
+        self.live_runner.finished.connect(self._apply_live_result)
         self._dj_panel = CodeBeatDjPanel(self)
+        self._last_live_label = ""
+        self._last_live_playing = False
         self._long_press_fired = False
         self._long_press_timer = QTimer(self)
         self._long_press_timer.setSingleShot(True)
@@ -413,11 +457,11 @@ class PetdexWindow(QWidget):
         self._label.setFixedSize(*self._petdex_display_size)
         self._now_button = _icon_button("♪", "当前播放")
         self._now_button.clicked.connect(self._dj_panel.now_playing)
-        self._recommend_button = _icon_button("✨", "按当前状态推荐")
+        self._recommend_button = _icon_button("+", "按当前状态推荐")
         self._recommend_button.clicked.connect(self._dj_panel.recommend_from_context)
-        self._reroll_button = _icon_button("🎲", "换一组")
+        self._reroll_button = _icon_button("↻", "换一组")
         self._reroll_button.clicked.connect(self._dj_panel.reroll)
-        self._more_button = _icon_button("⋯", "更多")
+        self._more_button = _icon_button("...", "更多")
         self._more_button.clicked.connect(self._show_more_menu)
 
         self._controls_widget = _controls_widget(
@@ -446,14 +490,24 @@ class PetdexWindow(QWidget):
         self.state_timer.timeout.connect(self._refresh_state)
         self.state_timer.start(1500)
 
+        self.live_timer = QTimer(self)
+        self.live_timer.timeout.connect(self._poll_live_music)
+        self.live_timer.start(3500)
+
     def _tick(self) -> None:
         self.petdex_animator.tick()
         self._render()
 
     def _refresh_state(self) -> None:
         action = self.controller.refresh_action()
+        if self._last_live_playing:
+            action = "dance"
         self.petdex_animator.set_action(action)
         self._track_label.setText(self.controller.current_track_label())
+
+    def _poll_live_music(self) -> None:
+        if not self.live_runner.busy:
+            self.live_runner.run(self.music_session.live_now_playing)
 
     def _render(self) -> None:
         pixmap = _petdex_frame_pixmap(self._spritesheet, self.petdex_animator, self._petdex_display_size)
@@ -639,6 +693,25 @@ class PetdexWindow(QWidget):
             self._dj_panel.show_result(result)
         self._show_bubble(_pet_bubble_text(result))
         self._track_label.setText(self.controller.current_track_label())
+
+    def _apply_live_result(self, result: PetSessionResult) -> None:
+        if result.card.kind != "live":
+            return
+        self._last_live_playing = result.action == "dance"
+        if self._last_live_playing:
+            self.petdex_animator.set_action("dance")
+        elif self.petdex_animator.action == "dance":
+            self.petdex_animator.set_action(self.controller.refresh_action())
+        if self._dj_panel.isVisible():
+            self._dj_panel.refresh_live_snapshot()
+        if not result.ok:
+            self._last_live_label = result.card.text
+            return
+        if result.card.text == self._last_live_label:
+            return
+        self._last_live_label = result.card.text
+        self._show_bubble(result.card.text)
+        self._track_label.setText(_live_track_label(result.card.text))
 
 
 def _petdex_frame_pixmap(spritesheet: QPixmap, animator: PetdexAnimator, target_size: tuple[int, int]) -> QPixmap:

@@ -185,7 +185,7 @@ def test_dj_panel_has_profile_identity_stats_and_chips():
 
     assert app is not None
     assert panel.findChild(QLabel, "DjTitle").text() == "CodeBeat DJ"
-    assert "mood" in panel.findChild(QLabel, "DjSubtitle").text().lower()
+    assert "coding state" in panel.findChild(QLabel, "DjSubtitle").text().lower()
     assert panel.findChild(QLabel, "StatOnAirValue").text() == "LIVE"
     assert panel.findChild(QLabel, "StatMoodValue").text() == "IDLE"
     assert panel.findChild(QLabel, "StatQueueValue").text() == "0"

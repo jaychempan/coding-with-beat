@@ -59,9 +59,9 @@ def test_pixel_bubble_label_uses_soft_glass_style():
     style = label.styleSheet()
 
     assert app is not None
-    assert "rgba(8, 13, 31, 142)" in style
-    assert "border-radius: 8px" in style
-    assert "rgba(167, 139, 250, 145)" in style
+    assert "rgba(5, 9, 18, 176)" in style
+    assert "border-radius: 9px" in style
+    assert "rgba(94, 234, 212, 128)" in style
 
 
 def test_status_label_has_compact_width_limit():

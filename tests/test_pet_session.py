@@ -31,6 +31,7 @@ class FakeMusic:
         library_text="1. 晴天 — 周杰伦 · 叶惠美 [Library]",
         playlists_text="1. Coding Beats [user playlist] — 42 首",
         playlist_text="▶ now playing playlist 'Coding Beats': Intro — DJ  source=apple_music",
+        snapshot_text='{"title":"晴天","artist":"周杰伦","source":"apple_music","playing":true}',
     ):
         self.calls = []
         self.recommend_ok = recommend_ok
@@ -44,6 +45,7 @@ class FakeMusic:
         self.library_text = library_text
         self.playlists_text = playlists_text
         self.playlist_text = playlist_text
+        self.snapshot_text = snapshot_text
 
     def recommend(self, queries):
         self.calls.append(("recommend", list(queries)))
@@ -56,6 +58,10 @@ class FakeMusic:
     def now_playing(self):
         self.calls.append(("now_playing",))
         return MusicResult(self.now_playing_ok, self.now_playing_text)
+
+    def now_playing_snapshot(self, known_lyrics_key=""):
+        self.calls.append(("now_playing_snapshot", known_lyrics_key))
+        return MusicResult(True, self.snapshot_text)
 
     def search(self, query):
         self.calls.append(("search", query))
@@ -361,6 +367,42 @@ def test_now_playing_success_returns_status_card():
     assert result.card.kind == "status"
     assert result.card.text == "当前播放\n▶ 晴天 - 周杰伦"
     assert session.last_result == result
+
+
+def test_live_now_playing_reports_terminal_started_track():
+    music = FakeMusic(snapshot_text='{"title":"晴天","artist":"周杰伦","source":"apple_music","playing":true}')
+    session = PetMusicSession(music=music, load_state=lambda: state(vibe="debug"))
+
+    result = session.live_now_playing()
+
+    assert result.ok is True
+    assert result.action == "dance"
+    assert result.card.kind == "live"
+    assert result.card.text == "当前播放\n▶ 晴天 — 周杰伦"
+    assert music.calls == [("now_playing_snapshot", "")]
+
+
+def test_live_now_playing_reports_paused_track_without_dance():
+    music = FakeMusic(snapshot_text='{"title":"晴天","artist":"周杰伦","source":"apple_music","playing":false}')
+    session = PetMusicSession(music=music, load_state=lambda: state(vibe="debug"))
+
+    result = session.live_now_playing()
+
+    assert result.ok is True
+    assert result.action == "idle"
+    assert result.card.text == "当前播放\n▷ 晴天 — 周杰伦"
+
+
+def test_live_now_playing_ignores_empty_snapshot():
+    music = FakeMusic(snapshot_text='{"title":"","artist":"","playing":false}')
+    session = PetMusicSession(music=music, load_state=lambda: state(vibe="debug"))
+
+    result = session.live_now_playing()
+
+    assert result.ok is False
+    assert result.action == "idle"
+    assert result.card.kind == "live"
+    assert result.card.text == "当前播放\n未播放"
 
 
 def test_now_playing_failure_returns_error_card():
