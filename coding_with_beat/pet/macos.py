@@ -13,20 +13,32 @@ from PySide6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
 APP_NAME = "Coding With Beat Pet"
 
 
+def app_icon_path() -> Path | None:
+    return _first_existing_asset(("waveform_app_icon.svg", "waveform_logo.svg", "logo_icon.png"))
+
+
 def pet_icon_path() -> Path | None:
-    assets_dir = Path(__file__).resolve().parents[2] / "assets"
-    for name in ("waveform_logo.svg", "logo_icon.png"):
+    return _first_existing_asset(("waveform_menu_bar.svg", "waveform_logo.svg", "logo_icon.png"))
+
+
+def _first_existing_asset(names: tuple[str, ...]) -> Path | None:
+    assets_dir = _assets_dir()
+    for name in names:
         path = assets_dir / name
         if path.exists():
             return path
     return None
 
 
+def _assets_dir() -> Path:
+    return Path(__file__).resolve().parents[2] / "assets"
+
+
 def apply_app_metadata(app: QApplication) -> QIcon:
     app.setApplicationName(APP_NAME)
     app.setOrganizationName("Coding With Beat")
     icon = QIcon()
-    path = pet_icon_path()
+    path = app_icon_path()
     if path is not None:
         icon = QIcon(str(path))
         app.setWindowIcon(icon)

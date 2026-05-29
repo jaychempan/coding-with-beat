@@ -12,6 +12,7 @@ from PySide6.QtWidgets import QApplication
 from coding_with_beat.pet.macos import (
     APP_NAME,
     PetMenuBarController,
+    app_icon_path,
     hide_dock_icon,
     pet_icon_path,
 )
@@ -54,7 +55,15 @@ def test_pet_icon_path_uses_repo_logo():
     path = pet_icon_path()
 
     assert path is not None
-    assert path.name == "waveform_logo.svg"
+    assert path.name == "waveform_menu_bar.svg"
+    assert path.exists()
+
+
+def test_app_icon_path_uses_padded_waveform_logo():
+    path = app_icon_path()
+
+    assert path is not None
+    assert path.name == "waveform_app_icon.svg"
     assert path.exists()
 
 
