@@ -194,6 +194,19 @@ def test_empty_recommendation_output_returns_empty_card_and_sets_current_card():
     assert session.last_result == result
 
 
+def test_textual_no_matches_recommendation_returns_empty_card_not_error():
+    music = FakeMusic(recommend_text="(no matches for queries: debug)")
+    session = PetMusicSession(music=music, load_state=lambda: state(vibe="debug"))
+
+    result = session.recommend_from_context()
+
+    assert result.ok is False
+    assert result.action == "sad"
+    assert result.card.kind == "empty"
+    assert not result.card.text.startswith("推荐失败")
+    assert session.current_card == result.card
+
+
 def test_recommend_from_text_uses_user_text_over_state():
     music = FakeMusic()
     session = PetMusicSession(music=music, load_state=lambda: state(dj_mood="victory", vibe="debug"))

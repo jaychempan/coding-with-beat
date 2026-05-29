@@ -93,7 +93,7 @@ class PetMusicSession:
         query_set = self.brain.queries_for_intent(self.current_intent, self.reroll_count)
         self.current_query_set = query_set
         music_result = self.music.recommend(query_set.queries)
-        if not _music_result_ok(music_result):
+        if not music_result.ok:
             card = self.bubble.error("推荐失败", music_result.text)
             return self._remember(PetSessionResult(False, "sad", card))
 
