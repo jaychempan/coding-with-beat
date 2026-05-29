@@ -55,8 +55,12 @@ class InstallSettingsTest(unittest.TestCase):
         self.assertEqual(migrated["statusLine"]["command"], "python3 -m coding_with_beat statusline")
         self.assertEqual(migrated["statusLine"]["_owner"], "coding-with-beat")
         self.assertEqual(len(migrated["hooks"]["UserPromptExpansion"]), 1)
-        self.assertEqual(migrated["hooks"]["UserPromptExpansion"][0]["matcher"], "cwb")
-        self.assertEqual(migrated["hooks"]["UserPromptExpansion"][0]["_owner"], "coding-with-beat")
+        self.assertNotIn("matcher", migrated["hooks"]["UserPromptExpansion"][0])
+        self.assertNotIn("_owner", migrated["hooks"]["UserPromptExpansion"][0])
+        self.assertEqual(
+            migrated["hooks"]["UserPromptExpansion"][0]["hooks"][0]["command"],
+            "python3 -m coding_with_beat hook",
+        )
 
 
 if __name__ == "__main__":
