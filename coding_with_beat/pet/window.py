@@ -74,6 +74,9 @@ class PetWindow(QWidget):
         self._single_click_timer = QTimer(self)
         self._single_click_timer.setSingleShot(True)
         self._single_click_timer.timeout.connect(self._handle_single_click)
+        self._controls_hide_timer = QTimer(self)
+        self._controls_hide_timer.setSingleShot(True)
+        self._controls_hide_timer.timeout.connect(self._hide_controls_if_idle)
         self._drag_origin: QPoint | None = None
         self._bubble = PixelBubbleLabel(self)
         self._track_label = QLabel("未播放", self)
@@ -91,7 +94,7 @@ class PetWindow(QWidget):
         self._recommend_button.clicked.connect(self._dj_panel.recommend_from_context)
         self._reroll_button = _icon_button("↻", "换一组")
         self._reroll_button.clicked.connect(self._dj_panel.reroll)
-        self._more_button = _icon_button("...", "更多")
+        self._more_button = _icon_button("⋮", "更多")
         self._more_button.clicked.connect(self._show_more_menu)
 
         self._controls_widget = _controls_widget(
@@ -100,6 +103,7 @@ class PetWindow(QWidget):
             self._reroll_button,
             self._more_button,
         )
+        self._controls_widget.hide()
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(6, 6, 6, 6)
@@ -154,11 +158,12 @@ class PetWindow(QWidget):
         self._aura.set_sprite_size((pixmap.width(), pixmap.height()))
         self._aura.advance()
         _layout_sprite_stage(self._sprite_stage, self._aura, self._label)
-        extra = 66 + (self._bubble.sizeHint().height() + 8 if self._bubble.isVisible() else 0)
+        extra = _pet_extra_height(self._bubble, self._controls_widget, base=34)
         self.resize(max(172, self._sprite_stage.width() + 12), self._sprite_stage.height() + extra)
 
     def mousePressEvent(self, event) -> None:
         if event.button() == Qt.MouseButton.LeftButton:
+            self._show_controls_temporarily()
             self._long_press_fired = False
             self._drag_started = False
             self._press_global_pos = event.globalPosition().toPoint()
@@ -201,11 +206,36 @@ class PetWindow(QWidget):
         super().mouseDoubleClickEvent(event)
 
     def contextMenuEvent(self, event) -> None:
+        self._show_controls_temporarily()
         self._build_context_menu().exec(event.globalPos())
+
+    def closeEvent(self, event) -> None:
+        _stop_pet_timers(self)
+        super().closeEvent(event)
+
+    def enterEvent(self, event) -> None:
+        self._show_controls_temporarily()
+        super().enterEvent(event)
+
+    def leaveEvent(self, event) -> None:
+        self._controls_hide_timer.start(900)
+        super().leaveEvent(event)
 
     def showEvent(self, event) -> None:
         super().showEvent(event)
         keep_window_above_apps(self)
+
+    def _show_controls_temporarily(self) -> None:
+        self._controls_widget.show()
+        self._controls_hide_timer.start(2600)
+        self._render()
+
+    def _hide_controls_if_idle(self) -> None:
+        if self.underMouse():
+            self._controls_hide_timer.start(1200)
+            return
+        self._controls_widget.hide()
+        self._render()
 
     def _build_context_menu(self) -> QMenu:
         menu = QMenu(self)
@@ -241,6 +271,7 @@ class PetWindow(QWidget):
         return menu
 
     def _show_more_menu(self) -> None:
+        self._show_controls_temporarily()
         self._build_context_menu().exec(self._more_button.mapToGlobal(QPoint(0, self._more_button.height())))
 
     def _handle_long_press(self) -> None:
@@ -288,6 +319,7 @@ class PetWindow(QWidget):
 
     def _show_bubble(self, text: str) -> None:
         self._bubble.set_pixel_text(_trim_output(text))
+        self._show_controls_temporarily()
         self._render()
 
     def _run_pet_command(self, command, pending_text: str = "思考中...") -> None:
@@ -419,15 +451,39 @@ def _icon_button(text: str, tooltip: str) -> QPushButton:
 
 def _controls_widget(*buttons: QPushButton) -> QWidget:
     widget = QWidget()
-    width = 26 * len(buttons) + 4 * max(0, len(buttons) - 1)
+    width = 22 * len(buttons) + 2 * max(0, len(buttons) - 1)
     widget.setFixedWidth(width)
     widget.setMaximumWidth(width)
     layout = QHBoxLayout(widget)
     layout.setContentsMargins(0, 0, 0, 0)
-    layout.setSpacing(4)
+    layout.setSpacing(2)
     for button in buttons:
         layout.addWidget(button)
     return widget
+
+
+def _pet_extra_height(bubble: PixelBubbleLabel, controls: QWidget, *, base: int) -> int:
+    extra = base
+    if bubble.isVisible():
+        extra += bubble.sizeHint().height() + 8
+    if not controls.isHidden():
+        extra += controls.height() + 6
+    return extra
+
+
+def _stop_pet_timers(owner) -> None:
+    for name in (
+        "_controls_hide_timer",
+        "_long_press_timer",
+        "_single_click_timer",
+        "timer",
+        "state_timer",
+        "live_timer",
+        "ambient_timer",
+    ):
+        timer = getattr(owner, name, None)
+        if timer is not None:
+            timer.stop()
 
 
 def _style_sprite_label(label: QLabel) -> None:
@@ -524,6 +580,9 @@ class PetdexWindow(QWidget):
         self._single_click_timer = QTimer(self)
         self._single_click_timer.setSingleShot(True)
         self._single_click_timer.timeout.connect(self._handle_single_click)
+        self._controls_hide_timer = QTimer(self)
+        self._controls_hide_timer.setSingleShot(True)
+        self._controls_hide_timer.timeout.connect(self._hide_controls_if_idle)
         self.petdex_animator = PetdexAnimator()
         self._installed_pets = installed_petdex_pets()
         self._spritesheet = QPixmap()
@@ -553,7 +612,7 @@ class PetdexWindow(QWidget):
         self._recommend_button.clicked.connect(self._dj_panel.recommend_from_context)
         self._reroll_button = _icon_button("↻", "换一组")
         self._reroll_button.clicked.connect(self._dj_panel.reroll)
-        self._more_button = _icon_button("...", "更多")
+        self._more_button = _icon_button("⋮", "更多")
         self._more_button.clicked.connect(self._show_more_menu)
 
         self._controls_widget = _controls_widget(
@@ -562,6 +621,7 @@ class PetdexWindow(QWidget):
             self._reroll_button,
             self._more_button,
         )
+        self._controls_widget.hide()
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(6, 6, 6, 6)
@@ -610,7 +670,7 @@ class PetdexWindow(QWidget):
         self._resize_shell()
 
     def _resize_shell(self) -> None:
-        extra = 62 + (self._bubble.sizeHint().height() + 8 if self._bubble.isVisible() else 0)
+        extra = _pet_extra_height(self._bubble, self._controls_widget, base=30)
         width = max(150, self._sprite_stage.width() + 12)
         height = self._sprite_stage.height() + extra
         if self.width() != width or self.height() != height:
@@ -618,6 +678,7 @@ class PetdexWindow(QWidget):
 
     def mousePressEvent(self, event) -> None:
         if event.button() == Qt.MouseButton.LeftButton:
+            self._show_controls_temporarily()
             self._long_press_fired = False
             self._drag_started = False
             self._press_global_pos = event.globalPosition().toPoint()
@@ -660,11 +721,36 @@ class PetdexWindow(QWidget):
         super().mouseDoubleClickEvent(event)
 
     def contextMenuEvent(self, event) -> None:
+        self._show_controls_temporarily()
         self._build_context_menu().exec(event.globalPos())
+
+    def closeEvent(self, event) -> None:
+        _stop_pet_timers(self)
+        super().closeEvent(event)
+
+    def enterEvent(self, event) -> None:
+        self._show_controls_temporarily()
+        super().enterEvent(event)
+
+    def leaveEvent(self, event) -> None:
+        self._controls_hide_timer.start(900)
+        super().leaveEvent(event)
 
     def showEvent(self, event) -> None:
         super().showEvent(event)
         keep_window_above_apps(self)
+
+    def _show_controls_temporarily(self) -> None:
+        self._controls_widget.show()
+        self._controls_hide_timer.start(2600)
+        self._render()
+
+    def _hide_controls_if_idle(self) -> None:
+        if self.underMouse():
+            self._controls_hide_timer.start(1200)
+            return
+        self._controls_widget.hide()
+        self._render()
 
     def _build_context_menu(self) -> QMenu:
         menu = QMenu(self)
@@ -702,6 +788,7 @@ class PetdexWindow(QWidget):
         return menu
 
     def _show_more_menu(self) -> None:
+        self._show_controls_temporarily()
         self._build_context_menu().exec(self._more_button.mapToGlobal(QPoint(0, self._more_button.height())))
 
     def _handle_long_press(self) -> None:
@@ -770,6 +857,7 @@ class PetdexWindow(QWidget):
 
     def _show_bubble(self, text: str) -> None:
         self._bubble.set_pixel_text(_trim_output(text))
+        self._show_controls_temporarily()
         self._render()
 
     def _run_pet_command(self, command, pending_text: str = "思考中...") -> None:

@@ -20,11 +20,11 @@ BUBBLE_STYLE = (
     " padding: 7px 9px; font-size: 11px; }"
 )
 ICON_BUTTON_STYLE = (
-    "QPushButton { color: #ecfeff; background: rgba(5, 9, 18, 150);"
-    " border: 1px solid rgba(94, 234, 212, 118); border-radius: 7px; padding: 0;"
+    "QPushButton { color: #ecfeff; background: rgba(5, 9, 18, 92);"
+    " border: 1px solid rgba(94, 234, 212, 92); border-radius: 6px; padding: 0;"
     " font-size: 12px; }"
-    "QPushButton:hover { color: #5eead4; background: rgba(8, 18, 28, 208);"
-    " border-color: rgba(94, 234, 212, 220); }"
+    "QPushButton:hover { color: #5eead4; background: rgba(8, 18, 28, 172);"
+    " border-color: rgba(94, 234, 212, 210); }"
     "QPushButton:pressed { color: #020617; background: #5eead4; border-color: #99f6e4; }"
 )
 
@@ -62,7 +62,7 @@ def style_status_label(label: QLabel) -> None:
 
 def style_icon_button(button: QPushButton) -> None:
     button.setCursor(Qt.CursorShape.PointingHandCursor)
-    button.setFixedSize(26, 26)
+    button.setFixedSize(22, 22)
     button.setFont(_pixel_font(12, bold=True))
     button.setStyleSheet(ICON_BUTTON_STYLE)
 

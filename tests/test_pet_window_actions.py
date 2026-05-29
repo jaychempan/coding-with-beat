@@ -213,7 +213,43 @@ def test_builtin_pet_window_keeps_controls_cluster_compact_and_centered():
 
         assert controls_item.widget() is window._controls_widget
         assert controls_item.alignment() & Qt.AlignmentFlag.AlignHCenter
-        assert window._controls_widget.maximumWidth() == 116
+        assert window._controls_widget.maximumWidth() == 94
+        assert window._controls_widget.isHidden() is True
+        assert window._more_button.text() == "⋮"
+    finally:
+        window.close()
+
+
+def test_builtin_pet_window_shows_and_hides_controls_temporarily(monkeypatch):
+    app = QApplication.instance() or QApplication([])
+    window = PetWindow()
+    try:
+        assert app is not None
+        monkeypatch.setattr(window, "underMouse", lambda: False)
+
+        window._show_controls_temporarily()
+        assert window._controls_widget.isHidden() is False
+
+        window._hide_controls_if_idle()
+        assert window._controls_widget.isHidden() is True
+    finally:
+        window.close()
+
+
+def test_builtin_hidden_controls_do_not_reserve_bottom_space(monkeypatch):
+    app = QApplication.instance() or QApplication([])
+    window = PetWindow()
+    try:
+        assert app is not None
+        monkeypatch.setattr(window, "underMouse", lambda: False)
+        compact_height = window.height()
+
+        window._show_controls_temporarily()
+        expanded_height = window.height()
+
+        window._hide_controls_if_idle()
+        assert expanded_height > compact_height
+        assert window.height() == compact_height
     finally:
         window.close()
 
@@ -386,7 +422,43 @@ def test_petdex_window_keeps_controls_cluster_compact_and_centered():
 
         assert controls_item.widget() is window._controls_widget
         assert controls_item.alignment() & Qt.AlignmentFlag.AlignHCenter
-        assert window._controls_widget.maximumWidth() == 116
+        assert window._controls_widget.maximumWidth() == 94
+        assert window._controls_widget.isHidden() is True
+        assert window._more_button.text() == "⋮"
+    finally:
+        window.close()
+
+
+def test_petdex_window_shows_and_hides_controls_temporarily(monkeypatch):
+    app = QApplication.instance() or QApplication([])
+    window = PetdexWindow(ensure_petdex_pet("codebeat-buddy"))
+    try:
+        assert app is not None
+        monkeypatch.setattr(window, "underMouse", lambda: False)
+
+        window._show_controls_temporarily()
+        assert window._controls_widget.isHidden() is False
+
+        window._hide_controls_if_idle()
+        assert window._controls_widget.isHidden() is True
+    finally:
+        window.close()
+
+
+def test_petdex_hidden_controls_do_not_reserve_bottom_space(monkeypatch):
+    app = QApplication.instance() or QApplication([])
+    window = PetdexWindow(ensure_petdex_pet("codebeat-buddy"))
+    try:
+        assert app is not None
+        monkeypatch.setattr(window, "underMouse", lambda: False)
+        compact_height = window.height()
+
+        window._show_controls_temporarily()
+        expanded_height = window.height()
+
+        window._hide_controls_if_idle()
+        assert expanded_height > compact_height
+        assert window.height() == compact_height
     finally:
         window.close()
 
