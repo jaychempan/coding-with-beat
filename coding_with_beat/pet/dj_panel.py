@@ -6,8 +6,8 @@ import json
 import math
 import shlex
 
-from PySide6.QtCore import Qt, QTimer
-from PySide6.QtGui import QColor, QPainter, QPen, QRadialGradient
+from PySide6.QtCore import QRectF, Qt, QTimer
+from PySide6.QtGui import QColor, QLinearGradient, QPainter, QPen, QRadialGradient
 from PySide6.QtWidgets import (
     QFrame,
     QGridLayout,
@@ -50,8 +50,8 @@ QLabel#IntroLine {
   font-size: 11px;
 }
 QFrame#NowPlayingBand {
-  background: rgba(2, 6, 23, 126);
-  border: 1px solid rgba(94, 234, 212, 64);
+  background: rgba(2, 6, 23, 96);
+  border: 1px solid rgba(94, 234, 212, 78);
   border-radius: 12px;
 }
 QLabel#SectionKicker {
@@ -143,8 +143,8 @@ QPushButton#ActionChip:hover {
   border-color: rgba(103, 232, 249, 220);
 }
 QFrame#QueueRow {
-  background: rgba(15, 23, 42, 112);
-  border: 1px solid rgba(94, 234, 212, 44);
+  background: rgba(15, 23, 42, 82);
+  border: 1px solid rgba(94, 234, 212, 54);
   border-radius: 10px;
 }
 QLabel#QueueLabel {
@@ -161,16 +161,16 @@ QLabel#TranscriptBlock {
   font-size: 11px;
 }
 QPushButton#QueuePlayButton {
-  color: #03151b;
-  background: #5eead4;
-  border: 1px solid rgba(255, 255, 255, 90);
-  border-radius: 14px;
-  min-width: 28px;
-  max-width: 28px;
-  min-height: 28px;
-  max-height: 28px;
+  color: #04131b;
+  background: rgba(94, 234, 212, 230);
+  border: 1px solid rgba(236, 254, 255, 130);
+  border-radius: 13px;
+  min-width: 26px;
+  max-width: 26px;
+  min-height: 26px;
+  max-height: 26px;
   padding: 0;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 900;
 }
 QPushButton#QueuePlayButton:hover {
@@ -197,6 +197,115 @@ QScrollBar::sub-line:vertical {
 """
 
 
+class CockpitSignalRail(QWidget):
+    def __init__(self, parent=None) -> None:
+        super().__init__(parent)
+        self.phase = 0
+        self.setObjectName("SignalRail")
+        self.setFixedHeight(28)
+        self.setAutoFillBackground(False)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+
+    def set_phase(self, phase: int) -> None:
+        self.phase = int(phase)
+        self.update()
+
+    def paintEvent(self, event) -> None:
+        painter = QPainter(self)
+        try:
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
+            center_y = self.height() // 2
+            painter.setPen(QPen(QColor(94, 234, 212, 42), 1))
+            painter.drawLine(0, center_y, self.width(), center_y)
+
+            scan_x = (self.phase * 4) % max(1, self.width() + 80) - 40
+            gradient = QLinearGradient(scan_x - 38, 0, scan_x + 38, 0)
+            gradient.setColorAt(0.0, QColor(94, 234, 212, 0))
+            gradient.setColorAt(0.5, QColor(94, 234, 212, 115))
+            gradient.setColorAt(1.0, QColor(94, 234, 212, 0))
+            painter.fillRect(QRectF(scan_x - 38, center_y - 1, 76, 3), gradient)
+
+            for index, x in enumerate(range(4, self.width(), 12)):
+                pulse = 0.5 + 0.5 * math.sin((self.phase + index * 3) / 5)
+                color = QColor("#5eead4" if index % 4 else "#c4b5fd")
+                color.setAlpha(45 + int(72 * pulse))
+                painter.fillRect(x, center_y - 5, 2, 10, color)
+        finally:
+            painter.end()
+        super().paintEvent(event)
+
+
+class LiquidNowPlayingBand(QFrame):
+    def __init__(self, parent=None) -> None:
+        super().__init__(parent)
+        self.phase = 0
+        self.live_playing = False
+        self.setObjectName("NowPlayingBand")
+        self.setAutoFillBackground(False)
+
+    def set_phase(self, phase: int) -> None:
+        self.phase = int(phase)
+        self.update()
+
+    def set_live_playing(self, playing: bool) -> None:
+        self.live_playing = bool(playing)
+        self.update()
+
+    def paintEvent(self, event) -> None:
+        painter = QPainter(self)
+        try:
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
+            pulse = 0.5 + 0.5 * math.sin(self.phase / 8)
+            base = QColor(2, 6, 23, 118)
+            painter.fillRect(self.rect(), base)
+
+            glow = QLinearGradient(0, 0, self.width(), self.height())
+            glow.setColorAt(0.0, QColor(94, 234, 212, 8 + int(10 * pulse)))
+            glow.setColorAt(0.48, QColor(167, 139, 250, 18 + int(12 * pulse)))
+            glow.setColorAt(1.0, QColor(94, 234, 212, 4))
+            painter.fillRect(self.rect(), glow)
+
+            painter.setPen(QPen(QColor(94, 234, 212, 38), 1))
+            for y in range(7 + (self.phase % 9), self.height(), 9):
+                painter.drawLine(8, y, self.width() - 8, y)
+
+            if self.live_playing:
+                color = QColor("#5eead4")
+                color.setAlpha(138)
+                painter.setPen(QPen(color, 2))
+                baseline = self.height() - 17
+                for index in range(18):
+                    height = 4 + int(12 * (0.5 + 0.5 * math.sin((self.phase + index * 2) / 4)))
+                    x = self.width() - 136 + index * 7
+                    painter.drawLine(x, baseline, x, baseline - height)
+        finally:
+            painter.end()
+        super().paintEvent(event)
+
+
+class QueueTrackRow(QFrame):
+    def __init__(self, track_number: int, parent=None) -> None:
+        super().__init__(parent)
+        self.track_number = int(track_number)
+        self.setObjectName("QueueRow")
+        self.setAutoFillBackground(False)
+
+    def paintEvent(self, event) -> None:
+        painter = QPainter(self)
+        try:
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
+            painter.fillRect(self.rect(), QColor(15, 23, 42, 76))
+            if self.underMouse():
+                painter.fillRect(self.rect(), QColor(94, 234, 212, 18))
+            painter.setPen(QPen(QColor(94, 234, 212, 44), 1))
+            painter.drawLine(0, 0, self.width(), 0)
+            painter.setPen(QPen(QColor(167, 139, 250, 55), 1))
+            painter.drawLine(0, self.height() - 1, self.width(), self.height() - 1)
+        finally:
+            painter.end()
+        super().paintEvent(event)
+
+
 class CodeBeatDjPanel(QWidget):
     def __init__(self, host) -> None:
         super().__init__()
@@ -207,6 +316,7 @@ class CodeBeatDjPanel(QWidget):
         self._lyrics_text = ""
         self._live_playing = False
         self._motion_phase = 0
+        self.signal_rail = CockpitSignalRail()
         self.setObjectName("CodeBeatDjPanel")
         self.setWindowTitle("CodeBeat DJ")
         self.setWindowFlags(Qt.WindowType.Window | Qt.WindowType.WindowStaysOnTopHint)
@@ -290,6 +400,7 @@ class CodeBeatDjPanel(QWidget):
         layout.addWidget(self._build_now_playing_band())
         layout.addWidget(self._build_stats_band())
         layout.addWidget(self._build_chips_row())
+        layout.addWidget(self.signal_rail)
         layout.addWidget(self.scroll_area, 1)
         layout.addLayout(input_row)
         layout.addLayout(action_grid)
@@ -442,8 +553,7 @@ class CodeBeatDjPanel(QWidget):
         self._transcript.append(label.text())
 
     def _append_result_item(self, item: PetResultItem) -> None:
-        row = QFrame()
-        row.setObjectName("QueueRow")
+        row = QueueTrackRow(item.number)
         text = f"{item.number}. {item.label}"
         label = QLabel(text)
         label.setObjectName("QueueLabel")
@@ -511,8 +621,8 @@ class CodeBeatDjPanel(QWidget):
         return intro
 
     def _build_now_playing_band(self) -> QWidget:
-        band = QFrame()
-        band.setObjectName("NowPlayingBand")
+        band = LiquidNowPlayingBand()
+        self.now_band = band
         layout = QVBoxLayout(band)
         layout.setContentsMargins(11, 9, 11, 9)
         layout.setSpacing(4)
@@ -577,6 +687,7 @@ class CodeBeatDjPanel(QWidget):
         position = float(data.get("position") or 0.0)
         duration = float(data.get("duration") or 0.0)
         self._live_playing = bool(data.get("playing"))
+        self.now_band.set_live_playing(self._live_playing)
         self.now_title.setText(title)
         self.now_meta.setText(f"{artist} · {source} · {_mmss(position)} / {_mmss(duration)}")
         lyrics_key = str(data.get("lyrics_key") or "")
@@ -596,6 +707,8 @@ class CodeBeatDjPanel(QWidget):
 
     def _tick_motion(self) -> None:
         self._motion_phase = (self._motion_phase + 1) % 3600
+        self.signal_rail.set_phase(self._motion_phase)
+        self.now_band.set_phase(self._motion_phase)
         self.update()
 
     def showEvent(self, event) -> None:

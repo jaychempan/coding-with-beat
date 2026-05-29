@@ -181,7 +181,7 @@ Petdex mode:
 - Bubbles are display-only pixel cards for short feedback only: no white editor background and no scrollbars.
 - The compact action strip uses `♪`, `✨`, `🎲`, and `⋮` for now playing, recommend, reroll, and more. The first three open/use the CodeBeat DJ panel.
 - The action strip stays hidden during idle desktop use and appears temporarily on hover, click, bubble updates, or live playback changes.
-- The CodeBeat DJ profile panel uses a dark dotted DJ-station layout with identity header, live stats, taste chips, full result text, a scrollable queue, search prompt input, and direct **▶** buttons beside each result.
+- The CodeBeat DJ profile panel uses a dark liquid-pixel cockpit layout with animated signal rail, live now-playing waveform band, taste chips, full result text, a scrollable queue, search prompt input, and direct **▶** buttons beside each result.
 - The DJ prompt is a music command box, not just a mood box. Type `周杰伦` or `晴天 周杰伦` to search, `从资料库找 周杰伦` to restrict results to your library, `从喜欢里找 周杰伦` to search loved tracks, `我的歌单` to list playlists, or `播放歌单 Coding Beats` to start a named playlist.
 - The bottom DJ controls include quick access to recommendations, library, loved tracks, playlists, current playback, and reroll. Slash commands still work for common controls such as `/volume 70`, `/seek 1:30`, `/next`, `/pause`, and `/mode shuffle`.
 - Right-click remains available for opening the DJ panel, play/pause, next track, play by number, pet switching, and quit.

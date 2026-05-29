@@ -8,10 +8,10 @@ import pytest
 pytest.importorskip("PySide6")
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QApplication, QFrame, QLabel, QPushButton
+from PySide6.QtWidgets import QApplication, QLabel, QPushButton
 
 from coding_with_beat.pet.bubble import PetBubbleCard, PetResultItem
-from coding_with_beat.pet.dj_panel import CodeBeatDjPanel
+from coding_with_beat.pet.dj_panel import CockpitSignalRail, CodeBeatDjPanel, LiquidNowPlayingBand, QueueTrackRow
 from coding_with_beat.pet.session import PetSessionResult
 
 
@@ -193,6 +193,28 @@ def test_dj_panel_has_profile_identity_stats_and_chips():
     assert "NO VOCAL" in panel.chip_text()
 
 
+def test_dj_panel_uses_cockpit_visual_components():
+    app = QApplication.instance() or QApplication([])
+    panel = CodeBeatDjPanel(FakeHost())
+
+    assert app is not None
+    assert isinstance(panel.signal_rail, CockpitSignalRail)
+    assert isinstance(panel.now_band, LiquidNowPlayingBand)
+    assert panel.findChild(CockpitSignalRail, "SignalRail") is panel.signal_rail
+    assert panel.findChild(LiquidNowPlayingBand, "NowPlayingBand") is panel.now_band
+
+
+def test_dj_panel_motion_tick_drives_visual_components():
+    app = QApplication.instance() or QApplication([])
+    panel = CodeBeatDjPanel(FakeHost())
+
+    panel._tick_motion()
+
+    assert app is not None
+    assert panel.signal_rail.phase == panel._motion_phase
+    assert panel.now_band.phase == panel._motion_phase
+
+
 def test_dj_panel_updates_queue_stat_when_recommendations_render():
     app = QApplication.instance() or QApplication([])
     panel = CodeBeatDjPanel(FakeHost())
@@ -231,11 +253,13 @@ def test_dj_panel_queue_rows_use_profile_objects_and_play_controls():
     )
 
     panel.show_result(result)
-    row = panel.findChild(QFrame, "QueueRow")
+    row = panel.findChild(QueueTrackRow, "QueueRow")
     play_button = next(button for button in panel.findChildren(QPushButton) if button.objectName() == "QueuePlayButton")
 
     assert app is not None
     assert row is not None
+    assert isinstance(row, QueueTrackRow)
+    assert row.track_number == 1
     assert play_button.text() == "▶"
     assert panel.prompt_input.objectName() == "DjPromptInput"
 
@@ -252,6 +276,7 @@ def test_dj_panel_renders_live_snapshot_and_current_lyric():
     assert "Luna" in panel.findChild(QLabel, "NowMeta").text()
     assert panel.findChild(QLabel, "NowLyric").text() == "second"
     assert panel._live_playing is True
+    assert panel.now_band.live_playing is True
 
 
 def test_dj_panel_prompt_slash_command_routes_to_cwb_control():
