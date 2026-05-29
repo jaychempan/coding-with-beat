@@ -158,9 +158,13 @@ python -m coding_with_beat pet --builtin
 
 Petdex mode:
 
-- Left-drag moves the pet; double-click asks for a song recommendation.
-- Buttons show `推荐`, `在播`, and `皮肤`; right-click exposes play/pause, next track, play by result number, and pet switching.
-- The `皮肤` control cycles local Petdex pets discovered in `~/.coding-with-beat/petdex/`, `~/.petdex/pets/`, and `~/.codex/pets/`.
+- The pet stays compact by default: sprite animation plus a short current-status line.
+- Single-click shows the current playback/status bubble.
+- Double-click asks DJ Buddy to recommend from the current coding vibe.
+- Long-press auto-starts music from the current coding vibe.
+- The compact action strip uses `♪`, `✨`, `🎲`, and `⋯` for now playing, recommend, reroll, and more.
+- Right-click remains available for play/pause, next track, play by number, pet switching, and quit.
+- The `⋯` menu cycles local Petdex pets discovered in `~/.coding-with-beat/petdex/`, `~/.petdex/pets/`, and `~/.codex/pets/`.
 - The last selected Petdex pet is saved and used by the next `cwb pet` launch.
 
 ### Codex CLI
@@ -201,7 +205,7 @@ See **[README_CODEX.md](README_CODEX.md)** for the full integration guide — ho
 >
 > **Live player:** Open a second terminal and run `cwb watch` to see the currently playing track, lyrics, and progress bar in real time.
 >
-> **Desktop pet:** Run `cwb pet` on macOS to open the draggable pixel companion. Double-click it to ask for mood-based recommendations, right-click for playback controls and skin switching.
+> **Desktop pet:** Run `cwb pet` on macOS to open the draggable pixel companion. Click for status, double-click for DJ Buddy recommendations, or long-press to start music from the current coding vibe.
 >
 > **Apple Music:** The first time you play a catalog track, a popup will appear — click **Add to Library**, then repeat the play command.
 
