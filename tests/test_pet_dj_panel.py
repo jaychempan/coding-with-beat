@@ -1,3 +1,4 @@
+import json
 import os
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
@@ -14,6 +15,9 @@ from coding_with_beat.pet.session import PetSessionResult
 
 
 class FakeSession:
+    def __init__(self):
+        self.music = FakePanelMusic()
+
     def recommend_from_context(self):
         return PetSessionResult(True, "recommend", PetBubbleCard("status", "context"))
 
@@ -39,6 +43,39 @@ class FakeHost:
     def _run_pet_command(self, command, pending_text="思考中..."):
         self.pending.append(pending_text)
         self.calls.append(command())
+
+
+class FakePanelMusic:
+    def __init__(self):
+        self.controls = []
+        self.snapshots = []
+
+    def now_playing_snapshot(self, known_lyrics_key=""):
+        self.snapshots.append(known_lyrics_key)
+        return type(
+            "Result",
+            (),
+            {
+                "ok": True,
+                "text": json.dumps(
+                    {
+                        "title": "Night Owl",
+                        "artist": "Luna",
+                        "source": "apple_music",
+                        "position": 10.0,
+                        "duration": 20.0,
+                        "playing": True,
+                        "lyrics_key": "apple_music\\0Luna\\0Album\\0Night Owl",
+                        "lyrics_text": "first\nsecond\nthird\n",
+                        "lyrics_pending": False,
+                    }
+                ),
+            },
+        )()
+
+    def control(self, tool, kwargs):
+        self.controls.append((tool, kwargs))
+        return type("Result", (), {"ok": True, "text": f"{tool}:{kwargs}"})()
 
 
 def test_dj_panel_renders_recommendations_with_direct_play_buttons():
@@ -163,3 +200,42 @@ def test_dj_panel_queue_rows_use_profile_objects_and_play_controls():
     assert row is not None
     assert play_button.text() == "▶"
     assert panel.prompt_input.objectName() == "DjPromptInput"
+
+
+def test_dj_panel_renders_live_snapshot_and_current_lyric():
+    app = QApplication.instance() or QApplication([])
+    host = FakeHost()
+    panel = CodeBeatDjPanel(host)
+
+    panel.refresh_live_snapshot()
+
+    assert app is not None
+    assert panel.findChild(QLabel, "NowTitle").text() == "Night Owl"
+    assert "Luna" in panel.findChild(QLabel, "NowMeta").text()
+    assert panel.findChild(QLabel, "NowLyric").text() == "second"
+    assert panel._live_playing is True
+
+
+def test_dj_panel_prompt_slash_command_routes_to_cwb_control():
+    app = QApplication.instance() or QApplication([])
+    host = FakeHost()
+    panel = CodeBeatDjPanel(host)
+
+    panel.prompt_input.setText("/volume 70")
+    panel.submit_prompt()
+
+    assert app is not None
+    assert host.music_session.music.controls == [("set_volume", {"percent": 70})]
+    assert "set_volume" in panel.transcript_text()
+
+
+def test_dj_panel_motion_timer_runs_only_while_visible():
+    app = QApplication.instance() or QApplication([])
+    panel = CodeBeatDjPanel(FakeHost())
+
+    panel.show()
+    app.processEvents()
+    assert panel._animation_timer.isActive() is True
+    panel.hide()
+    app.processEvents()
+    assert panel._animation_timer.isActive() is False

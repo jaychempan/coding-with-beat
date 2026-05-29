@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
-from PySide6.QtCore import Qt
+import json
+import math
+import shlex
+
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QColor, QPainter, QPen, QRadialGradient
 from PySide6.QtWidgets import (
     QFrame,
@@ -16,6 +20,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from ..lyrics_snapshot import line_from_text
 from .bubble import PetBubbleCard, PetResultItem
 from .session import PetSessionResult
 
@@ -42,6 +47,25 @@ QLabel#DjSubtitle {
 QLabel#IntroLine {
   color: rgba(203, 213, 225, 175);
   font-size: 12px;
+}
+QFrame#NowPlayingBand {
+  background: rgba(2, 6, 23, 94);
+  border: 1px solid rgba(94, 234, 212, 48);
+  border-radius: 10px;
+}
+QLabel#NowTitle {
+  color: #f8fafc;
+  font-size: 13px;
+  font-weight: 800;
+}
+QLabel#NowMeta {
+  color: rgba(203, 213, 225, 178);
+  font-size: 10px;
+}
+QLabel#NowLyric {
+  color: #5eead4;
+  font-size: 12px;
+  font-weight: 700;
 }
 QLabel#LivePillLabel {
   color: #5eead4;
@@ -172,6 +196,10 @@ class CodeBeatDjPanel(QWidget):
         self.host = host
         self._transcript: list[str] = []
         self._chip_labels: list[QLabel] = []
+        self._lyrics_key = ""
+        self._lyrics_text = ""
+        self._live_playing = False
+        self._motion_phase = 0
         self.setObjectName("CodeBeatDjPanel")
         self.setWindowTitle("CodeBeat DJ")
         self.setWindowFlags(Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.Tool)
@@ -189,6 +217,12 @@ class CodeBeatDjPanel(QWidget):
         self.mood_value.setObjectName("StatMoodValue")
         self.queue_value = QLabel("0")
         self.queue_value.setObjectName("StatQueueValue")
+        self.now_title = QLabel("No track")
+        self.now_title.setObjectName("NowTitle")
+        self.now_meta = QLabel("等待播放状态")
+        self.now_meta.setObjectName("NowMeta")
+        self.now_lyric = QLabel("lyrics will appear here")
+        self.now_lyric.setObjectName("NowLyric")
 
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
@@ -223,6 +257,15 @@ class CodeBeatDjPanel(QWidget):
         now_button = QPushButton("当前播放")
         now_button.setObjectName("ActionChip")
         now_button.clicked.connect(self.now_playing)
+        like_button = QPushButton("喜欢")
+        like_button.setObjectName("ActionChip")
+        like_button.clicked.connect(lambda: self._run_cwb_command("like_current", {}))
+        next_button = QPushButton("下一首")
+        next_button.setObjectName("ActionChip")
+        next_button.clicked.connect(lambda: self._run_cwb_command("next_track", {}))
+        lyrics_button = QPushButton("歌词")
+        lyrics_button.setObjectName("ActionChip")
+        lyrics_button.clicked.connect(self.refresh_live_snapshot)
 
         action_row = QHBoxLayout()
         action_row.setContentsMargins(0, 0, 0, 0)
@@ -230,17 +273,28 @@ class CodeBeatDjPanel(QWidget):
         action_row.addWidget(recommend_button)
         action_row.addWidget(reroll_button)
         action_row.addWidget(now_button)
+        action_row.addWidget(like_button)
+        action_row.addWidget(next_button)
+        action_row.addWidget(lyrics_button)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(18, 18, 18, 16)
         layout.setSpacing(12)
         layout.addWidget(self._build_identity_header())
         layout.addWidget(self._build_intro())
+        layout.addWidget(self._build_now_playing_band())
         layout.addWidget(self._build_stats_band())
         layout.addWidget(self._build_chips_row())
         layout.addWidget(self.scroll_area, 1)
         layout.addLayout(input_row)
         layout.addLayout(action_row)
+
+        self._animation_timer = QTimer(self)
+        self._animation_timer.timeout.connect(self._tick_motion)
+        self._animation_timer.setInterval(120)
+        self._snapshot_timer = QTimer(self)
+        self._snapshot_timer.timeout.connect(self.refresh_live_snapshot)
+        self._snapshot_timer.setInterval(1500)
 
     def transcript_text(self) -> str:
         return "\n".join(self._transcript)
@@ -251,19 +305,33 @@ class CodeBeatDjPanel(QWidget):
             painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
             painter.fillRect(self.rect(), QColor(5, 9, 18, 246))
 
-            gradient = QRadialGradient(self.width() * 0.66, self.height() * 0.22, self.width() * 0.45)
-            gradient.setColorAt(0.0, QColor(45, 212, 191, 42))
+            pulse = 0.5 + 0.5 * math.sin(self._motion_phase / 7)
+            gradient = QRadialGradient(
+                self.width() * (0.62 + 0.03 * pulse),
+                self.height() * 0.22,
+                self.width() * (0.40 + 0.04 * pulse),
+            )
+            gradient.setColorAt(0.0, QColor(45, 212, 191, 34 + int(18 * pulse)))
             gradient.setColorAt(0.45, QColor(45, 212, 191, 14))
             gradient.setColorAt(1.0, QColor(45, 212, 191, 0))
             painter.fillRect(self.rect(), gradient)
 
             painter.setPen(QPen(QColor(94, 234, 212, 48), 1))
-            for y in range(14, self.height(), 18):
-                for x in range(12, self.width(), 18):
+            offset = self._motion_phase % 18
+            for y in range(14 - offset, self.height(), 18):
+                for x in range(12 + (offset // 2), self.width(), 18):
                     painter.drawPoint(x, y)
 
+            if self._live_playing:
+                painter.setPen(QPen(QColor(94, 234, 212, 120), 2))
+                base_x = self.width() - 74
+                base_y = 76
+                for i in range(5):
+                    h = 7 + int(12 * (0.5 + 0.5 * math.sin((self._motion_phase + i * 2) / 3)))
+                    painter.drawLine(base_x + i * 8, base_y, base_x + i * 8, base_y - h)
+
             painter.setPen(QPen(QColor(148, 163, 184, 30), 1))
-            painter.drawLine(18, 176, self.width() - 18, 176)
+            painter.drawLine(18, 222, self.width() - 18, 222)
         finally:
             painter.end()
         super().paintEvent(event)
@@ -301,11 +369,46 @@ class CodeBeatDjPanel(QWidget):
         if not text:
             return
         self.prompt_input.clear()
+        if text.startswith("/"):
+            self._submit_command_text(text[1:].strip())
+            return
         self.recommend_from_text(text)
+
+    def refresh_live_snapshot(self) -> None:
+        music = getattr(self.host.music_session, "music", None)
+        if music is None or not hasattr(music, "now_playing_snapshot"):
+            return
+        result = music.now_playing_snapshot(self._lyrics_key)
+        if not result.ok:
+            self.now_meta.setText(result.text)
+            return
+        try:
+            data = json.loads(result.text or "{}")
+        except json.JSONDecodeError:
+            self.now_meta.setText(result.text)
+            return
+        self._apply_snapshot(data)
 
     def _run(self, command, pending_text: str) -> None:
         self.set_pending(pending_text)
         self.host._run_pet_command(command, pending_text)
+
+    def _run_cwb_command(self, tool: str, kwargs: dict) -> None:
+        music = getattr(self.host.music_session, "music", None)
+        if music is None or not hasattr(music, "control"):
+            self._append_text("当前音乐客户端不支持这个命令")
+            return
+        result = music.control(tool, kwargs)
+        self._append_text(result.text)
+        self.refresh_live_snapshot()
+
+    def _submit_command_text(self, text: str) -> None:
+        parsed = _parse_cwb_command(text)
+        if parsed is None:
+            self._append_text(f"未知 CWB 命令：/{text}")
+            return
+        tool, kwargs = parsed
+        self._run_cwb_command(tool, kwargs)
 
     def _append_card(self, card: PetBubbleCard) -> None:
         self._update_stats(card)
@@ -391,6 +494,17 @@ class CodeBeatDjPanel(QWidget):
             layout.addWidget(label)
         return intro
 
+    def _build_now_playing_band(self) -> QWidget:
+        band = QFrame()
+        band.setObjectName("NowPlayingBand")
+        layout = QVBoxLayout(band)
+        layout.setContentsMargins(10, 8, 10, 8)
+        layout.setSpacing(3)
+        layout.addWidget(self.now_title)
+        layout.addWidget(self.now_meta)
+        layout.addWidget(self.now_lyric)
+        return band
+
     def _build_stats_band(self) -> QWidget:
         band = QFrame()
         band.setObjectName("StatsBand")
@@ -436,3 +550,75 @@ class CodeBeatDjPanel(QWidget):
             self.mood_value.setText("ERROR")
         else:
             self.mood_value.setText("IDLE")
+
+    def _apply_snapshot(self, data: dict) -> None:
+        title = str(data.get("title") or "No track")
+        artist = str(data.get("artist") or "—")
+        source = str(data.get("source") or "source")
+        position = float(data.get("position") or 0.0)
+        duration = float(data.get("duration") or 0.0)
+        self._live_playing = bool(data.get("playing"))
+        self.now_title.setText(title)
+        self.now_meta.setText(f"{artist} · {source} · {_mmss(position)} / {_mmss(duration)}")
+        lyrics_key = str(data.get("lyrics_key") or "")
+        if lyrics_key and lyrics_key != self._lyrics_key:
+            self._lyrics_text = ""
+        self._lyrics_key = lyrics_key
+        lyrics_text = data.get("lyrics_text")
+        if isinstance(lyrics_text, str) and lyrics_text:
+            self._lyrics_text = lyrics_text
+        if self._lyrics_text:
+            self.now_lyric.setText(line_from_text(self._lyrics_text, position, duration).strip() or "lyrics...")
+        elif data.get("lyrics_pending"):
+            self.now_lyric.setText("lyrics loading...")
+        else:
+            self.now_lyric.setText("no lyrics yet")
+        self.update()
+
+    def _tick_motion(self) -> None:
+        self._motion_phase = (self._motion_phase + 1) % 3600
+        self.update()
+
+    def showEvent(self, event) -> None:
+        super().showEvent(event)
+        self._animation_timer.start()
+        self._snapshot_timer.start()
+
+    def hideEvent(self, event) -> None:
+        self._animation_timer.stop()
+        self._snapshot_timer.stop()
+        super().hideEvent(event)
+
+
+def _mmss(seconds: float) -> str:
+    seconds = max(0, int(seconds or 0))
+    return f"{seconds // 60}:{seconds % 60:02d}"
+
+
+def _parse_cwb_command(text: str) -> tuple[str, dict] | None:
+    parts = shlex.split(text)
+    if not parts:
+        return None
+    command = parts[0].lower()
+    if command in {"like", "喜欢"}:
+        return "like_current", {}
+    if command in {"next", "下一首"}:
+        return "next_track", {}
+    if command in {"pause", "toggle", "暂停"}:
+        return "toggle", {}
+    if command in {"lyrics", "歌词"}:
+        return "now_playing_snapshot", {"known_lyrics_key": ""}
+    if command in {"volume", "音量"} and len(parts) == 2:
+        return "set_volume", {"percent": int(parts[1])}
+    if command in {"seek", "跳转"} and len(parts) == 2:
+        return "seek", {"seconds": _parse_seconds(parts[1])}
+    if command in {"mode", "模式"} and len(parts) == 2:
+        return "set_play_mode", {"mode": parts[1]}
+    return None
+
+
+def _parse_seconds(value: str) -> float:
+    if ":" not in value:
+        return float(value)
+    minutes, seconds = value.split(":", 1)
+    return int(minutes) * 60 + int(seconds)

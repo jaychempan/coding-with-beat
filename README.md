@@ -178,6 +178,7 @@ Petdex mode:
 - Bubbles are display-only pixel cards for short feedback only: no white editor background and no scrollbars.
 - The compact action strip uses `♪`, `✨`, `🎲`, and `⋯` for now playing, recommend, reroll, and more. The first three open/use the CodeBeat DJ panel.
 - The CodeBeat DJ profile panel uses a dark dotted DJ-station layout with identity header, live stats, taste chips, full recommendation text, a scrollable queue, mood/style prompt input, and direct **▶** buttons beside each result.
+- When the DJ panel is visible, it also acts as a live cockpit: subtle motion, current track, progress, current lyric line, and common CWB controls like like, next, volume, seek, and play mode via slash commands such as `/volume 70` or `/seek 1:30`.
 - Right-click remains available for opening the DJ panel, play/pause, next track, play by number, pet switching, and quit.
 - The `⋯` menu cycles local Petdex pets discovered in `~/.coding-with-beat/petdex/`, `~/.petdex/pets/`, and `~/.codex/pets/`.
 - The last selected Petdex pet is saved and used by the next `cwb pet` launch.

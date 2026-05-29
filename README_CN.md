@@ -121,6 +121,8 @@ python -m coding_with_beat pet --builtin
 
 桌面宠物会把身体气泡保持得很短，只显示当前状态和简短反馈。完整推荐结果会进入 CodeBeat DJ Profile 面板：深色点阵 DJ station、身份标题、实时状态、taste chips、可滚动推荐队列、心情/风格输入框，以及每条结果旁边的 **▶** 直接播放按钮，不必再手动输入编号。
 
+面板打开时也会作为 live cockpit 使用：背景和信号有轻微动态，显示当前歌曲、进度、当前歌词行，并支持常用 CWB 控制。可以输入 `/like`、`/next`、`/volume 70`、`/seek 1:30`、`/mode shuffle` 这类命令。
+
 ### 直接跟 AI 说
 
 ```

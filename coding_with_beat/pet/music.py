@@ -10,6 +10,7 @@ from coding_with_beat.mcp_client import call_tool as _call_tool
 ToolCaller = Callable[..., str]
 
 DEFAULT_PET_MUSIC_TIMEOUT = 20.0
+SNAPSHOT_TIMEOUT = 1.5
 
 
 @dataclass(frozen=True)
@@ -32,15 +33,25 @@ class PetMusicClient:
     def now_playing(self) -> MusicResult:
         return self._call("now_playing", {})
 
+    def now_playing_snapshot(self, known_lyrics_key: str = "") -> MusicResult:
+        return self._call(
+            "now_playing_snapshot",
+            {"known_lyrics_key": known_lyrics_key},
+            timeout=SNAPSHOT_TIMEOUT,
+        )
+
+    def control(self, tool: str, kwargs: dict) -> MusicResult:
+        return self._call(tool, kwargs)
+
     def toggle(self) -> MusicResult:
         return self._call("toggle", {})
 
     def next_track(self) -> MusicResult:
         return self._call("next_track", {})
 
-    def _call(self, name: str, kwargs: dict) -> MusicResult:
+    def _call(self, name: str, kwargs: dict, timeout: float | None = None) -> MusicResult:
         try:
-            return MusicResult(True, _call_with_timeout(self._call_tool, name, kwargs, self.timeout))
+            return MusicResult(True, _call_with_timeout(self._call_tool, name, kwargs, timeout or self.timeout))
         except Exception as e:
             return MusicResult(False, str(e))
 
