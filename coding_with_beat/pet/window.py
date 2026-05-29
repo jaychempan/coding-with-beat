@@ -44,6 +44,17 @@ class PetWindow(QWidget):
         super().__init__()
         self.settings = load_settings()
         self.controller = controller or PetController(PetAnimator(self.settings.skin_id))
+        self.music_session = PetMusicSession(music=self.controller.music, load_state=self.controller.load_state)
+        self.interactions = PetInteractionController(session=self.music_session)
+        self._long_press_fired = False
+        self._drag_started = False
+        self._press_global_pos: QPoint | None = None
+        self._long_press_timer = QTimer(self)
+        self._long_press_timer.setSingleShot(True)
+        self._long_press_timer.timeout.connect(self._handle_long_press)
+        self._single_click_timer = QTimer(self)
+        self._single_click_timer.setSingleShot(True)
+        self._single_click_timer.timeout.connect(self._handle_single_click)
         self._drag_origin: QPoint | None = None
         self._bubble = QTextEdit(self)
         self._bubble.setReadOnly(True)
@@ -57,19 +68,26 @@ class PetWindow(QWidget):
         )
         self._label = QLabel(self)
         self._label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._recommend_button = _button("推荐")
-        self._recommend_button.clicked.connect(self.ask_mood)
-        self._now_button = _button("在播")
-        self._now_button.clicked.connect(self.show_now_playing)
-        self._skin_button = _button("皮肤")
-        self._skin_button.clicked.connect(self.cycle_skin)
+        self._now_button = _icon_button("♪", "当前播放")
+        self._now_button.clicked.connect(lambda: self._apply_session_result(self.interactions.quick_action("now")))
+        self._recommend_button = _icon_button("✨", "按当前状态推荐")
+        self._recommend_button.clicked.connect(
+            lambda: self._apply_session_result(self.interactions.quick_action("recommend"))
+        )
+        self._reroll_button = _icon_button("🎲", "换一组")
+        self._reroll_button.clicked.connect(
+            lambda: self._apply_session_result(self.interactions.quick_action("reroll"))
+        )
+        self._more_button = _icon_button("⋯", "更多")
+        self._more_button.clicked.connect(self._show_more_menu)
 
         controls = QHBoxLayout()
         controls.setContentsMargins(0, 0, 0, 0)
         controls.setSpacing(4)
-        controls.addWidget(self._recommend_button)
         controls.addWidget(self._now_button)
-        controls.addWidget(self._skin_button)
+        controls.addWidget(self._recommend_button)
+        controls.addWidget(self._reroll_button)
+        controls.addWidget(self._more_button)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(6, 6, 6, 6)
@@ -116,33 +134,61 @@ class PetWindow(QWidget):
 
     def mousePressEvent(self, event) -> None:
         if event.button() == Qt.MouseButton.LeftButton:
-            self._drag_origin = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
+            self._long_press_fired = False
+            self._drag_started = False
+            self._press_global_pos = event.globalPosition().toPoint()
+            self._single_click_timer.stop()
+            self._long_press_timer.start(650)
+            self._drag_origin = self._press_global_pos - self.frameGeometry().topLeft()
             self.controller.animator.set_action("dance")
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event) -> None:
         if self._drag_origin is not None and event.buttons() & Qt.MouseButton.LeftButton:
+            if self._press_global_pos is not None:
+                distance = (event.globalPosition().toPoint() - self._press_global_pos).manhattanLength()
+                if distance >= QApplication.startDragDistance():
+                    self._drag_started = True
+                    self._long_press_timer.stop()
+                    self._single_click_timer.stop()
             self.move(event.globalPosition().toPoint() - self._drag_origin)
         super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event) -> None:
         if event.button() == Qt.MouseButton.LeftButton:
+            self._long_press_timer.stop()
             self._drag_origin = None
+            self._press_global_pos = None
             self.settings.x = self.x()
             self.settings.y = self.y()
             save_settings(self.settings)
+            if not self._long_press_fired and not self._drag_started:
+                self._single_click_timer.start(QApplication.doubleClickInterval())
         super().mouseReleaseEvent(event)
 
     def mouseDoubleClickEvent(self, event) -> None:
         if event.button() == Qt.MouseButton.LeftButton:
-            self.ask_mood()
+            self._long_press_timer.stop()
+            self._single_click_timer.stop()
+            self._long_press_fired = True
+            self._drag_started = False
+            self._apply_session_result(self.interactions.double_click())
         super().mouseDoubleClickEvent(event)
 
     def contextMenuEvent(self, event) -> None:
+        self._build_context_menu().exec(event.globalPos())
+
+    def _build_context_menu(self) -> QMenu:
         menu = QMenu(self)
-        menu.addAction(_action("推荐歌曲", self.ask_mood, self))
+        menu.addAction(_action("按心情推荐", self.ask_mood, self))
+        menu.addAction(
+            _action("按当前状态推荐", lambda: self._apply_session_result(self.interactions.double_click()), self)
+        )
+        menu.addAction(_action("自动开播", lambda: self._apply_session_result(self.interactions.long_press()), self))
         menu.addAction(_action("播放编号", self.play_number_dialog, self))
-        menu.addAction(_action("当前播放", self.show_now_playing, self))
+        menu.addAction(
+            _action("当前播放", lambda: self._apply_session_result(self.interactions.quick_action("now")), self)
+        )
         menu.addAction(_action("暂停/继续", self.toggle_playback, self))
         menu.addAction(_action("下一首", self.next_track, self))
         skin_menu = menu.addMenu("切换皮肤")
@@ -150,29 +196,43 @@ class PetWindow(QWidget):
             skin_menu.addAction(_action(skin.name, lambda sid=skin_id: self.set_skin(sid), self))
         menu.addSeparator()
         menu.addAction(_action("退出", self.close, self))
-        menu.exec(event.globalPos())
+        return menu
+
+    def _show_more_menu(self) -> None:
+        self._build_context_menu().exec(self._more_button.mapToGlobal(QPoint(0, self._more_button.height())))
+
+    def _handle_long_press(self) -> None:
+        self._long_press_fired = True
+        self._apply_session_result(self.interactions.long_press())
+
+    def _handle_single_click(self) -> None:
+        self._apply_session_result(self.interactions.single_click())
 
     def ask_mood(self) -> None:
         text, ok = QInputDialog.getText(self, "DJ Buddy", "想听什么心情？")
         if not ok or not text.strip():
             return
-        result = self.controller.handle_mood_text(text.strip())
-        self._show_bubble(result.text)
+        self.controller.animator.set_action("think")
+        result = self.music_session.recommend_from_text(text.strip())
+        self._apply_session_result(result)
 
     def show_now_playing(self) -> None:
-        self._show_bubble(self.controller.music.now_playing().text)
+        self._apply_session_result(self.interactions.quick_action("now"))
 
     def play_number_dialog(self) -> None:
         number, ok = QInputDialog.getInt(self, "DJ Buddy", "播放第几首？", 1, 1, 999, 1)
         if not ok:
             return
-        self._show_bubble(self.controller.play_number(number).text)
+        result = self.music_session.play_number(number)
+        self._apply_session_result(result)
 
     def toggle_playback(self) -> None:
         self._show_bubble(self.controller.music.toggle().text)
+        self._track_label.setText(self.controller.current_track_label())
 
     def next_track(self) -> None:
         self._show_bubble(self.controller.music.next_track().text)
+        self._track_label.setText(self.controller.current_track_label())
 
     def set_skin(self, skin_id: str) -> None:
         self.controller.animator.set_skin(skin_id)
@@ -189,6 +249,11 @@ class PetWindow(QWidget):
         self._bubble.setPlainText(_trim_output(text))
         self._bubble.setVisible(True)
         self._render()
+
+    def _apply_session_result(self, result: PetSessionResult) -> None:
+        self.controller.animator.set_action(result.action)
+        self._show_bubble(result.card.text)
+        self._track_label.setText(self.controller.current_track_label())
 
 
 def _action(text: str, callback, parent) -> QAction:
