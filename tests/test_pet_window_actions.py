@@ -231,8 +231,23 @@ def test_petdex_window_centers_pet_sprite_widget():
         assert app is not None
         label_item = window.layout().itemAt(2)
 
-        assert label_item.widget() is window._label
+        assert label_item.widget() is window._sprite_stage
         assert label_item.alignment() & Qt.AlignmentFlag.AlignHCenter
+    finally:
+        window.close()
+
+
+def test_petdex_window_owns_centered_music_aura():
+    app = QApplication.instance() or QApplication([])
+    window = PetdexWindow(ensure_petdex_pet("codebeat-buddy"))
+    try:
+        assert app is not None
+        assert isinstance(window._aura, MusicAuraWidget)
+        stage_item = window.layout().itemAt(2)
+        assert stage_item.widget() is window._sprite_stage
+        assert stage_item.alignment() & Qt.AlignmentFlag.AlignHCenter
+        assert window._aura.parent() is window._sprite_stage
+        assert window._label.parent() is window._sprite_stage
     finally:
         window.close()
 

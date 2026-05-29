@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QMenu,
     QPushButton,
+    QStackedLayout,
     QVBoxLayout,
     QWidget,
 )
@@ -340,8 +341,11 @@ def _sprite_stage(aura: MusicAuraWidget, label: QLabel) -> QWidget:
     widget.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
     widget.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground, True)
     widget.setAutoFillBackground(False)
-    aura.setParent(widget)
-    label.setParent(widget)
+    layout = QStackedLayout(widget)
+    layout.setStackingMode(QStackedLayout.StackingMode.StackAll)
+    layout.setContentsMargins(0, 0, 0, 0)
+    layout.addWidget(aura)
+    layout.addWidget(label)
     return widget
 
 
@@ -349,8 +353,8 @@ def _layout_sprite_stage(stage: QWidget, aura: MusicAuraWidget, label: QLabel) -
     width = max(aura.width(), label.width())
     height = max(aura.height(), label.height())
     stage.setFixedSize(width, height)
-    aura.move((width - aura.width()) // 2, (height - aura.height()) // 2)
-    label.move((width - label.width()) // 2, (height - label.height()) // 2)
+    stage.layout().setAlignment(aura, Qt.AlignmentFlag.AlignCenter)
+    stage.layout().setAlignment(label, Qt.AlignmentFlag.AlignCenter)
 
 
 def _add_display_settings_menu(menu: QMenu, owner) -> None:
@@ -530,6 +534,8 @@ class PetdexWindow(QWidget):
         self._label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         _style_sprite_label(self._label)
         self._label.setFixedSize(*self._petdex_display_size)
+        self._aura = MusicAuraWidget(sprite_size=self._petdex_display_size, parent=self)
+        self._sprite_stage = _sprite_stage(self._aura, self._label)
         self._now_button = _icon_button("♪", "当前播放")
         self._now_button.clicked.connect(self._dj_panel.now_playing)
         self._recommend_button = _icon_button("+", "按当前状态推荐")
@@ -550,7 +556,7 @@ class PetdexWindow(QWidget):
         layout.setContentsMargins(6, 6, 6, 6)
         layout.addWidget(self._bubble)
         layout.addWidget(self._track_label)
-        layout.addWidget(self._label, alignment=Qt.AlignmentFlag.AlignHCenter)
+        layout.addWidget(self._sprite_stage, alignment=Qt.AlignmentFlag.AlignHCenter)
         layout.addWidget(self._controls_widget, alignment=Qt.AlignmentFlag.AlignHCenter)
 
         _style_pet_window(self)
@@ -587,12 +593,15 @@ class PetdexWindow(QWidget):
     def _render(self) -> None:
         pixmap = _petdex_frame_pixmap(self._spritesheet, self.petdex_animator, self._petdex_display_size)
         self._label.setPixmap(pixmap)
+        self._aura.set_sprite_size(self._petdex_display_size)
+        self._aura.advance()
+        _layout_sprite_stage(self._sprite_stage, self._aura, self._label)
         self._resize_shell()
 
     def _resize_shell(self) -> None:
         extra = 62 + (self._bubble.sizeHint().height() + 8 if self._bubble.isVisible() else 0)
-        width = max(150, self._petdex_display_size[0] + 12)
-        height = self._petdex_display_size[1] + extra
+        width = max(150, self._sprite_stage.width() + 12)
+        height = self._sprite_stage.height() + extra
         if self.width() != width or self.height() != height:
             self.resize(width, height)
 
@@ -745,6 +754,7 @@ class PetdexWindow(QWidget):
         self._petdex_display_size = display_size(frame_w, frame_h)
         if hasattr(self, "_label"):
             self._label.setFixedSize(*self._petdex_display_size)
+            self._aura.set_sprite_size(self._petdex_display_size)
             self._render()
 
     def _show_bubble(self, text: str) -> None:
