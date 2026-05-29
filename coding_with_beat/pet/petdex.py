@@ -11,6 +11,7 @@ import os
 import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Iterable
 
 from PIL import Image
 
@@ -18,20 +19,37 @@ from coding_with_beat.config import DATA_DIR, ensure_dirs
 
 MANIFEST_URL = "https://petdex.crafter.run/api/manifest"
 PETDEX_CACHE_DIR = DATA_DIR / "petdex"
+PETDEX_LIBRARY_DIRS = (
+    PETDEX_CACHE_DIR,
+    Path.home() / ".petdex" / "pets",
+    Path.home() / ".codex" / "pets",
+)
 USER_AGENT = "coding-with-beat-pet/1.0"
 PETDEX_ACTION_ROWS = {
     "idle": 0,
-    "recommend": 1,
-    "walk": 2,
-    "dance": 2,
-    "sad": 3,
-    "panic": 3,
-    "think": 4,
+    "walk": 1,
+    "recommend": 3,
+    "happy": 4,
+    "sad": 5,
+    "panic": 5,
+    "think": 6,
+    "dance": 7,
+    "sleep": 0,
+}
+PETDEX_ACTION_FRAME_COUNTS = {
+    "idle": 6,
+    "walk": 8,
+    "recommend": 4,
     "happy": 5,
-    "sleep": 7,
+    "sad": 8,
+    "panic": 8,
+    "think": 6,
+    "dance": 6,
+    "sleep": 6,
 }
 FRAME_COLUMNS = 8
 FRAME_ROWS = 9
+DISPLAY_WIDTH = 72
 
 
 @dataclass(frozen=True)
@@ -54,11 +72,12 @@ class PetdexAnimator:
             self.frame_index = 0
 
     def tick(self) -> tuple[int, int]:
-        self.frame_index = (self.frame_index + 1) % FRAME_COLUMNS
+        self.frame_index = (self.frame_index + 1) % PETDEX_ACTION_FRAME_COUNTS.get(self.action, 6)
         return self.current_cell()
 
     def current_cell(self) -> tuple[int, int]:
-        return PETDEX_ACTION_ROWS.get(self.action, 0), self.frame_index % FRAME_COLUMNS
+        frame_count = PETDEX_ACTION_FRAME_COUNTS.get(self.action, 6)
+        return PETDEX_ACTION_ROWS.get(self.action, 0), self.frame_index % frame_count
 
 
 def ensure_petdex_pet(slug: str, cache_dir: Path = PETDEX_CACHE_DIR) -> PetdexPet:
@@ -95,8 +114,50 @@ def resolve_spritesheet_path(pet: PetdexPet) -> Path:
     return pet.spritesheet_path
 
 
+def installed_petdex_pets(roots: Iterable[Path] = PETDEX_LIBRARY_DIRS) -> list[PetdexPet]:
+    pets: list[PetdexPet] = []
+    seen: set[str] = set()
+    for root in roots:
+        if not root.exists():
+            continue
+        for folder in sorted(path for path in root.iterdir() if path.is_dir()):
+            pet = _read_installed_pet(folder)
+            if pet is None or pet.slug in seen:
+                continue
+            seen.add(pet.slug)
+            pets.append(pet)
+    return pets
+
+
+def _read_installed_pet(folder: Path) -> PetdexPet | None:
+    pet_json_path = folder / "pet.json"
+    try:
+        data = json.loads(pet_json_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+
+    slug = str(data.get("id") or folder.name).strip().lower()
+    if not slug:
+        return None
+    name = str(data.get("displayName") or slug)
+    sprite_name = data.get("spritesheetPath") or "spritesheet.webp"
+    spritesheet_path = folder / str(sprite_name)
+    if not spritesheet_path.exists():
+        for candidate in (folder / "spritesheet.png", folder / "spritesheet.webp"):
+            if candidate.exists():
+                spritesheet_path = candidate
+                break
+    if not spritesheet_path.exists():
+        return None
+    return PetdexPet(slug=slug, name=name, folder=folder, spritesheet_path=spritesheet_path)
+
+
 def frame_size(width: int, height: int) -> tuple[int, int]:
     return width // FRAME_COLUMNS, height // FRAME_ROWS
+
+
+def display_size(frame_width: int, frame_height: int, target_width: int = DISPLAY_WIDTH) -> tuple[int, int]:
+    return target_width, round(frame_height * target_width / frame_width)
 
 
 def _json_get(url: str) -> dict:

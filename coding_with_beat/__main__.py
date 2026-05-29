@@ -181,9 +181,10 @@ def cmd_watch() -> int:
 def cmd_pet() -> int:
     try:
         from .pet.app import run
+        from .pet.settings import load_settings
 
         args = sys.argv[2:]
-        petdex_slug = DEFAULT_PETDEX_SLUG
+        petdex_slug = load_settings().petdex_slug or DEFAULT_PETDEX_SLUG
         if "--builtin" in args:
             petdex_slug = None
         if "--petdex" in sys.argv[2:]:

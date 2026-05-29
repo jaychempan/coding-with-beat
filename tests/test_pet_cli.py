@@ -1,6 +1,7 @@
 from unittest import mock
 
 from coding_with_beat.__main__ import COMMANDS, cmd_pet
+from coding_with_beat.pet.settings import PetSettings
 
 
 def test_pet_command_registered():
@@ -25,6 +26,22 @@ def test_cmd_pet_defaults_to_curated_petdex_pet(monkeypatch):
     with mock.patch("coding_with_beat.pet.app.run", side_effect=fake_run):
         assert cmd_pet() == 0
     assert called["petdex_slug"] == "boba"
+
+
+def test_cmd_pet_uses_saved_petdex_pet(monkeypatch):
+    called = {}
+
+    def fake_run(*, petdex_slug=None):
+        called["petdex_slug"] = petdex_slug
+        return 0
+
+    monkeypatch.setattr("sys.argv", ["cwb", "pet"])
+    with (
+        mock.patch("coding_with_beat.pet.settings.load_settings", return_value=PetSettings(petdex_slug="mochi")),
+        mock.patch("coding_with_beat.pet.app.run", side_effect=fake_run),
+    ):
+        assert cmd_pet() == 0
+    assert called["petdex_slug"] == "mochi"
 
 
 def test_cmd_pet_passes_petdex_slug(monkeypatch):

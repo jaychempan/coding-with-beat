@@ -140,7 +140,7 @@ python -m pip install "coding-with-beat[pet]"
 cwb pet
 ```
 
-By default, `cwb pet` uses a high-quality public Petdex spritesheet pet (`boba`) and downloads it to `~/.coding-with-beat/petdex/` at runtime. The CWB music controls stay attached.
+By default, `cwb pet` uses a high-quality public Petdex spritesheet pet (`boba`) and downloads it to `~/.coding-with-beat/petdex/` at runtime. The CWB music controls stay attached, while the sprite rendering follows Petdex Desktop's small fixed-window animation style.
 
 When running from a local checkout:
 
@@ -155,6 +155,13 @@ You can choose another Petdex pet by slug, or force the simpler built-in pixel s
 python -m coding_with_beat pet --petdex boba
 python -m coding_with_beat pet --builtin
 ```
+
+Petdex mode:
+
+- Left-drag moves the pet; double-click asks for a song recommendation.
+- Buttons show `推荐`, `在播`, and `皮肤`; right-click exposes play/pause, next track, play by result number, and pet switching.
+- The `皮肤` control cycles local Petdex pets discovered in `~/.coding-with-beat/petdex/`, `~/.petdex/pets/`, and `~/.codex/pets/`.
+- The last selected Petdex pet is saved and used by the next `cwb pet` launch.
 
 ### Codex CLI
 

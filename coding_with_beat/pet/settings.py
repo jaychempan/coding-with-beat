@@ -17,6 +17,7 @@ class PetSettings:
     x: int = 80
     y: int = 120
     skin_id: str = "dj"
+    petdex_slug: str = "boba"
     scale: int = 5
 
 

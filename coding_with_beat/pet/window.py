@@ -10,7 +10,15 @@ from PySide6.QtWidgets import QHBoxLayout, QInputDialog, QLabel, QMenu, QPushBut
 
 from .animator import PetAnimator
 from .controller import PetController
-from .petdex import PetdexAnimator, PetdexPet, ensure_petdex_pet, resolve_spritesheet_path
+from .petdex import (
+    PetdexAnimator,
+    PetdexPet,
+    display_size,
+    ensure_petdex_pet,
+    frame_size,
+    installed_petdex_pets,
+    resolve_spritesheet_path,
+)
 from .settings import load_settings, save_settings
 from .sprites import BUILTIN_SKINS, Frame
 
@@ -221,9 +229,10 @@ class PetdexWindow(QWidget):
         self.settings = load_settings()
         self.controller = controller or PetController(PetAnimator(self.settings.skin_id))
         self.petdex_animator = PetdexAnimator()
-        self._spritesheet = QPixmap(str(resolve_spritesheet_path(pet)))
-        if self._spritesheet.isNull():
-            raise RuntimeError(f"Could not load Petdex spritesheet: {pet.spritesheet_path}")
+        self._installed_pets = installed_petdex_pets()
+        self._spritesheet = QPixmap()
+        self._petdex_display_size = (72, 78)
+        self._load_petdex_pet(pet)
         self._drag_origin: QPoint | None = None
 
         self._bubble = QTextEdit(self)
@@ -238,12 +247,13 @@ class PetdexWindow(QWidget):
         )
         self._label = QLabel(self)
         self._label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._label.setFixedSize(*self._petdex_display_size)
         self._recommend_button = _button("推荐")
         self._recommend_button.clicked.connect(self.ask_mood)
         self._now_button = _button("在播")
         self._now_button.clicked.connect(self.show_now_playing)
-        self._pet_button = _button("宠物")
-        self._pet_button.clicked.connect(lambda: self._show_bubble(f"Petdex: {self.pet.name}"))
+        self._pet_button = _button("皮肤")
+        self._pet_button.clicked.connect(self.cycle_petdex_pet)
 
         controls = QHBoxLayout()
         controls.setContentsMargins(0, 0, 0, 0)
@@ -266,7 +276,7 @@ class PetdexWindow(QWidget):
 
         self.timer = QTimer(self)
         self.timer.timeout.connect(self._tick)
-        self.timer.start(110)
+        self.timer.start(180)
 
         self.state_timer = QTimer(self)
         self.state_timer.timeout.connect(self._refresh_state)
@@ -282,10 +292,16 @@ class PetdexWindow(QWidget):
         self._track_label.setText(self.controller.current_track_label())
 
     def _render(self) -> None:
-        pixmap = _petdex_frame_pixmap(self._spritesheet, self.petdex_animator, max(1, self.settings.scale // 2))
+        pixmap = _petdex_frame_pixmap(self._spritesheet, self.petdex_animator, self._petdex_display_size)
         self._label.setPixmap(pixmap)
+        self._resize_shell()
+
+    def _resize_shell(self) -> None:
         extra = 82 + (130 if self._bubble.isVisible() else 0)
-        self.resize(max(220, pixmap.width() + 12), pixmap.height() + extra)
+        width = max(150, self._petdex_display_size[0] + 12)
+        height = self._petdex_display_size[1] + extra
+        if self.width() != width or self.height() != height:
+            self.resize(width, height)
 
     def mousePressEvent(self, event) -> None:
         if event.button() == Qt.MouseButton.LeftButton:
@@ -318,6 +334,11 @@ class PetdexWindow(QWidget):
         menu.addAction(_action("当前播放", self.show_now_playing, self))
         menu.addAction(_action("暂停/继续", self.toggle_playback, self))
         menu.addAction(_action("下一首", self.next_track, self))
+        pet_menu = menu.addMenu("切换宠物")
+        for pet in self._installed_pets:
+            pet_menu.addAction(_action(pet.name, lambda next_pet=pet: self.set_petdex_pet(next_pet), self))
+        if not self._installed_pets:
+            pet_menu.addAction(_action("未发现本地宠物", lambda: self._show_bubble("未发现本地 Petdex 宠物"), self))
         menu.addAction(_action(f"Petdex: {self.pet.name}", lambda: self._show_bubble(str(self.pet.folder)), self))
         menu.addSeparator()
         menu.addAction(_action("退出", self.close, self))
@@ -349,19 +370,52 @@ class PetdexWindow(QWidget):
     def next_track(self) -> None:
         self._show_bubble(self.controller.music.next_track().text)
 
+    def set_petdex_pet(self, pet: PetdexPet) -> None:
+        self._load_petdex_pet(pet)
+        self.settings.petdex_slug = pet.slug
+        save_settings(self.settings)
+        self.petdex_animator.set_action("recommend")
+        self._show_bubble(f"宠物：{pet.name}")
+
+    def cycle_petdex_pet(self) -> None:
+        self._installed_pets = installed_petdex_pets()
+        if not self._installed_pets:
+            self._show_bubble("未发现本地 Petdex 宠物")
+            return
+        current_index = next(
+            (index for index, pet in enumerate(self._installed_pets) if pet.slug == self.pet.slug),
+            -1,
+        )
+        next_pet = self._installed_pets[(current_index + 1) % len(self._installed_pets)]
+        self.set_petdex_pet(next_pet)
+
+    def _load_petdex_pet(self, pet: PetdexPet) -> None:
+        spritesheet = QPixmap(str(resolve_spritesheet_path(pet)))
+        if spritesheet.isNull():
+            raise RuntimeError(f"Could not load Petdex spritesheet: {pet.spritesheet_path}")
+        self.pet = pet
+        self._spritesheet = spritesheet
+        frame_w, frame_h = frame_size(self._spritesheet.width(), self._spritesheet.height())
+        self._petdex_display_size = display_size(frame_w, frame_h)
+        if hasattr(self, "_label"):
+            self._label.setFixedSize(*self._petdex_display_size)
+            self._render()
+
     def _show_bubble(self, text: str) -> None:
         self._bubble.setPlainText(_trim_output(text))
         self._bubble.setVisible(True)
         self._render()
 
 
-def _petdex_frame_pixmap(spritesheet: QPixmap, animator: PetdexAnimator, scale: int) -> QPixmap:
+def _petdex_frame_pixmap(spritesheet: QPixmap, animator: PetdexAnimator, target_size: tuple[int, int]) -> QPixmap:
     row, col = animator.current_cell()
-    from .petdex import frame_size
 
     frame_w, frame_h = frame_size(spritesheet.width(), spritesheet.height())
     source = QRect(col * frame_w, row * frame_h, frame_w, frame_h)
     frame = spritesheet.copy(source)
     return frame.scaled(
-        frame_w * scale, frame_h * scale, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.FastTransformation
+        target_size[0],
+        target_size[1],
+        Qt.AspectRatioMode.KeepAspectRatio,
+        Qt.TransformationMode.FastTransformation,
     )
