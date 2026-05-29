@@ -6,7 +6,7 @@ import pytest
 
 pytest.importorskip("PySide6")
 
-from PySide6.QtWidgets import QApplication, QPushButton
+from PySide6.QtWidgets import QApplication, QFrame, QLabel, QPushButton
 
 from coding_with_beat.pet.bubble import PetBubbleCard, PetResultItem
 from coding_with_beat.pet.dj_panel import CodeBeatDjPanel
@@ -59,13 +59,13 @@ def test_dj_panel_renders_recommendations_with_direct_play_buttons():
     )
 
     panel.show_result(result)
-    buttons = [button.text() for button in panel.findChildren(QPushButton)]
+    queue_buttons = [button for button in panel.findChildren(QPushButton) if button.objectName() == "QueuePlayButton"]
 
     assert app is not None
     assert panel.scroll_area.widgetResizable() is True
     assert "1" in panel.transcript_text()
     assert "Night Owl - Luna" in panel.transcript_text()
-    assert buttons.count("播放") == 2
+    assert [button.text() for button in queue_buttons] == ["▶", "▶"]
 
 
 def test_dj_panel_play_button_runs_play_number_without_manual_number_dialog():
@@ -83,7 +83,7 @@ def test_dj_panel_play_button_runs_play_number_without_manual_number_dialog():
     )
 
     panel.show_result(result)
-    play_button = next(button for button in panel.findChildren(QPushButton) if button.text() == "播放")
+    play_button = next(button for button in panel.findChildren(QPushButton) if button.objectName() == "QueuePlayButton")
     play_button.click()
 
     assert app is not None
@@ -102,3 +102,64 @@ def test_dj_panel_text_prompt_runs_text_recommendation():
     assert app is not None
     assert host.pending[-1] == "正在按你的描述找歌..."
     assert host.calls[-1].card.text == "来点爵士"
+
+
+def test_dj_panel_has_profile_identity_stats_and_chips():
+    app = QApplication.instance() or QApplication([])
+    panel = CodeBeatDjPanel(FakeHost())
+
+    assert app is not None
+    assert panel.findChild(QLabel, "DjTitle").text() == "CodeBeat DJ"
+    assert "mood" in panel.findChild(QLabel, "DjSubtitle").text().lower()
+    assert panel.findChild(QLabel, "StatOnAirValue").text() == "LIVE"
+    assert panel.findChild(QLabel, "StatMoodValue").text() == "IDLE"
+    assert panel.findChild(QLabel, "StatQueueValue").text() == "0"
+    assert "LOFI" in panel.chip_text()
+    assert "NO VOCAL" in panel.chip_text()
+
+
+def test_dj_panel_updates_queue_stat_when_recommendations_render():
+    app = QApplication.instance() or QApplication([])
+    panel = CodeBeatDjPanel(FakeHost())
+    result = PetSessionResult(
+        True,
+        "recommend",
+        PetBubbleCard(
+            "recommendations",
+            "Debug flow",
+            items=[
+                PetResultItem(1, "Night Owl - Luna"),
+                PetResultItem(2, "Rain Debug - Soft Keys"),
+                PetResultItem(3, "Green Terminal - Byte"),
+            ],
+        ),
+    )
+
+    panel.show_result(result)
+
+    assert app is not None
+    assert panel.findChild(QLabel, "StatMoodValue").text() == "FOCUS"
+    assert panel.findChild(QLabel, "StatQueueValue").text() == "3"
+
+
+def test_dj_panel_queue_rows_use_profile_objects_and_play_controls():
+    app = QApplication.instance() or QApplication([])
+    panel = CodeBeatDjPanel(FakeHost())
+    result = PetSessionResult(
+        True,
+        "recommend",
+        PetBubbleCard(
+            "recommendations",
+            "Debug flow",
+            items=[PetResultItem(1, "Night Owl - Luna")],
+        ),
+    )
+
+    panel.show_result(result)
+    row = panel.findChild(QFrame, "QueueRow")
+    play_button = next(button for button in panel.findChildren(QPushButton) if button.objectName() == "QueuePlayButton")
+
+    assert app is not None
+    assert row is not None
+    assert play_button.text() == "▶"
+    assert panel.prompt_input.objectName() == "DjPromptInput"

@@ -172,12 +172,12 @@ Petdex mode:
 - On macOS, the pet installs a Coding With Beat menu bar icon. Use it to show/hide the pet after it is hidden.
 - The pet tries to hide the Python Dock/Cmd-Tab identity by default. Use `--show-dock` if you want to keep it visible.
 - Single-click shows the current playback/status bubble.
-- Double-click asks DJ Buddy to recommend from the current coding vibe and opens the scrollable CodeBeat DJ panel.
+- Double-click asks DJ Buddy to recommend from the current coding vibe and opens the scrollable CodeBeat DJ profile panel.
 - Long-press auto-starts music from the current coding vibe.
 - Music actions run in the background, so the pet keeps animating while recommendations load.
 - Bubbles are display-only pixel cards for short feedback only: no white editor background and no scrollbars.
 - The compact action strip uses `♪`, `✨`, `🎲`, and `⋯` for now playing, recommend, reroll, and more. The first three open/use the CodeBeat DJ panel.
-- The CodeBeat DJ panel keeps full recommendation text, supports scrolling, lets you type a mood/style prompt, and adds a direct **播放** button beside each result so you do not have to manually enter a number.
+- The CodeBeat DJ profile panel uses a dark dotted DJ-station layout with identity header, live stats, taste chips, full recommendation text, a scrollable queue, mood/style prompt input, and direct **▶** buttons beside each result.
 - Right-click remains available for opening the DJ panel, play/pause, next track, play by number, pet switching, and quit.
 - The `⋯` menu cycles local Petdex pets discovered in `~/.coding-with-beat/petdex/`, `~/.petdex/pets/`, and `~/.codex/pets/`.
 - The last selected Petdex pet is saved and used by the next `cwb pet` launch.
@@ -220,7 +220,7 @@ See **[README_CODEX.md](README_CODEX.md)** for the full integration guide — ho
 >
 > **Live player:** Open a second terminal and run `cwb watch` to see the currently playing track, lyrics, and progress bar in real time.
 >
-> **Desktop pet:** Run `cwb pet` on macOS to open the draggable pixel companion. Click for status, double-click for the scrollable CodeBeat DJ recommendation panel, or long-press to start music from the current coding vibe.
+> **Desktop pet:** Run `cwb pet` on macOS to open the draggable pixel companion. Click for status, double-click for the scrollable CodeBeat DJ profile panel, or long-press to start music from the current coding vibe.
 >
 > **Apple Music:** The first time you play a catalog track, a popup will appear — click **Add to Library**, then repeat the play command.
 
