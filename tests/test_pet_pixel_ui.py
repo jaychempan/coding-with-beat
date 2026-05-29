@@ -7,7 +7,7 @@ import pytest
 pytest.importorskip("PySide6")
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QLabel
 
 from coding_with_beat.pet.pixel_ui import PixelBubbleLabel, trim_pixel_text
 
@@ -51,3 +51,16 @@ def test_pixel_bubble_label_is_display_only_and_has_no_scrollbar():
     assert label.textFormat() == Qt.TextFormat.PlainText
     assert label.textInteractionFlags() == Qt.TextInteractionFlag.NoTextInteraction
     assert "background" in label.styleSheet()
+
+
+def test_status_label_has_compact_width_limit():
+    app = QApplication.instance() or QApplication([])
+    label = QLabel()
+
+    from coding_with_beat.pet.pixel_ui import style_status_label
+
+    style_status_label(label)
+
+    assert app is not None
+    assert label.maximumWidth() == 150
+    assert label.wordWrap() is False

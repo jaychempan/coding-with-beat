@@ -87,20 +87,19 @@ class PetWindow(QWidget):
         self._more_button = _icon_button("⋯", "更多")
         self._more_button.clicked.connect(self._show_more_menu)
 
-        controls = QHBoxLayout()
-        controls.setContentsMargins(0, 0, 0, 0)
-        controls.setSpacing(4)
-        controls.addWidget(self._now_button)
-        controls.addWidget(self._recommend_button)
-        controls.addWidget(self._reroll_button)
-        controls.addWidget(self._more_button)
+        self._controls_widget = _controls_widget(
+            self._now_button,
+            self._recommend_button,
+            self._reroll_button,
+            self._more_button,
+        )
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(6, 6, 6, 6)
         layout.addWidget(self._bubble)
         layout.addWidget(self._track_label)
         layout.addWidget(self._label, alignment=Qt.AlignmentFlag.AlignHCenter)
-        layout.addLayout(controls)
+        layout.addWidget(self._controls_widget, alignment=Qt.AlignmentFlag.AlignHCenter)
 
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.Tool)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
@@ -296,6 +295,19 @@ def _icon_button(text: str, tooltip: str) -> QPushButton:
     return button
 
 
+def _controls_widget(*buttons: QPushButton) -> QWidget:
+    widget = QWidget()
+    width = 26 * len(buttons) + 4 * max(0, len(buttons) - 1)
+    widget.setFixedWidth(width)
+    widget.setMaximumWidth(width)
+    layout = QHBoxLayout(widget)
+    layout.setContentsMargins(0, 0, 0, 0)
+    layout.setSpacing(4)
+    for button in buttons:
+        layout.addWidget(button)
+    return widget
+
+
 def _trim_output(text: str) -> str:
     clean = text.strip() or "没有返回内容"
     return re.sub(r"\n{3,}", "\n\n", clean)[:1200]
@@ -367,20 +379,19 @@ class PetdexWindow(QWidget):
         self._more_button = _icon_button("⋯", "更多")
         self._more_button.clicked.connect(self._show_more_menu)
 
-        controls = QHBoxLayout()
-        controls.setContentsMargins(0, 0, 0, 0)
-        controls.setSpacing(4)
-        controls.addWidget(self._now_button)
-        controls.addWidget(self._recommend_button)
-        controls.addWidget(self._reroll_button)
-        controls.addWidget(self._more_button)
+        self._controls_widget = _controls_widget(
+            self._now_button,
+            self._recommend_button,
+            self._reroll_button,
+            self._more_button,
+        )
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(6, 6, 6, 6)
         layout.addWidget(self._bubble)
         layout.addWidget(self._track_label)
         layout.addWidget(self._label, alignment=Qt.AlignmentFlag.AlignHCenter)
-        layout.addLayout(controls)
+        layout.addWidget(self._controls_widget, alignment=Qt.AlignmentFlag.AlignHCenter)
 
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.Tool)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)

@@ -60,6 +60,20 @@ def test_builtin_pet_window_centers_pet_sprite_widget():
         window.close()
 
 
+def test_builtin_pet_window_keeps_controls_cluster_compact_and_centered():
+    app = QApplication.instance() or QApplication([])
+    window = PetWindow()
+    try:
+        assert app is not None
+        controls_item = window.layout().itemAt(3)
+
+        assert controls_item.widget() is window._controls_widget
+        assert controls_item.alignment() & Qt.AlignmentFlag.AlignHCenter
+        assert window._controls_widget.maximumWidth() == 116
+    finally:
+        window.close()
+
+
 def test_petdex_window_centers_pet_sprite_widget():
     app = QApplication.instance() or QApplication([])
     window = PetdexWindow(ensure_petdex_pet("codebeat-buddy"))
@@ -69,6 +83,20 @@ def test_petdex_window_centers_pet_sprite_widget():
 
         assert label_item.widget() is window._label
         assert label_item.alignment() & Qt.AlignmentFlag.AlignHCenter
+    finally:
+        window.close()
+
+
+def test_petdex_window_keeps_controls_cluster_compact_and_centered():
+    app = QApplication.instance() or QApplication([])
+    window = PetdexWindow(ensure_petdex_pet("codebeat-buddy"))
+    try:
+        assert app is not None
+        controls_item = window.layout().itemAt(3)
+
+        assert controls_item.widget() is window._controls_widget
+        assert controls_item.alignment() & Qt.AlignmentFlag.AlignHCenter
+        assert window._controls_widget.maximumWidth() == 116
     finally:
         window.close()
 

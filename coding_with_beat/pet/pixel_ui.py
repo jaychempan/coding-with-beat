@@ -56,6 +56,8 @@ def style_status_label(label: QLabel) -> None:
     label.setFont(_pixel_font(12, bold=True))
     label.setStyleSheet(STATUS_STYLE)
     label.setTextFormat(Qt.TextFormat.PlainText)
+    label.setWordWrap(False)
+    label.setMaximumWidth(150)
 
 
 def style_icon_button(button: QPushButton) -> None:
