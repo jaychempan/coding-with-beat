@@ -6,7 +6,7 @@ import re
 
 from PySide6.QtCore import QPoint, Qt, QTimer
 from PySide6.QtGui import QAction, QColor, QPainter, QPixmap
-from PySide6.QtWidgets import QInputDialog, QLabel, QMenu, QTextEdit, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QHBoxLayout, QInputDialog, QLabel, QMenu, QPushButton, QTextEdit, QVBoxLayout, QWidget
 
 from .animator import PetAnimator
 from .controller import PetController
@@ -24,13 +24,34 @@ class PetWindow(QWidget):
         self._bubble.setReadOnly(True)
         self._bubble.setVisible(False)
         self._bubble.setMaximumHeight(120)
+        self._track_label = QLabel("未播放", self)
+        self._track_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._track_label.setStyleSheet(
+            "QLabel { color: #f8fafc; background: rgba(15, 23, 42, 190);"
+            " border-radius: 5px; padding: 3px 6px; font-size: 12px; }"
+        )
         self._label = QLabel(self)
         self._label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._recommend_button = _button("推荐")
+        self._recommend_button.clicked.connect(self.ask_mood)
+        self._now_button = _button("在播")
+        self._now_button.clicked.connect(self.show_now_playing)
+        self._skin_button = _button("皮肤")
+        self._skin_button.clicked.connect(self.cycle_skin)
+
+        controls = QHBoxLayout()
+        controls.setContentsMargins(0, 0, 0, 0)
+        controls.setSpacing(4)
+        controls.addWidget(self._recommend_button)
+        controls.addWidget(self._now_button)
+        controls.addWidget(self._skin_button)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(6, 6, 6, 6)
         layout.addWidget(self._bubble)
+        layout.addWidget(self._track_label)
         layout.addWidget(self._label)
+        layout.addLayout(controls)
 
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.Tool)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
@@ -55,6 +76,7 @@ class PetWindow(QWidget):
 
     def _refresh_state(self) -> None:
         self.controller.refresh_action()
+        self._track_label.setText(self.controller.current_track_label())
 
     def _ambient_motion(self) -> None:
         if self.controller.animator.action in {"idle", "walk", "think", "happy"}:
@@ -64,7 +86,8 @@ class PetWindow(QWidget):
         frame = self.controller.animator.current_frame()
         pixmap = _frame_pixmap(frame, self.controller.animator.skin.palette, self.settings.scale)
         self._label.setPixmap(pixmap)
-        self.resize(max(160, pixmap.width() + 12), pixmap.height() + (130 if self._bubble.isVisible() else 12))
+        extra = 82 + (130 if self._bubble.isVisible() else 0)
+        self.resize(max(172, pixmap.width() + 12), pixmap.height() + extra)
 
     def mousePressEvent(self, event) -> None:
         if event.button() == Qt.MouseButton.LeftButton:
@@ -132,6 +155,11 @@ class PetWindow(QWidget):
         save_settings(self.settings)
         self._render()
 
+    def cycle_skin(self) -> None:
+        self.settings.skin_id = self.controller.cycle_skin()
+        save_settings(self.settings)
+        self._show_bubble(f"皮肤：{self.controller.animator.skin.name}")
+
     def _show_bubble(self, text: str) -> None:
         self._bubble.setPlainText(_trim_output(text))
         self._bubble.setVisible(True)
@@ -142,6 +170,20 @@ def _action(text: str, callback, parent) -> QAction:
     action = QAction(text, parent)
     action.triggered.connect(callback)
     return action
+
+
+def _button(text: str) -> QPushButton:
+    button = QPushButton(text)
+    button.setCursor(Qt.CursorShape.PointingHandCursor)
+    button.setFixedHeight(26)
+    button.setStyleSheet(
+        "QPushButton { color: #f8fafc; background: rgba(30, 41, 59, 210);"
+        " border: 1px solid rgba(148, 163, 184, 180); border-radius: 5px; padding: 2px 7px;"
+        " font-size: 12px; }"
+        "QPushButton:hover { background: rgba(51, 65, 85, 230); }"
+        "QPushButton:pressed { background: rgba(15, 23, 42, 235); }"
+    )
+    return button
 
 
 def _trim_output(text: str) -> str:

@@ -11,6 +11,7 @@ from coding_with_beat import state as state_mod
 from .animator import PetAnimator
 from .mood import queries_for_mood
 from .music import MusicResult, PetMusicClient
+from .sprites import BUILTIN_SKINS
 
 
 def action_for_state(st, now: float | None = None) -> str:
@@ -53,6 +54,29 @@ class PetController:
         action = self.ambient_actions[self.ambient_index % len(self.ambient_actions)]
         self.ambient_index += 1
         return action
+
+    def current_track_label(self) -> str:
+        st = self.load_state()
+        track = getattr(st, "track", None)
+        title = (getattr(track, "title", "") or "").strip()
+        artist = (getattr(track, "artist", "") or "").strip()
+        if not title and not artist:
+            return "未播放"
+        marker = "▶" if getattr(st, "playing", False) else "▷"
+        if title and artist:
+            return f"{marker} {title} — {artist}"
+        return f"{marker} {title or artist}"
+
+    def cycle_skin(self) -> str:
+        skin_ids = list(BUILTIN_SKINS)
+        current = self.animator.skin.id
+        try:
+            idx = skin_ids.index(current)
+        except ValueError:
+            idx = 0
+        next_skin = skin_ids[(idx + 1) % len(skin_ids)]
+        self.animator.set_skin(next_skin)
+        return next_skin
 
     def handle_mood_text(self, text: str) -> MusicResult:
         self.animator.set_action("think")
