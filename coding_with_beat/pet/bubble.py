@@ -40,8 +40,9 @@ class PetBubbleView:
         raw_results: str,
         *,
         empty_text: str = "没有找到结果。可以换个关键词，或者说得更具体一点。",
+        max_items: int = _MAX_RECOMMENDATIONS,
     ) -> PetBubbleCard:
-        items = _parse_numbered_items(raw_results)
+        items = _parse_numbered_items(raw_results, max_items=max_items)
         if not items:
             return PetBubbleCard(
                 kind="empty",
@@ -68,7 +69,7 @@ class PetBubbleView:
         return PetBubbleCard(kind="error", text=_trim_text(text, _MAX_ERROR_TEXT), action="sad")
 
 
-def _parse_numbered_items(raw_results: str) -> list[PetResultItem]:
+def _parse_numbered_items(raw_results: str, *, max_items: int = _MAX_RECOMMENDATIONS) -> list[PetResultItem]:
     items: list[PetResultItem] = []
     for line in (raw_results or "").splitlines():
         match = _NUMBERED_LINE.match(line)
@@ -78,7 +79,7 @@ def _parse_numbered_items(raw_results: str) -> list[PetResultItem]:
         if not label:
             continue
         items.append(PetResultItem(int(match.group(1)), label))
-        if len(items) >= _MAX_RECOMMENDATIONS:
+        if len(items) >= max_items:
             break
     return items
 

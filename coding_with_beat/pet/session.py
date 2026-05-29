@@ -156,6 +156,7 @@ class PetMusicSession:
             "只显示资料库里的结果",
             filtered,
             empty_text="资料库里没找到，要不要搜一下线上？",
+            max_items=40,
         )
         self.current_card = card
         return self._remember(PetSessionResult(bool(card.items), card.action, card))
@@ -264,7 +265,7 @@ class PetMusicSession:
         if not music_result.ok:
             card = self.bubble.error(f"{title}失败", music_result.text)
             return self._remember(PetSessionResult(False, "sad", card))
-        card = self.bubble.results(label, "点 ▶ 或输入编号播放", music_result.text)
+        card = self.bubble.results(label, "点 ▶ 或输入编号播放", music_result.text, max_items=40)
         self.current_card = card
         return self._remember(PetSessionResult(bool(card.items), card.action, card))
 

@@ -118,6 +118,30 @@ def test_dj_panel_renders_recommendations_with_direct_play_buttons():
     assert [button.text() for button in queue_buttons] == ["▶", "▶"]
 
 
+def test_dj_panel_renders_long_library_result_with_scrollable_play_buttons():
+    app = QApplication.instance() or QApplication([])
+    host = FakeHost()
+    panel = CodeBeatDjPanel(host)
+    result = PetSessionResult(
+        True,
+        "recommend",
+        PetBubbleCard(
+            "recommendations",
+            "资料库\n点 ▶ 或输入编号播放",
+            items=[PetResultItem(number, f"Track {number} — Artist") for number in range(1, 13)],
+        ),
+    )
+
+    panel.show_result(result)
+    queue_buttons = [button for button in panel.findChildren(QPushButton) if button.objectName() == "QueuePlayButton"]
+
+    assert app is not None
+    assert panel.scroll_area.widgetResizable() is True
+    assert panel.findChild(QLabel, "StatQueueValue").text() == "12"
+    assert len(queue_buttons) == 12
+    assert "12. Track 12" in panel.transcript_text()
+
+
 def test_dj_panel_play_button_runs_play_number_without_manual_number_dialog():
     app = QApplication.instance() or QApplication([])
     host = FakeHost()

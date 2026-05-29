@@ -183,6 +183,7 @@ Petdex mode:
 - The sidecar stays hidden during idle desktop use and appears temporarily beside the pet on hover, click, bubble updates, or live playback changes.
 - The CodeBeat DJ profile panel uses a dark liquid-pixel cockpit layout with animated signal rail, live now-playing waveform band, taste chips, full result text, a scrollable queue, search prompt input, and direct **▶** buttons beside each result.
 - The DJ prompt is a music command box, not just a mood box. Type `周杰伦` or `晴天 周杰伦` to search, `从资料库找 周杰伦` to restrict results to your library, `从喜欢里找 周杰伦` to search loved tracks, `我的歌单` to list playlists, or `播放歌单 Coding Beats` to start a named playlist.
+- Library, loved, search, and playlist results keep a longer playable queue in the DJ panel; the desktop pet bubble still shows only a compact summary.
 - The bottom DJ controls include quick access to recommendations, library, loved tracks, playlists, current playback, and reroll. Slash commands still work for common controls such as `/volume 70`, `/seek 1:30`, `/next`, `/pause`, and `/mode shuffle`.
 - Right-click remains available for opening the DJ panel, play/pause, next track, play by number, pet switching, and quit.
 - The `⋯` menu cycles local Petdex pets discovered in `~/.coding-with-beat/petdex/`, `~/.petdex/pets/`, and `~/.codex/pets/`.

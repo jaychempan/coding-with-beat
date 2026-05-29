@@ -319,6 +319,20 @@ def test_handle_prompt_filters_library_only_search_results():
     assert music.calls == [("search", "周杰伦")]
 
 
+def test_list_library_keeps_more_than_five_playable_results():
+    library_text = "\n".join(f"{number}. Track {number} — Artist · Album [Library]" for number in range(1, 13))
+    music = FakeMusic(library_text=library_text)
+    session = PetMusicSession(music=music, load_state=lambda: state(vibe="debug"))
+
+    result = session.list_library()
+
+    assert result.ok is True
+    assert result.card.text.startswith("资料库")
+    assert [item.number for item in result.card.items] == list(range(1, 13))
+    assert "12. Track 12" in result.card.text
+    assert music.calls == [("list_library", 40)]
+
+
 def test_handle_prompt_searches_loved_tracks():
     music = FakeMusic()
     session = PetMusicSession(music=music, load_state=lambda: state(vibe="debug"))
