@@ -258,22 +258,8 @@ class PetWindow(QWidget):
 
 def _action(text: str, callback, parent) -> QAction:
     action = QAction(text, parent)
-    action.triggered.connect(callback)
+    action.triggered.connect(lambda _checked=False: callback())
     return action
-
-
-def _button(text: str) -> QPushButton:
-    button = QPushButton(text)
-    button.setCursor(Qt.CursorShape.PointingHandCursor)
-    button.setFixedHeight(26)
-    button.setStyleSheet(
-        "QPushButton { color: #f8fafc; background: rgba(30, 41, 59, 210);"
-        " border: 1px solid rgba(148, 163, 184, 180); border-radius: 5px; padding: 2px 7px;"
-        " font-size: 12px; }"
-        "QPushButton:hover { background: rgba(51, 65, 85, 230); }"
-        "QPushButton:pressed { background: rgba(15, 23, 42, 235); }"
-    )
-    return button
 
 
 def _icon_button(text: str, tooltip: str) -> QPushButton:
