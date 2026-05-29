@@ -193,7 +193,7 @@ def cmd_pet() -> int:
                 print("error: usage: cwb pet --petdex <slug>", file=sys.stderr)
                 return 2
             petdex_slug = sys.argv[idx + 1]
-        return run(petdex_slug=petdex_slug)
+        return run(petdex_slug=petdex_slug, hide_dock="--show-dock" not in args)
     except RuntimeError as e:
         if "PySide6" in str(e):
             print(

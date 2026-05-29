@@ -18,21 +18,24 @@ def test_cmd_pet_prints_install_hint_when_pyside_missing(capsys):
 def test_cmd_pet_defaults_to_curated_petdex_pet(monkeypatch):
     called = {}
 
-    def fake_run(*, petdex_slug=None):
+    def fake_run(*, petdex_slug=None, hide_dock=True):
         called["petdex_slug"] = petdex_slug
+        called["hide_dock"] = hide_dock
         return 0
 
     monkeypatch.setattr("sys.argv", ["cwb", "pet"])
     with mock.patch("coding_with_beat.pet.app.run", side_effect=fake_run):
         assert cmd_pet() == 0
     assert called["petdex_slug"] == "boba"
+    assert called["hide_dock"] is True
 
 
 def test_cmd_pet_uses_saved_petdex_pet(monkeypatch):
     called = {}
 
-    def fake_run(*, petdex_slug=None):
+    def fake_run(*, petdex_slug=None, hide_dock=True):
         called["petdex_slug"] = petdex_slug
+        called["hide_dock"] = hide_dock
         return 0
 
     monkeypatch.setattr("sys.argv", ["cwb", "pet"])
@@ -42,29 +45,49 @@ def test_cmd_pet_uses_saved_petdex_pet(monkeypatch):
     ):
         assert cmd_pet() == 0
     assert called["petdex_slug"] == "mochi"
+    assert called["hide_dock"] is True
 
 
 def test_cmd_pet_passes_petdex_slug(monkeypatch):
     called = {}
 
-    def fake_run(*, petdex_slug=None):
+    def fake_run(*, petdex_slug=None, hide_dock=True):
         called["petdex_slug"] = petdex_slug
+        called["hide_dock"] = hide_dock
         return 0
 
     monkeypatch.setattr("sys.argv", ["cwb", "pet", "--petdex", "boba"])
     with mock.patch("coding_with_beat.pet.app.run", side_effect=fake_run):
         assert cmd_pet() == 0
     assert called["petdex_slug"] == "boba"
+    assert called["hide_dock"] is True
 
 
 def test_cmd_pet_builtin_disables_petdex_default(monkeypatch):
     called = {}
 
-    def fake_run(*, petdex_slug=None):
+    def fake_run(*, petdex_slug=None, hide_dock=True):
         called["petdex_slug"] = petdex_slug
+        called["hide_dock"] = hide_dock
         return 0
 
     monkeypatch.setattr("sys.argv", ["cwb", "pet", "--builtin"])
     with mock.patch("coding_with_beat.pet.app.run", side_effect=fake_run):
         assert cmd_pet() == 0
     assert called["petdex_slug"] is None
+    assert called["hide_dock"] is True
+
+
+def test_cmd_pet_show_dock_disables_dock_hiding(monkeypatch):
+    called = {}
+
+    def fake_run(*, petdex_slug=None, hide_dock=True):
+        called["petdex_slug"] = petdex_slug
+        called["hide_dock"] = hide_dock
+        return 0
+
+    monkeypatch.setattr("sys.argv", ["cwb", "pet", "--show-dock"])
+    with mock.patch("coding_with_beat.pet.app.run", side_effect=fake_run):
+        assert cmd_pet() == 0
+    assert called["petdex_slug"] == "boba"
+    assert called["hide_dock"] is False
