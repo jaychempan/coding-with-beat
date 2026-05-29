@@ -64,6 +64,26 @@ def test_quick_action_reroll():
     assert session.calls == ["reroll"]
 
 
+def test_quick_action_now_calls_now_playing():
+    session = FakeSession()
+    controller = PetInteractionController(session=session)
+
+    result = controller.quick_action("now")
+
+    assert result.card.kind == "status"
+    assert session.calls == ["now_playing"]
+
+
+def test_quick_action_recommend_calls_recommend_from_context():
+    session = FakeSession()
+    controller = PetInteractionController(session=session)
+
+    result = controller.quick_action("recommend")
+
+    assert result.card.kind == "recommendations"
+    assert session.calls == ["recommend_from_context"]
+
+
 def test_unknown_quick_action_returns_error_card():
     session = FakeSession()
     controller = PetInteractionController(session=session, bubble=PetBubbleView())
