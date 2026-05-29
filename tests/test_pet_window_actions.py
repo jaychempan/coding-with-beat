@@ -6,12 +6,14 @@ import pytest
 
 pytest.importorskip("PySide6")
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
 
 from coding_with_beat.pet.bubble import PetBubbleCard
+from coding_with_beat.pet.petdex import ensure_petdex_pet
 from coding_with_beat.pet.pixel_ui import PixelBubbleLabel
 from coding_with_beat.pet.session import PetSessionResult
-from coding_with_beat.pet.window import PetWindow, _action
+from coding_with_beat.pet.window import PetdexWindow, PetWindow, _action
 
 
 def test_action_does_not_pass_qt_checked_arg_to_callback():
@@ -41,6 +43,32 @@ def test_builtin_pet_window_applies_pending_result():
         assert app is not None
         window._apply_session_result(PetSessionResult(True, "think", PetBubbleCard("status", "思考中...")))
         assert "思考中" in window._bubble.text()
+    finally:
+        window.close()
+
+
+def test_builtin_pet_window_centers_pet_sprite_widget():
+    app = QApplication.instance() or QApplication([])
+    window = PetWindow()
+    try:
+        assert app is not None
+        label_item = window.layout().itemAt(2)
+
+        assert label_item.widget() is window._label
+        assert label_item.alignment() & Qt.AlignmentFlag.AlignHCenter
+    finally:
+        window.close()
+
+
+def test_petdex_window_centers_pet_sprite_widget():
+    app = QApplication.instance() or QApplication([])
+    window = PetdexWindow(ensure_petdex_pet("codebeat-buddy"))
+    try:
+        assert app is not None
+        label_item = window.layout().itemAt(2)
+
+        assert label_item.widget() is window._label
+        assert label_item.alignment() & Qt.AlignmentFlag.AlignHCenter
     finally:
         window.close()
 

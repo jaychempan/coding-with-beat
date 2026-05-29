@@ -99,7 +99,7 @@ class PetWindow(QWidget):
         layout.setContentsMargins(6, 6, 6, 6)
         layout.addWidget(self._bubble)
         layout.addWidget(self._track_label)
-        layout.addWidget(self._label)
+        layout.addWidget(self._label, alignment=Qt.AlignmentFlag.AlignHCenter)
         layout.addLayout(controls)
 
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.Tool)
@@ -379,7 +379,7 @@ class PetdexWindow(QWidget):
         layout.setContentsMargins(6, 6, 6, 6)
         layout.addWidget(self._bubble)
         layout.addWidget(self._track_label)
-        layout.addWidget(self._label)
+        layout.addWidget(self._label, alignment=Qt.AlignmentFlag.AlignHCenter)
         layout.addLayout(controls)
 
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.Tool)
