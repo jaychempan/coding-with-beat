@@ -102,8 +102,8 @@ def _render_waveform_icon(size: int) -> Image.Image:
     image = Image.new("RGBA", (size, size), (0, 0, 0, 0))
     draw = ImageDraw.Draw(image)
     scale = size / 256
-    logo_offset = 46
-    logo_scale = 0.82
+    logo_offset = 36
+    logo_scale = 0.92
 
     def box(x: float, y: float, w: float, h: float, radius: float, fill) -> None:
         draw.rounded_rectangle(
