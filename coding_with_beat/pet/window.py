@@ -19,6 +19,7 @@ from PySide6.QtWidgets import (
 
 from .animator import PetAnimator
 from .async_runner import PetCommandRunner
+from .aura import MusicAuraWidget
 from .bubble import PetBubbleCard
 from .controller import PetController
 from .dj_panel import CodeBeatDjPanel
@@ -81,6 +82,8 @@ class PetWindow(QWidget):
         self._label = QLabel(self)
         self._label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         _style_sprite_label(self._label)
+        self._aura = MusicAuraWidget(sprite_size=(1, 1), parent=self)
+        self._sprite_stage = _sprite_stage(self._aura, self._label)
         self._now_button = _icon_button("♪", "当前播放")
         self._now_button.clicked.connect(self._dj_panel.now_playing)
         self._recommend_button = _icon_button("+", "按当前状态推荐")
@@ -101,7 +104,7 @@ class PetWindow(QWidget):
         layout.setContentsMargins(6, 6, 6, 6)
         layout.addWidget(self._bubble)
         layout.addWidget(self._track_label)
-        layout.addWidget(self._label, alignment=Qt.AlignmentFlag.AlignHCenter)
+        layout.addWidget(self._sprite_stage, alignment=Qt.AlignmentFlag.AlignHCenter)
         layout.addWidget(self._controls_widget, alignment=Qt.AlignmentFlag.AlignHCenter)
 
         _style_pet_window(self)
@@ -146,8 +149,12 @@ class PetWindow(QWidget):
         frame = self.controller.animator.current_frame()
         pixmap = _frame_pixmap(frame, self.controller.animator.skin.palette, self.settings.scale)
         self._label.setPixmap(pixmap)
+        self._label.setFixedSize(pixmap.size())
+        self._aura.set_sprite_size((pixmap.width(), pixmap.height()))
+        self._aura.advance()
+        _layout_sprite_stage(self._sprite_stage, self._aura, self._label)
         extra = 66 + (self._bubble.sizeHint().height() + 8 if self._bubble.isVisible() else 0)
-        self.resize(max(172, pixmap.width() + 12), pixmap.height() + extra)
+        self.resize(max(172, self._sprite_stage.width() + 12), self._sprite_stage.height() + extra)
 
     def mousePressEvent(self, event) -> None:
         if event.button() == Qt.MouseButton.LeftButton:
@@ -326,6 +333,24 @@ def _action(text: str, callback, parent) -> QAction:
     action = QAction(text, parent)
     action.triggered.connect(lambda _checked=False: callback())
     return action
+
+
+def _sprite_stage(aura: MusicAuraWidget, label: QLabel) -> QWidget:
+    widget = QWidget()
+    widget.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+    widget.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground, True)
+    widget.setAutoFillBackground(False)
+    aura.setParent(widget)
+    label.setParent(widget)
+    return widget
+
+
+def _layout_sprite_stage(stage: QWidget, aura: MusicAuraWidget, label: QLabel) -> None:
+    width = max(aura.width(), label.width())
+    height = max(aura.height(), label.height())
+    stage.setFixedSize(width, height)
+    aura.move((width - aura.width()) // 2, (height - aura.height()) // 2)
+    label.move((width - label.width()) // 2, (height - label.height()) // 2)
 
 
 def _add_display_settings_menu(menu: QMenu, owner) -> None:
