@@ -22,6 +22,7 @@ from PySide6.QtWidgets import (
 
 from ..lyrics_snapshot import line_from_text
 from .bubble import PetBubbleCard, PetResultItem
+from .macos import keep_window_above_apps
 from .session import PetSessionResult
 
 PANEL_STYLE = """
@@ -342,12 +343,14 @@ class CodeBeatDjPanel(QWidget):
     def show_result(self, result: PetSessionResult) -> None:
         self._append_card(result.card)
         self.show()
+        keep_window_above_apps(self)
         self.raise_()
         self.activateWindow()
 
     def set_pending(self, text: str) -> None:
         self._append_text(text)
         self.show()
+        keep_window_above_apps(self)
 
     def recommend_from_context(self) -> None:
         self._run(self.host.music_session.recommend_from_context, "正在按当前状态找歌...")
@@ -581,6 +584,7 @@ class CodeBeatDjPanel(QWidget):
 
     def showEvent(self, event) -> None:
         super().showEvent(event)
+        keep_window_above_apps(self)
         self._animation_timer.start()
         self._snapshot_timer.start()
 

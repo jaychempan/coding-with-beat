@@ -13,6 +13,7 @@ from coding_with_beat.pet.macos import (
     APP_NAME,
     CodeBeatControlWindow,
     PetMenuBarController,
+    _collection_behavior_with_pet_flags,
     app_icon_path,
     hide_dock_icon,
     menu_bar_icon,
@@ -81,6 +82,18 @@ def test_hide_dock_icon_returns_false_on_non_macos(monkeypatch):
     monkeypatch.setattr(sys, "platform", "linux")
 
     assert hide_dock_icon() is False
+
+
+def test_pet_window_collection_behavior_joins_spaces_and_full_screen():
+    current_behavior = (1 << 1) | (1 << 6)
+
+    behavior = _collection_behavior_with_pet_flags(current_behavior)
+
+    assert behavior & (1 << 0)
+    assert behavior & (1 << 4)
+    assert behavior & (1 << 8)
+    assert behavior & (1 << 6)
+    assert not behavior & (1 << 1)
 
 
 def test_menu_bar_controller_builds_expected_menu_actions():

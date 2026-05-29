@@ -23,6 +23,7 @@ from .bubble import PetBubbleCard
 from .controller import PetController
 from .dj_panel import CodeBeatDjPanel
 from .interactions import PetInteractionController
+from .macos import keep_window_above_apps
 from .petdex import (
     PetdexAnimator,
     PetdexPet,
@@ -179,6 +180,10 @@ class PetWindow(QWidget):
 
     def contextMenuEvent(self, event) -> None:
         self._build_context_menu().exec(event.globalPos())
+
+    def showEvent(self, event) -> None:
+        super().showEvent(event)
+        keep_window_above_apps(self)
 
     def _build_context_menu(self) -> QMenu:
         menu = QMenu(self)
@@ -502,6 +507,10 @@ class PetdexWindow(QWidget):
 
     def contextMenuEvent(self, event) -> None:
         self._build_context_menu().exec(event.globalPos())
+
+    def showEvent(self, event) -> None:
+        super().showEvent(event)
+        keep_window_above_apps(self)
 
     def _build_context_menu(self) -> QMenu:
         menu = QMenu(self)

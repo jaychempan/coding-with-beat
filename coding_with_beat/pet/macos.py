@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QColor, QIcon, QPainter, QPixmap
+from PySide6.QtGui import QColor, QGuiApplication, QIcon, QPainter, QPixmap
 from PySide6.QtWidgets import (
     QApplication,
     QHBoxLayout,
@@ -21,6 +21,11 @@ from PySide6.QtWidgets import (
 )
 
 APP_NAME = "CodeBeat"
+_NS_STATUS_WINDOW_LEVEL = 25
+_NS_WINDOW_COLLECTION_BEHAVIOR_CAN_JOIN_ALL_SPACES = 1 << 0
+_NS_WINDOW_COLLECTION_BEHAVIOR_MOVE_TO_ACTIVE_SPACE = 1 << 1
+_NS_WINDOW_COLLECTION_BEHAVIOR_STATIONARY = 1 << 4
+_NS_WINDOW_COLLECTION_BEHAVIOR_FULL_SCREEN_AUXILIARY = 1 << 8
 
 
 def app_icon_path() -> Path | None:
@@ -96,6 +101,90 @@ def hide_dock_icon() -> bool:
     return True
 
 
+def keep_window_above_apps(window) -> bool:
+    """Put a Qt widget above normal app windows on macOS."""
+    if sys.platform != "darwin" or QGuiApplication.platformName().lower() == "offscreen":
+        return False
+    try:
+        return _keep_window_above_apps_with_pyobjc(window)
+    except Exception:
+        return _keep_window_above_apps_with_ctypes(window)
+
+
+def _collection_behavior_with_pet_flags(current_behavior: int) -> int:
+    behavior = int(current_behavior) & ~_NS_WINDOW_COLLECTION_BEHAVIOR_MOVE_TO_ACTIVE_SPACE
+    return behavior | (
+        _NS_WINDOW_COLLECTION_BEHAVIOR_CAN_JOIN_ALL_SPACES
+        | _NS_WINDOW_COLLECTION_BEHAVIOR_STATIONARY
+        | _NS_WINDOW_COLLECTION_BEHAVIOR_FULL_SCREEN_AUXILIARY
+    )
+
+
+def _keep_window_above_apps_with_pyobjc(window) -> bool:
+    import objc
+
+    native_view = objc.objc_object(c_void_p=ctypes.c_void_p(int(window.winId())))
+    ns_window = native_view.window()
+    if ns_window is None:
+        return False
+    ns_window.setLevel_(_NS_STATUS_WINDOW_LEVEL)
+    ns_window.setCollectionBehavior_(_collection_behavior_with_pet_flags(ns_window.collectionBehavior()))
+    return True
+
+
+def _keep_window_above_apps_with_ctypes(window) -> bool:
+    native_id = int(window.winId())
+    if not native_id:
+        return False
+    objc = _objc_runtime()
+    ns_window = _objc_send_id(objc, native_id, b"window") or native_id
+    behavior = _objc_send_ulong(objc, ns_window, b"collectionBehavior")
+    _objc_send_void_long(objc, ns_window, b"setLevel:", _NS_STATUS_WINDOW_LEVEL)
+    _objc_send_void_ulong(objc, ns_window, b"setCollectionBehavior:", _collection_behavior_with_pet_flags(behavior))
+    return True
+
+
+def _objc_runtime():
+    library = ctypes.util.find_library("objc")
+    if not library:
+        raise RuntimeError("Objective-C runtime not available")
+    objc = ctypes.cdll.LoadLibrary(library)
+    objc.sel_registerName.restype = ctypes.c_void_p
+    objc.sel_registerName.argtypes = [ctypes.c_char_p]
+    return objc
+
+
+def _objc_selector(objc, name: bytes):
+    selector = objc.sel_registerName(name)
+    if not selector:
+        raise RuntimeError(f"Objective-C selector not available: {name!r}")
+    return selector
+
+
+def _objc_send_id(objc, receiver: int, selector_name: bytes) -> int:
+    objc.objc_msgSend.restype = ctypes.c_void_p
+    objc.objc_msgSend.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+    return int(objc.objc_msgSend(receiver, _objc_selector(objc, selector_name)) or 0)
+
+
+def _objc_send_ulong(objc, receiver: int, selector_name: bytes) -> int:
+    objc.objc_msgSend.restype = ctypes.c_ulong
+    objc.objc_msgSend.argtypes = [ctypes.c_void_p, ctypes.c_void_p]
+    return int(objc.objc_msgSend(receiver, _objc_selector(objc, selector_name)))
+
+
+def _objc_send_void_long(objc, receiver: int, selector_name: bytes, value: int) -> None:
+    objc.objc_msgSend.restype = None
+    objc.objc_msgSend.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_long]
+    objc.objc_msgSend(receiver, _objc_selector(objc, selector_name), int(value))
+
+
+def _objc_send_void_ulong(objc, receiver: int, selector_name: bytes, value: int) -> None:
+    objc.objc_msgSend.restype = None
+    objc.objc_msgSend.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_ulong]
+    objc.objc_msgSend(receiver, _objc_selector(objc, selector_name), int(value))
+
+
 def _hide_dock_icon_with_ctypes() -> bool:
     library = ctypes.util.find_library("objc")
     if not library:
@@ -145,6 +234,7 @@ class PetMenuBarController:
             self.window.hide()
             return
         self.window.show()
+        keep_window_above_apps(self.window)
         self.window.raise_()
         self.window.activateWindow()
 
@@ -207,6 +297,7 @@ class CodeBeatControlWindow(QWidget):
             self.window.hide()
             return
         self.window.show()
+        keep_window_above_apps(self.window)
         self.window.raise_()
         self.window.activateWindow()
 

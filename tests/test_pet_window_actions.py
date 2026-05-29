@@ -159,6 +159,20 @@ def test_builtin_pet_window_disables_system_backdrop_and_shadow():
         window.close()
 
 
+def test_builtin_pet_window_reasserts_native_top_level_when_shown(monkeypatch):
+    app = QApplication.instance() or QApplication([])
+    calls = []
+    monkeypatch.setattr("coding_with_beat.pet.window.keep_window_above_apps", lambda window: calls.append(window))
+    window = PetWindow()
+    try:
+        window.show()
+        app.processEvents()
+
+        assert window in calls
+    finally:
+        window.close()
+
+
 def test_petdex_window_centers_pet_sprite_widget():
     app = QApplication.instance() or QApplication([])
     window = PetdexWindow(ensure_petdex_pet("codebeat-buddy"))

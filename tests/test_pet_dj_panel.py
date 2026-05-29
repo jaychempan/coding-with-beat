@@ -239,3 +239,16 @@ def test_dj_panel_motion_timer_runs_only_while_visible():
     panel.hide()
     app.processEvents()
     assert panel._animation_timer.isActive() is False
+
+
+def test_dj_panel_reasserts_native_top_level_when_shown(monkeypatch):
+    app = QApplication.instance() or QApplication([])
+    calls = []
+    monkeypatch.setattr("coding_with_beat.pet.dj_panel.keep_window_above_apps", lambda window: calls.append(window))
+    panel = CodeBeatDjPanel(FakeHost())
+
+    panel.show()
+    app.processEvents()
+
+    assert app is not None
+    assert panel in calls
