@@ -15,9 +15,9 @@ STATUS_STYLE = (
     " padding: 0 2px; font-size: 12px; font-weight: 700; }"
 )
 BUBBLE_STYLE = (
-    "QLabel { color: #f8fafc; background: rgba(2, 6, 23, 188);"
-    " border: 1px solid rgba(103, 232, 249, 160); border-radius: 0px;"
-    " padding: 6px 7px; font-size: 11px; }"
+    "QLabel { color: #f8fafc; background: rgba(8, 13, 31, 142);"
+    " border: 1px solid rgba(167, 139, 250, 145); border-radius: 8px;"
+    " padding: 7px 9px; font-size: 11px; }"
 )
 ICON_BUTTON_STYLE = (
     "QPushButton { color: #f8fafc; background: rgba(2, 6, 23, 92);"

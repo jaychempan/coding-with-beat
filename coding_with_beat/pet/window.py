@@ -70,8 +70,10 @@ class PetWindow(QWidget):
         self._track_label = QLabel("未播放", self)
         self._track_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         style_status_label(self._track_label)
+        self._track_label.setVisible(False)
         self._label = QLabel(self)
         self._label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        _style_sprite_label(self._label)
         self._now_button = _icon_button("♪", "当前播放")
         self._now_button.clicked.connect(
             lambda: self._run_pet_command(lambda: self.interactions.quick_action("now"), "读取当前播放...")
@@ -308,6 +310,12 @@ def _controls_widget(*buttons: QPushButton) -> QWidget:
     return widget
 
 
+def _style_sprite_label(label: QLabel) -> None:
+    label.setAutoFillBackground(False)
+    label.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+    label.setStyleSheet("QLabel { background: transparent; border: none; }")
+
+
 def _trim_output(text: str) -> str:
     clean = text.strip() or "没有返回内容"
     return re.sub(r"\n{3,}", "\n\n", clean)[:1200]
@@ -361,8 +369,10 @@ class PetdexWindow(QWidget):
         self._track_label = QLabel("未播放", self)
         self._track_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         style_status_label(self._track_label)
+        self._track_label.setVisible(False)
         self._label = QLabel(self)
         self._label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        _style_sprite_label(self._label)
         self._label.setFixedSize(*self._petdex_display_size)
         self._now_button = _icon_button("♪", "当前播放")
         self._now_button.clicked.connect(

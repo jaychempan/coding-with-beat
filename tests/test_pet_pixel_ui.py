@@ -53,6 +53,17 @@ def test_pixel_bubble_label_is_display_only_and_has_no_scrollbar():
     assert "background" in label.styleSheet()
 
 
+def test_pixel_bubble_label_uses_soft_glass_style():
+    app = QApplication.instance() or QApplication([])
+    label = PixelBubbleLabel()
+    style = label.styleSheet()
+
+    assert app is not None
+    assert "rgba(8, 13, 31, 142)" in style
+    assert "border-radius: 8px" in style
+    assert "rgba(167, 139, 250, 145)" in style
+
+
 def test_status_label_has_compact_width_limit():
     app = QApplication.instance() or QApplication([])
     label = QLabel()
