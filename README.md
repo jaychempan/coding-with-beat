@@ -149,6 +149,15 @@ python -m pip install "PySide6>=6.7"
 python -m coding_with_beat pet
 ```
 
+To build the local macOS app wrapper:
+
+```bash
+python scripts/build_macos_app.py
+open dist/CodeBeat.app
+```
+
+`CodeBeat.app` is a lightweight menu-bar app for local use. It launches the same Python project, keeps the terminal CLI as `cwb`, uses padded waveform icons so the App/Menu Bar logo does not appear oversized, and writes app logs to `~/.coding-with-beat/logs/`.
+
 You can choose another Petdex pet by slug, or force the simpler built-in pixel set:
 
 ```bash

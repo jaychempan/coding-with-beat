@@ -7,6 +7,8 @@ import plistlib
 import shutil
 from pathlib import Path
 
+from PIL import Image, ImageDraw
+
 APP_NAME = "CodeBeat"
 BUNDLE_ID = "top.codebeat.CodeBeat"
 ROOT = Path(__file__).resolve().parents[1]
@@ -35,6 +37,7 @@ def _write_info_plist(path: Path) -> None:
         "CFBundleName": APP_NAME,
         "CFBundleDisplayName": APP_NAME,
         "CFBundleIdentifier": BUNDLE_ID,
+        "CFBundleIconFile": "CodeBeat.icns",
         "CFBundleExecutable": APP_NAME,
         "CFBundlePackageType": "APPL",
         "CFBundleShortVersionString": "0.1.0",
@@ -77,6 +80,34 @@ exec "$PY" -m coding_with_beat app >>"$LOG_DIR/app.log" 2>>"$LOG_DIR/app.err.log
 def _copy_icons(resources: Path) -> None:
     for name in ("waveform_app_icon.svg", "waveform_menu_bar.svg"):
         shutil.copy2(ROOT / "assets" / name, resources / name)
+    _write_icns(resources / "CodeBeat.icns")
+
+
+def _write_icns(path: Path) -> None:
+    sizes = [16, 32, 64, 128, 256, 512, 1024]
+    images = [_render_waveform_icon(size) for size in sizes]
+    images[-1].save(path, format="ICNS", append_images=images[:-1])
+
+
+def _render_waveform_icon(size: int) -> Image.Image:
+    image = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(image)
+    scale = size / 256
+
+    def box(x: float, y: float, w: float, h: float, radius: float, fill) -> None:
+        draw.rounded_rectangle(
+            [round(x * scale), round(y * scale), round((x + w) * scale), round((y + h) * scale)],
+            radius=max(1, round(radius * scale)),
+            fill=fill,
+        )
+
+    box(28, 28, 200, 200, 40, (8, 8, 16, 255))
+    box(79, 113, 16, 50, 8, (139, 92, 246, 140))
+    box(107, 86, 16, 104, 8, (139, 92, 246, 195))
+    box(130, 62, 18, 132, 9, (139, 92, 246, 255))
+    box(158, 92, 16, 94, 8, (139, 92, 246, 195))
+    box(188, 115, 16, 46, 8, (139, 92, 246, 140))
+    return image
 
 
 def main() -> int:

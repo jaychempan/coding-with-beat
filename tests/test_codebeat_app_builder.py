@@ -11,6 +11,7 @@ def test_build_app_creates_codebeat_bundle(tmp_path):
     assert (app_path / "Contents" / "MacOS" / "CodeBeat").exists()
     assert (app_path / "Contents" / "Resources" / "waveform_app_icon.svg").exists()
     assert (app_path / "Contents" / "Resources" / "waveform_menu_bar.svg").exists()
+    assert (app_path / "Contents" / "Resources" / "CodeBeat.icns").exists()
 
 
 def test_build_app_writes_expected_info_plist(tmp_path):
@@ -24,6 +25,7 @@ def test_build_app_writes_expected_info_plist(tmp_path):
     assert plist["CFBundleDisplayName"] == "CodeBeat"
     assert plist["CFBundleIdentifier"] == "top.codebeat.CodeBeat"
     assert plist["CFBundleExecutable"] == "CodeBeat"
+    assert plist["CFBundleIconFile"] == "CodeBeat.icns"
     assert plist["LSUIElement"] is True
 
 
