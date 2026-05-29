@@ -54,7 +54,7 @@ def test_pet_icon_path_uses_repo_logo():
     path = pet_icon_path()
 
     assert path is not None
-    assert path.name == "logo_icon.png"
+    assert path.name == "waveform_logo.svg"
     assert path.exists()
 
 

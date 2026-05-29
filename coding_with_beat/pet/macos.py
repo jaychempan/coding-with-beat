@@ -14,8 +14,12 @@ APP_NAME = "Coding With Beat Pet"
 
 
 def pet_icon_path() -> Path | None:
-    path = Path(__file__).resolve().parents[2] / "assets" / "logo_icon.png"
-    return path if path.exists() else None
+    assets_dir = Path(__file__).resolve().parents[2] / "assets"
+    for name in ("waveform_logo.svg", "logo_icon.png"):
+        path = assets_dir / name
+        if path.exists():
+            return path
+    return None
 
 
 def apply_app_metadata(app: QApplication) -> QIcon:
