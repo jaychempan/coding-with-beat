@@ -103,8 +103,7 @@ class PetWindow(QWidget):
         layout.addWidget(self._label, alignment=Qt.AlignmentFlag.AlignHCenter)
         layout.addWidget(self._controls_widget, alignment=Qt.AlignmentFlag.AlignHCenter)
 
-        self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.Tool)
-        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+        _style_pet_window(self)
         self.move(self.settings.x, self.settings.y)
         self._render()
 
@@ -316,6 +315,18 @@ def _style_sprite_label(label: QLabel) -> None:
     label.setStyleSheet("QLabel { background: transparent; border: none; }")
 
 
+def _style_pet_window(window: QWidget) -> None:
+    window.setWindowFlags(
+        Qt.WindowType.FramelessWindowHint
+        | Qt.WindowType.WindowStaysOnTopHint
+        | Qt.WindowType.Tool
+        | Qt.WindowType.NoDropShadowWindowHint
+    )
+    window.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+    window.setAttribute(Qt.WidgetAttribute.WA_NoSystemBackground, True)
+    window.setAutoFillBackground(False)
+
+
 def _trim_output(text: str) -> str:
     clean = text.strip() or "没有返回内容"
     return re.sub(r"\n{3,}", "\n\n", clean)[:1200]
@@ -403,8 +414,7 @@ class PetdexWindow(QWidget):
         layout.addWidget(self._label, alignment=Qt.AlignmentFlag.AlignHCenter)
         layout.addWidget(self._controls_widget, alignment=Qt.AlignmentFlag.AlignHCenter)
 
-        self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.Tool)
-        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+        _style_pet_window(self)
         self.move(self.settings.x, self.settings.y)
         self._render()
 

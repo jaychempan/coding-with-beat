@@ -95,6 +95,18 @@ def test_builtin_pet_sprite_has_transparent_label_background():
         window.close()
 
 
+def test_builtin_pet_window_disables_system_backdrop_and_shadow():
+    app = QApplication.instance() or QApplication([])
+    window = PetWindow()
+    try:
+        assert app is not None
+        assert window.windowFlags() & Qt.WindowType.NoDropShadowWindowHint
+        assert window.testAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        assert window.testAttribute(Qt.WidgetAttribute.WA_NoSystemBackground)
+    finally:
+        window.close()
+
+
 def test_petdex_window_centers_pet_sprite_widget():
     app = QApplication.instance() or QApplication([])
     window = PetdexWindow(ensure_petdex_pet("codebeat-buddy"))
@@ -104,6 +116,18 @@ def test_petdex_window_centers_pet_sprite_widget():
 
         assert label_item.widget() is window._label
         assert label_item.alignment() & Qt.AlignmentFlag.AlignHCenter
+    finally:
+        window.close()
+
+
+def test_petdex_window_disables_system_backdrop_and_shadow():
+    app = QApplication.instance() or QApplication([])
+    window = PetdexWindow(ensure_petdex_pet("codebeat-buddy"))
+    try:
+        assert app is not None
+        assert window.windowFlags() & Qt.WindowType.NoDropShadowWindowHint
+        assert window.testAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        assert window.testAttribute(Qt.WidgetAttribute.WA_NoSystemBackground)
     finally:
         window.close()
 
