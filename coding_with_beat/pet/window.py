@@ -6,7 +6,17 @@ import re
 
 from PySide6.QtCore import QPoint, QRect, Qt, QTimer
 from PySide6.QtGui import QAction, QColor, QPainter, QPixmap
-from PySide6.QtWidgets import QHBoxLayout, QInputDialog, QLabel, QMenu, QPushButton, QTextEdit, QVBoxLayout, QWidget
+from PySide6.QtWidgets import (
+    QApplication,
+    QHBoxLayout,
+    QInputDialog,
+    QLabel,
+    QMenu,
+    QPushButton,
+    QTextEdit,
+    QVBoxLayout,
+    QWidget,
+)
 
 from .animator import PetAnimator
 from .controller import PetController
@@ -251,12 +261,17 @@ class PetdexWindow(QWidget):
         self._long_press_timer = QTimer(self)
         self._long_press_timer.setSingleShot(True)
         self._long_press_timer.timeout.connect(self._handle_long_press)
+        self._single_click_timer = QTimer(self)
+        self._single_click_timer.setSingleShot(True)
+        self._single_click_timer.timeout.connect(self._handle_single_click)
         self.petdex_animator = PetdexAnimator()
         self._installed_pets = installed_petdex_pets()
         self._spritesheet = QPixmap()
         self._petdex_display_size = (72, 78)
         self._load_petdex_pet(pet)
         self._drag_origin: QPoint | None = None
+        self._press_global_pos: QPoint | None = None
+        self._drag_started = False
 
         self._bubble = QTextEdit(self)
         self._bubble.setReadOnly(True)
@@ -336,13 +351,22 @@ class PetdexWindow(QWidget):
     def mousePressEvent(self, event) -> None:
         if event.button() == Qt.MouseButton.LeftButton:
             self._long_press_fired = False
+            self._drag_started = False
+            self._press_global_pos = event.globalPosition().toPoint()
+            self._single_click_timer.stop()
             self._long_press_timer.start(650)
-            self._drag_origin = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
+            self._drag_origin = self._press_global_pos - self.frameGeometry().topLeft()
             self.petdex_animator.set_action("dance")
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event) -> None:
         if self._drag_origin is not None and event.buttons() & Qt.MouseButton.LeftButton:
+            if self._press_global_pos is not None:
+                distance = (event.globalPosition().toPoint() - self._press_global_pos).manhattanLength()
+                if distance >= QApplication.startDragDistance():
+                    self._drag_started = True
+                    self._long_press_timer.stop()
+                    self._single_click_timer.stop()
             self.move(event.globalPosition().toPoint() - self._drag_origin)
         super().mouseMoveEvent(event)
 
@@ -350,17 +374,20 @@ class PetdexWindow(QWidget):
         if event.button() == Qt.MouseButton.LeftButton:
             self._long_press_timer.stop()
             self._drag_origin = None
+            self._press_global_pos = None
             self.settings.x = self.x()
             self.settings.y = self.y()
             save_settings(self.settings)
-            if not self._long_press_fired:
-                self._apply_session_result(self.interactions.single_click())
+            if not self._long_press_fired and not self._drag_started:
+                self._single_click_timer.start(QApplication.doubleClickInterval())
         super().mouseReleaseEvent(event)
 
     def mouseDoubleClickEvent(self, event) -> None:
         if event.button() == Qt.MouseButton.LeftButton:
             self._long_press_timer.stop()
+            self._single_click_timer.stop()
             self._long_press_fired = True
+            self._drag_started = False
             self._apply_session_result(self.interactions.double_click())
         super().mouseDoubleClickEvent(event)
 
@@ -369,7 +396,10 @@ class PetdexWindow(QWidget):
 
     def _build_context_menu(self) -> QMenu:
         menu = QMenu(self)
-        menu.addAction(_action("推荐歌曲", lambda: self._apply_session_result(self.interactions.double_click()), self))
+        menu.addAction(_action("按心情推荐", self.ask_mood, self))
+        menu.addAction(
+            _action("按当前状态推荐", lambda: self._apply_session_result(self.interactions.double_click()), self)
+        )
         menu.addAction(_action("自动开播", lambda: self._apply_session_result(self.interactions.long_press()), self))
         menu.addAction(_action("播放编号", self.play_number_dialog, self))
         menu.addAction(
@@ -382,6 +412,7 @@ class PetdexWindow(QWidget):
             pet_menu.addAction(_action(pet.name, lambda next_pet=pet: self.set_petdex_pet(next_pet), self))
         if not self._installed_pets:
             pet_menu.addAction(_action("未发现本地宠物", lambda: self._show_bubble("未发现本地 Petdex 宠物"), self))
+        menu.addAction(_action(f"Petdex: {self.pet.name}", lambda: self._show_bubble(str(self.pet.folder)), self))
         menu.addSeparator()
         menu.addAction(_action("退出", self.close, self))
         return menu
@@ -392,6 +423,9 @@ class PetdexWindow(QWidget):
     def _handle_long_press(self) -> None:
         self._long_press_fired = True
         self._apply_session_result(self.interactions.long_press())
+
+    def _handle_single_click(self) -> None:
+        self._apply_session_result(self.interactions.single_click())
 
     def ask_mood(self) -> None:
         text, ok = QInputDialog.getText(self, "DJ Buddy", "想听什么心情？")
@@ -413,9 +447,11 @@ class PetdexWindow(QWidget):
 
     def toggle_playback(self) -> None:
         self._show_bubble(self.controller.music.toggle().text)
+        self._track_label.setText(self.controller.current_track_label())
 
     def next_track(self) -> None:
         self._show_bubble(self.controller.music.next_track().text)
+        self._track_label.setText(self.controller.current_track_label())
 
     def set_petdex_pet(self, pet: PetdexPet) -> None:
         self._load_petdex_pet(pet)
