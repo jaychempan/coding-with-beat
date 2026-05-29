@@ -101,6 +101,7 @@ cwb profile yearly
 - **Music sources** — Apple Music (AppleScript, no GUI needed), local files (afplay), QQ Music (search + preview).
 - **Pixel UI** — Album art in half-block ANSI, GameBoy retro border, pseudo-spectrum equalizer.
 - **DJ Buddy** — A headphones-wearing pixel character that reacts to your coding state. Tests failing? It panics with you.
+- **Desktop Pet** _(dev preview)_ — `cwb pet` opens a draggable always-on-top pixel companion on macOS. It has 5 built-in skins, mood input, song recommendations, and coding-state reactions.
 - **Vibe engine** — CC hooks track what you're doing in real time and shift the mood. `git commit`? Victory pose. Tests explode? Panic mode.
 - **Statusline** — One line: face + current track + progress bar.
 - **Focus mode** — Built-in 25/5 Pomodoro timer shown in the statusline.
@@ -129,6 +130,22 @@ cd coding-with-beat
 The installer configures Claude Code to use the HTTP MCP endpoint at `http://127.0.0.1:8765/mcp`, saves that URL to `~/.coding-with-beat/mcp-url`, and on macOS starts a user LaunchAgent for the local MCP server.
 
 Open a new shell and a new Claude Code session. When `(•_•)` appears in the statusline, you're good.
+
+### Optional Desktop Pet
+
+The native desktop pet uses PySide6. Install the optional GUI dependency before running it:
+
+```bash
+python -m pip install "coding-with-beat[pet]"
+cwb pet
+```
+
+When running from a local checkout:
+
+```bash
+python -m pip install "PySide6>=6.7"
+python -m coding_with_beat pet
+```
 
 ### Codex CLI
 
@@ -168,6 +185,8 @@ See **[README_CODEX.md](README_CODEX.md)** for the full integration guide — ho
 >
 > **Live player:** Open a second terminal and run `cwb watch` to see the currently playing track, lyrics, and progress bar in real time.
 >
+> **Desktop pet:** Run `cwb pet` on macOS to open the draggable pixel companion. Double-click it to ask for mood-based recommendations, right-click for playback controls and skin switching.
+>
 > **Apple Music:** The first time you play a catalog track, a popup will appear — click **Add to Library**, then repeat the play command.
 
 ### Just talk to your AI assistant
@@ -202,6 +221,7 @@ show my recently played tracks           # list_history — reads Apple Music's 
 /cwb like
 /cwb volume 70
 /cwb watch                # live player (q to quit)
+/cwb pet                  # desktop pixel pet (macOS, requires PySide6)
 /cwb karaoke              # full-screen karaoke (q to quit)
 /cwb lyrics               # lyrics window
 /cwb bar auto             # statusline: auto / show / hide
@@ -343,6 +363,7 @@ cwb seek <t>            # seek: seconds (90) or mm:ss (1:30)
 cwb mode <mode>         # shuffle | sequential | repeat | repeat_one
 cwb player              # full pixel player
 cwb watch               # live TUI (q to quit)
+cwb pet                 # native desktop pixel pet
 cwb karaoke             # full-screen karaoke (q to quit)
 cwb lyrics              # lyrics window
 cwb history [n]         # last n played tracks
