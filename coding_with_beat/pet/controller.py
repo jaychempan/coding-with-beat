@@ -41,10 +41,17 @@ class PetController:
     music: PetMusicClient = field(default_factory=PetMusicClient)
     load_state: Callable[[], object] = state_mod.load
     last_results: str = ""
+    ambient_actions: tuple[str, ...] = ("idle", "walk", "think", "happy")
+    ambient_index: int = 0
 
     def refresh_action(self) -> str:
         action = action_for_state(self.load_state())
         self.animator.set_action(action)
+        return action
+
+    def next_ambient_action(self) -> str:
+        action = self.ambient_actions[self.ambient_index % len(self.ambient_actions)]
+        self.ambient_index += 1
         return action
 
     def handle_mood_text(self, text: str) -> MusicResult:

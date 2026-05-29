@@ -45,12 +45,20 @@ class PetWindow(QWidget):
         self.state_timer.timeout.connect(self._refresh_state)
         self.state_timer.start(1500)
 
+        self.ambient_timer = QTimer(self)
+        self.ambient_timer.timeout.connect(self._ambient_motion)
+        self.ambient_timer.start(3200)
+
     def _tick(self) -> None:
         self.controller.animator.tick()
         self._render()
 
     def _refresh_state(self) -> None:
         self.controller.refresh_action()
+
+    def _ambient_motion(self) -> None:
+        if self.controller.animator.action in {"idle", "walk", "think", "happy"}:
+            self.controller.animator.set_action(self.controller.next_ambient_action())
 
     def _render(self) -> None:
         frame = self.controller.animator.current_frame()
