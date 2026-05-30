@@ -71,7 +71,7 @@ def detect_local_command_action(text: str) -> MusicAction | None:
         return MusicAction(MusicActionKind.CONTROL, "暂停/继续", "toggle")
     if lower in {"/like", "like", "喜欢这首"}:
         return MusicAction(MusicActionKind.CONTROL, "喜欢当前歌曲", "like_current")
-    volume = re.match(r"^/?(?:volume|音量)\s+(-?\d+)$", lower)
+    volume = re.match(r"^/?(?:volume|音量)\s+([+-]?\d+)$", lower)
     if volume:
         percent = max(0, min(100, int(volume.group(1))))
         return MusicAction(MusicActionKind.CONTROL, f"音量 {percent}", f"set_volume:{percent}")
@@ -83,9 +83,11 @@ def _actions_from_json(raw_json: str) -> tuple[bool, list[MusicAction]]:
         data = json.loads(raw_json)
     except json.JSONDecodeError:
         return False, []
-    values = data.get("music_actions") if isinstance(data, dict) else None
-    if not isinstance(values, list):
+    if not isinstance(data, dict) or "music_actions" not in data:
         return False, []
+    values = data["music_actions"]
+    if not isinstance(values, list):
+        return True, []
     actions: list[MusicAction] = []
     for item in values:
         if not isinstance(item, dict):

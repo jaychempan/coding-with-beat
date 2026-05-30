@@ -55,6 +55,18 @@ def test_parse_structured_music_actions_hides_valid_json_with_unusable_actions()
     assert reply.actions == []
 
 
+def test_parse_structured_music_actions_hides_valid_json_with_non_list_actions():
+    null_reply = parse_ai_music_reply('推荐《晴天》- 周杰伦\n```json\n{ "music_actions": null }\n```')
+    object_reply = parse_ai_music_reply(
+        '推荐《晴天》- 周杰伦\n```json\n{ "music_actions": {"kind": "play_track"} }\n```'
+    )
+
+    assert null_reply.text == "推荐《晴天》- 周杰伦"
+    assert null_reply.actions == []
+    assert object_reply.text == "推荐《晴天》- 周杰伦"
+    assert object_reply.actions == []
+
+
 def test_parse_structured_music_actions_dedupes_repeated_actions():
     raw = """```json
 {
@@ -109,6 +121,10 @@ def test_local_command_detection_maps_fast_transport_controls():
     assert detect_local_command_action("下一首") == MusicAction(MusicActionKind.CONTROL, "下一首", "next_track")
     assert detect_local_command_action("暂停") == MusicAction(MusicActionKind.CONTROL, "暂停/继续", "toggle")
     assert detect_local_command_action("音量 70") == MusicAction(MusicActionKind.CONTROL, "音量 70", "set_volume:70")
+    assert detect_local_command_action("音量 +70") == MusicAction(MusicActionKind.CONTROL, "音量 70", "set_volume:70")
+    assert detect_local_command_action("/volume +70") == MusicAction(
+        MusicActionKind.CONTROL, "音量 70", "set_volume:70"
+    )
     assert detect_local_command_action("音量 1000") == MusicAction(
         MusicActionKind.CONTROL, "音量 100", "set_volume:100"
     )
