@@ -247,6 +247,32 @@ def test_runner_stop_waits_for_killed_process_to_finish_before_accepting_next_se
     assert runner.busy is False
 
 
+def test_runner_ignores_process_error_after_stop_until_finished(tmp_path):
+    app = QApplication.instance() or QApplication([])
+    process = HangingFakeProcess()
+    runner = AiChatRunner(
+        cwd=tmp_path,
+        process_factory=lambda: process,
+        executable_resolver=lambda provider: provider.value,
+    )
+    results = []
+    runner.finished.connect(results.append)
+
+    assert runner.send("hello", AiProvider.CODEX, AiPermissionMode.READ_ONLY) is True
+    runner.stop()
+    process.errorOccurred.emit(1)
+
+    assert runner.busy is True
+    assert results == []
+    assert runner.send("again", AiProvider.CODEX, AiPermissionMode.READ_ONLY) is False
+
+    process.finished.emit(9, 0)
+    _wait_for(lambda: bool(results), app)
+
+    assert results == [AiChatResult(ok=False, text="AI chat stopped.")]
+    assert runner.busy is False
+
+
 def test_runner_extracts_codex_jsonl_final_agent_message(tmp_path):
     app = QApplication.instance() or QApplication([])
     stdout = b'{"type":"item.completed","item":{"type":"agent_message","text":"real answer"}}\n'

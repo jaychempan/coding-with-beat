@@ -239,6 +239,8 @@ class AiChatRunner(QObject):
     def _process_error(self, _error=None) -> None:
         if not self.busy:
             return
+        if self._stopping:
+            return
         process = self._process
         message = "unknown process error"
         if process is not None and hasattr(process, "errorString"):
