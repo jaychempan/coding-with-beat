@@ -62,7 +62,7 @@ def detect_local_command_action(text: str) -> MusicAction | None:
         return MusicAction(MusicActionKind.CONTROL, "暂停/继续", "toggle")
     if lower in {"/like", "like", "喜欢这首"}:
         return MusicAction(MusicActionKind.CONTROL, "喜欢当前歌曲", "like_current")
-    volume = re.match(r"^/?(?:volume|音量)\s+(\d{1,3})$", lower)
+    volume = re.match(r"^/?(?:volume|音量)\s+(-?\d+)$", lower)
     if volume:
         percent = max(0, min(100, int(volume.group(1))))
         return MusicAction(MusicActionKind.CONTROL, f"音量 {percent}", f"set_volume:{percent}")

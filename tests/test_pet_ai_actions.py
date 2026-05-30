@@ -57,4 +57,8 @@ def test_local_command_detection_maps_fast_transport_controls():
     assert detect_local_command_action("下一首") == MusicAction(MusicActionKind.CONTROL, "下一首", "next_track")
     assert detect_local_command_action("暂停") == MusicAction(MusicActionKind.CONTROL, "暂停/继续", "toggle")
     assert detect_local_command_action("音量 70") == MusicAction(MusicActionKind.CONTROL, "音量 70", "set_volume:70")
+    assert detect_local_command_action("音量 1000") == MusicAction(
+        MusicActionKind.CONTROL, "音量 100", "set_volume:100"
+    )
+    assert detect_local_command_action("音量 -10") == MusicAction(MusicActionKind.CONTROL, "音量 0", "set_volume:0")
     assert detect_local_command_action("解释这个项目") is None
