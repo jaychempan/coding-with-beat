@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import json
 import os
+from pathlib import Path
 from typing import Any
 
 import anyio
@@ -14,6 +16,7 @@ from .config import MCP_URL_FILE
 MCP_URL_ENV = "CWB_MCP_URL"
 LEGACY_MCP_URL_ENV = "CC_JUKEBOX_MCP_URL"
 DEFAULT_MCP_URL = "http://127.0.0.1:8765/mcp"
+APP_SETTINGS_FILE = Path.home() / "Library" / "Application Support" / "CodeBeat" / "settings.json"
 
 
 class MCPClientError(RuntimeError):
@@ -24,11 +27,25 @@ def configured_url() -> str:
     env_url = os.environ.get(MCP_URL_ENV, "").strip() or os.environ.get(LEGACY_MCP_URL_ENV, "").strip()
     if env_url:
         return env_url
+    app_url = _app_settings_url()
+    if app_url:
+        return app_url
     try:
         saved_url = MCP_URL_FILE.read_text(encoding="utf-8").strip()
     except OSError:
         saved_url = ""
     return saved_url or DEFAULT_MCP_URL
+
+
+def _app_settings_url() -> str:
+    try:
+        raw = json.loads(APP_SETTINGS_FILE.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return ""
+    service = raw.get("service") if isinstance(raw, dict) else None
+    if not isinstance(service, dict):
+        return ""
+    return str(service.get("mcpUrl") or "").strip()
 
 
 def call_tool(

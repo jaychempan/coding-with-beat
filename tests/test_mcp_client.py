@@ -43,6 +43,23 @@ class MCPClientConfigTest(unittest.TestCase):
             ):
                 self.assertEqual(mcp_client.configured_url(), "http://127.0.0.1:7777/mcp")
 
+    def test_configured_url_prefers_app_support_service_settings(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            app_settings = Path(tmpdir) / "settings.json"
+            legacy_url_file = Path(tmpdir) / "mcp-url"
+            app_settings.write_text(
+                '{"service": {"mcpUrl": "http://127.0.0.1:9999/mcp"}}',
+                encoding="utf-8",
+            )
+            legacy_url_file.write_text("http://127.0.0.1:9876/mcp\n", encoding="utf-8")
+
+            with (
+                mock.patch.dict(os.environ, {}, clear=True),
+                mock.patch.object(mcp_client, "APP_SETTINGS_FILE", app_settings),
+                mock.patch.object(mcp_client, "MCP_URL_FILE", legacy_url_file),
+            ):
+                self.assertEqual(mcp_client.configured_url(), "http://127.0.0.1:9999/mcp")
+
     def test_call_tool_passes_configured_timeout_to_async_client(self):
         with (
             mock.patch.object(mcp_client, "configured_url", return_value="http://127.0.0.1:8765/mcp"),
