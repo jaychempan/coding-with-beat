@@ -30,22 +30,31 @@ class AiVisibleReply:
 
 
 _JSON_BLOCK_RE = re.compile(r"```(?:json)?\s*(\{.*?\})\s*```", re.DOTALL | re.IGNORECASE)
-_CHINESE_TRACK_RE = re.compile(r"(?:^\s*\d+[.)、]?\s*)?《([^》]+)》\s*[-—–]\s*([^\n，。]+)", re.MULTILINE)
-_ENGLISH_BY_RE = re.compile(r"(?:^\s*\d+[.)]?\s*)?([A-Z][^\n]+?)\s+by\s+([A-Z][^\n]+)", re.MULTILINE)
+_CHINESE_TRACK_RE = re.compile(
+    r"(?:^\s*\d+[.)、]?\s*)?《([^》]+)》\s*[-—–]\s*([^\n,.;:，。；：]+?)(?=\s+is\b|[\n,.;:，。；：]|$)",
+    re.MULTILINE,
+)
+_ENGLISH_BY_RE = re.compile(
+    r"(?:^\s*\d+[.)]?\s*)?([A-Z][^\n]+?)\s+by\s+([A-Z][^\n,.;:，。；：]+?)(?=\s+is\b|[\n,.;:，。；：]|$)",
+    re.MULTILINE,
+)
 
 
 def parse_ai_music_reply(raw: str) -> AiVisibleReply:
     text = (raw or "").strip()
     actions: list[MusicAction] = []
     visible = text
+    has_structured_music_actions = False
 
     for match in _JSON_BLOCK_RE.finditer(text):
-        parsed = _actions_from_json(match.group(1))
+        has_music_actions, parsed = _actions_from_json(match.group(1))
+        if has_music_actions:
+            has_structured_music_actions = True
+            visible = visible.replace(match.group(0), "").strip()
         if parsed:
             actions.extend(parsed)
-            visible = visible.replace(match.group(0), "").strip()
 
-    if not actions:
+    if not actions and not has_structured_music_actions:
         actions.extend(_fallback_actions(text))
 
     return AiVisibleReply(_normalize_visible_text(visible), _dedupe_actions(actions))
@@ -69,14 +78,14 @@ def detect_local_command_action(text: str) -> MusicAction | None:
     return None
 
 
-def _actions_from_json(raw_json: str) -> list[MusicAction]:
+def _actions_from_json(raw_json: str) -> tuple[bool, list[MusicAction]]:
     try:
         data = json.loads(raw_json)
     except json.JSONDecodeError:
-        return []
+        return False, []
     values = data.get("music_actions") if isinstance(data, dict) else None
     if not isinstance(values, list):
-        return []
+        return False, []
     actions: list[MusicAction] = []
     for item in values:
         if not isinstance(item, dict):
@@ -89,7 +98,7 @@ def _actions_from_json(raw_json: str) -> list[MusicAction]:
         label = str(item.get("label") or query).strip()
         if query and label:
             actions.append(MusicAction(kind, label, query))
-    return actions
+    return True, actions
 
 
 def _fallback_actions(text: str) -> list[MusicAction]:

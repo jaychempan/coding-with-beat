@@ -40,12 +40,55 @@ def test_parse_structured_music_actions_keeps_text_when_json_is_invalid():
     assert reply.actions == [MusicAction(MusicActionKind.PLAY_TRACK, "晴天 - 周杰伦", "晴天 周杰伦")]
 
 
+def test_parse_structured_music_actions_hides_valid_json_with_unusable_actions():
+    raw = """可以先聊聊这些选择。
+
+```json
+{ "music_actions": [{"kind":"unknown", "query":"x", "label":"x"}] }
+```
+"""
+
+    reply = parse_ai_music_reply(raw)
+
+    assert reply.text == "可以先聊聊这些选择。"
+    assert "music_actions" not in reply.text
+    assert reply.actions == []
+
+
+def test_parse_structured_music_actions_dedupes_repeated_actions():
+    raw = """```json
+{
+  "music_actions": [
+    {"kind": "play_track", "query": "Anti-Hero Taylor Swift", "label": "Anti-Hero - Taylor Swift"},
+    {"kind": "play_track", "query": "anti-hero taylor swift", "label": "Anti-Hero - Taylor Swift"}
+  ]
+}
+```"""
+
+    reply = parse_ai_music_reply(raw)
+
+    assert reply.actions == [
+        MusicAction(MusicActionKind.PLAY_TRACK, "Anti-Hero - Taylor Swift", "Anti-Hero Taylor Swift")
+    ]
+
+
 def test_fallback_extracts_chinese_and_english_recommendation_lines():
     raw = "1. 《晴天》- 周杰伦\n2. Anti-Hero by Taylor Swift\n这两首都适合继续写代码。"
 
     reply = parse_ai_music_reply(raw)
 
     assert reply.text == raw
+    assert reply.actions == [
+        MusicAction(MusicActionKind.PLAY_TRACK, "晴天 - 周杰伦", "晴天 周杰伦"),
+        MusicAction(MusicActionKind.PLAY_TRACK, "Anti-Hero - Taylor Swift", "Anti-Hero Taylor Swift"),
+    ]
+
+
+def test_fallback_stops_artists_before_continuation_prose():
+    raw = "Anti-Hero by Taylor Swift is good for coding\n《晴天》- 周杰伦 is a safe pick"
+
+    reply = parse_ai_music_reply(raw)
+
     assert reply.actions == [
         MusicAction(MusicActionKind.PLAY_TRACK, "晴天 - 周杰伦", "晴天 周杰伦"),
         MusicAction(MusicActionKind.PLAY_TRACK, "Anti-Hero - Taylor Swift", "Anti-Hero Taylor Swift"),
