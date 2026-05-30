@@ -121,6 +121,110 @@ def test_start_launches_server_process_and_writes_logs(tmp_path):
     assert (tmp_path / "logs" / "mcp.err.log").exists()
 
 
+def test_start_closes_existing_log_handles_after_crash(tmp_path):
+    process = FakeProcess()
+    old_stdout = FakeLogHandle()
+    old_stderr = FakeLogHandle()
+
+    def fake_popen(args, stdout, stderr):
+        return process
+
+    manager = ServiceManager(paths=_paths(tmp_path), python="python3", popen=fake_popen)
+    manager._process = FakeProcess(returncode=1)
+    manager._stdout = old_stdout
+    manager._stderr = old_stderr
+
+    status = manager.start()
+
+    assert status.state == ServiceState.STARTING
+    assert old_stdout.closed is True
+    assert old_stderr.closed is True
+    assert manager._stdout is not None
+    assert manager._stderr is not None
+    assert manager._stdout is not old_stdout
+    assert manager._stderr is not old_stderr
+
+
+def test_start_closes_new_log_handles_when_popen_raises(tmp_path):
+    popen_handles = []
+
+    def fake_popen(args, stdout, stderr):
+        popen_handles.append((stdout, stderr))
+        raise RuntimeError("launch failed")
+
+    manager = ServiceManager(paths=_paths(tmp_path), python="python3", popen=fake_popen)
+
+    with pytest.raises(RuntimeError, match="launch failed"):
+        manager.start()
+
+    stdout, stderr = popen_handles[0]
+    assert stdout.closed is True
+    assert stderr.closed is True
+    assert manager._stdout is None
+    assert manager._stderr is None
+    assert manager._process is None
+
+
+def test_start_uses_custom_mcp_url_for_launch_args(tmp_path):
+    popen_calls = []
+
+    def fake_popen(args, stdout, stderr):
+        popen_calls.append(args)
+        return FakeProcess()
+
+    manager = ServiceManager(
+        paths=_paths(tmp_path),
+        python="/usr/bin/python3",
+        mcp_url="http://127.0.0.1:9876/custom",
+        popen=fake_popen,
+    )
+
+    manager.start()
+
+    assert popen_calls[0] == [
+        "/usr/bin/python3",
+        "-m",
+        "coding_with_beat",
+        "server",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "9876",
+        "--path",
+        "/custom",
+    ]
+
+
+def test_start_uses_launch_defaults_for_missing_mcp_url_parts(tmp_path):
+    popen_calls = []
+
+    def fake_popen(args, stdout, stderr):
+        popen_calls.append(args)
+        return FakeProcess()
+
+    manager = ServiceManager(
+        paths=_paths(tmp_path),
+        python="/usr/bin/python3",
+        mcp_url="http://127.0.0.1",
+        popen=fake_popen,
+    )
+
+    manager.start()
+
+    assert popen_calls[0] == [
+        "/usr/bin/python3",
+        "-m",
+        "coding_with_beat",
+        "server",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "8765",
+        "--path",
+        "/mcp",
+    ]
+
+
 def test_status_running_when_health_check_succeeds(tmp_path):
     process = FakeProcess()
     manager = ServiceManager(paths=_paths(tmp_path), python="python3", health_check=lambda _url: True)

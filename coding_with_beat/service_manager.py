@@ -7,6 +7,7 @@ import sys
 from dataclasses import dataclass
 from enum import Enum
 from typing import Callable
+from urllib.parse import urlparse
 
 from .app_paths import CodeBeatPaths
 from .mcp_client import DEFAULT_MCP_URL, call_tool
@@ -69,24 +70,20 @@ class ServiceManager:
         if current.state in {ServiceState.RUNNING, ServiceState.STARTING, ServiceState.DEGRADED}:
             return current
         self.paths.ensure()
-        self._stdout = (self.paths.logs_dir / "mcp.log").open("a", encoding="utf-8")
-        self._stderr = (self.paths.logs_dir / "mcp.err.log").open("a", encoding="utf-8")
-        self._process = self._popen(
-            [
-                self.python,
-                "-m",
-                "coding_with_beat",
-                "server",
-                "--host",
-                "127.0.0.1",
-                "--port",
-                "8765",
-                "--path",
-                "/mcp",
-            ],
-            stdout=self._stdout,
-            stderr=self._stderr,
-        )
+        self._process = None
+        self._close_logs()
+        try:
+            self._stdout = (self.paths.logs_dir / "mcp.log").open("a", encoding="utf-8")
+            self._stderr = (self.paths.logs_dir / "mcp.err.log").open("a", encoding="utf-8")
+            self._process = self._popen(
+                self._launch_args(),
+                stdout=self._stdout,
+                stderr=self._stderr,
+            )
+        except Exception:
+            self._process = None
+            self._close_logs()
+            raise
         return ServiceStatus(ServiceState.STARTING, self.mcp_url, pid=getattr(self._process, "pid", None))
 
     def stop(self) -> ServiceStatus:
@@ -115,6 +112,27 @@ class ServiceManager:
                 handle.close()
         self._stdout = None
         self._stderr = None
+
+    def _launch_args(self) -> list[str]:
+        parsed = urlparse(self.mcp_url)
+        host = parsed.hostname or "127.0.0.1"
+        try:
+            port = parsed.port or 8765
+        except ValueError:
+            port = 8765
+        path = parsed.path or "/mcp"
+        return [
+            self.python,
+            "-m",
+            "coding_with_beat",
+            "server",
+            "--host",
+            host,
+            "--port",
+            str(port),
+            "--path",
+            path,
+        ]
 
     @staticmethod
     def _default_health_check(url: str) -> bool:
