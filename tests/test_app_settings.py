@@ -158,3 +158,14 @@ def test_load_settings_defaults_malformed_version(tmp_path):
     settings = load_settings(paths)
 
     assert settings.version == 1
+
+
+def test_load_settings_defaults_infinite_versions(tmp_path):
+    for version in ("Infinity", "-Infinity"):
+        paths = _paths(tmp_path / version)
+        paths.support_dir.mkdir(parents=True)
+        paths.settings_file.write_text(f'{{"version": {version}}}', encoding="utf-8")
+
+        settings = load_settings(paths)
+
+        assert settings.version == 1

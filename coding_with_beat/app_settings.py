@@ -111,7 +111,7 @@ def _settings_from_json(raw: dict) -> AppSettings:
 def _version_from_json(value: object) -> int:
     try:
         return int(value or 1)
-    except (TypeError, ValueError):
+    except (OverflowError, TypeError, ValueError):
         return 1
 
 
