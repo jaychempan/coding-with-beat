@@ -34,6 +34,7 @@ class FakeProcess:
     def __init__(self, stdout=b"agent reply", stderr=b"", exit_code=0):
         self.readyReadStandardOutput = FakeSignal()
         self.readyReadStandardError = FakeSignal()
+        self.errorOccurred = FakeSignal()
         self.finished = FakeSignal()
         self.stdout = stdout
         self.stderr = stderr
@@ -75,10 +76,18 @@ class FakeProcess:
     def kill(self):
         self.killed = True
 
+    def errorString(self):
+        return "fake process error"
+
 
 class HangingFakeProcess(FakeProcess):
     def closeWriteChannel(self):
         pass
+
+
+class UndrainedFakeProcess(FakeProcess):
+    def closeWriteChannel(self):
+        self.finished.emit(self.exit_code, 0)
 
 
 def _wait_for(predicate, app, timeout=1.0):
@@ -165,6 +174,22 @@ def test_runner_successful_output_emits_result_and_marks_session_started(tmp_pat
     assert runner._sessions[AiProvider.CODEX].started is True
 
 
+def test_runner_drains_stdout_when_finish_arrives_before_ready_read(tmp_path):
+    app = QApplication.instance() or QApplication([])
+    runner = AiChatRunner(
+        cwd=tmp_path,
+        process_factory=lambda: UndrainedFakeProcess(stdout=b"agent reply"),
+        executable_resolver=lambda provider: provider.value,
+    )
+    results = []
+    runner.finished.connect(results.append)
+
+    assert runner.send("hello", AiProvider.CODEX, AiPermissionMode.READ_ONLY) is True
+    _wait_for(lambda: bool(results), app)
+
+    assert results == [AiChatResult(ok=True, text="agent reply")]
+
+
 def test_runner_missing_cli_emits_not_found(tmp_path):
     app = QApplication.instance() or QApplication([])
     runner = AiChatRunner(cwd=tmp_path, executable_resolver=lambda _provider: None)
@@ -177,7 +202,26 @@ def test_runner_missing_cli_emits_not_found(tmp_path):
     assert results == [AiChatResult(ok=False, text="codex CLI not found.")]
 
 
-def test_runner_stop_kills_active_process_and_emits_stopped(tmp_path):
+def test_runner_process_error_emits_failure_and_clears_busy(tmp_path):
+    app = QApplication.instance() or QApplication([])
+    process = HangingFakeProcess()
+    runner = AiChatRunner(
+        cwd=tmp_path,
+        process_factory=lambda: process,
+        executable_resolver=lambda provider: provider.value,
+    )
+    results = []
+    runner.finished.connect(results.append)
+
+    assert runner.send("hello", AiProvider.CODEX, AiPermissionMode.READ_ONLY) is True
+    process.errorOccurred.emit(1)
+    _wait_for(lambda: bool(results), app)
+
+    assert results == [AiChatResult(ok=False, text="AI chat process failed: fake process error")]
+    assert runner.busy is False
+
+
+def test_runner_stop_waits_for_killed_process_to_finish_before_accepting_next_send(tmp_path):
     app = QApplication.instance() or QApplication([])
     process = HangingFakeProcess()
     runner = AiChatRunner(
@@ -190,10 +234,17 @@ def test_runner_stop_kills_active_process_and_emits_stopped(tmp_path):
 
     assert runner.send("hello", AiProvider.CODEX, AiPermissionMode.READ_ONLY) is True
     runner.stop()
-    _wait_for(lambda: bool(results), app)
 
     assert process.killed is True
+    assert runner.busy is True
+    assert runner.send("again", AiProvider.CODEX, AiPermissionMode.READ_ONLY) is False
+    assert results == []
+
+    process.finished.emit(9, 0)
+    _wait_for(lambda: bool(results), app)
+
     assert results == [AiChatResult(ok=False, text="AI chat stopped.")]
+    assert runner.busy is False
 
 
 def test_runner_extracts_codex_jsonl_final_agent_message(tmp_path):

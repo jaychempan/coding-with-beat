@@ -158,6 +158,7 @@ class AiChatRunner(QObject):
         self._active_provider: AiProvider | None = None
         self._stdout = bytearray()
         self._stderr = bytearray()
+        self._stopping = False
         self._sessions = {
             AiProvider.CODEX: AiChatSession(AiProvider.CODEX, self.cwd),
             AiProvider.CLAUDE: AiChatSession(AiProvider.CLAUDE, self.cwd),
@@ -178,11 +179,14 @@ class AiChatRunner(QObject):
         self._active_provider = provider
         self._stdout = bytearray()
         self._stderr = bytearray()
+        self._stopping = False
         self.busy = True
 
         self._configure_process(process, command.cwd)
         process.readyReadStandardOutput.connect(self._read_stdout)
         process.readyReadStandardError.connect(self._read_stderr)
+        if hasattr(process, "errorOccurred"):
+            process.errorOccurred.connect(self._process_error)
         process.finished.connect(self._finish)
         process.start(executable, command.args[1:])
         process.write(command.stdin.encode("utf-8"))
@@ -193,14 +197,11 @@ class AiChatRunner(QObject):
     def stop(self) -> None:
         if not self.busy:
             return
-        process = self._process
         self._timeout_timer.stop()
-        self.busy = False
-        self._process = None
-        self._active_provider = None
+        self._stopping = True
+        process = self._process
         if process is not None:
             process.kill()
-        self.finished.emit(AiChatResult(False, "AI chat stopped."))
 
     def reset_session(self, provider: AiProvider | None = None) -> None:
         if provider is None:
@@ -235,17 +236,34 @@ class AiChatRunner(QObject):
         if self._process is not None:
             self._stderr.extend(_bytes_from_qt(self._process.readAllStandardError()))
 
+    def _process_error(self, _error=None) -> None:
+        if not self.busy:
+            return
+        process = self._process
+        message = "unknown process error"
+        if process is not None and hasattr(process, "errorString"):
+            message = str(process.errorString())
+        self._timeout_timer.stop()
+        self._clear_active_state()
+        self.finished.emit(AiChatResult(False, f"AI chat process failed: {message}"))
+
     def _finish(self, exit_code: int, _exit_status=None) -> None:
         if not self.busy:
             return
         self._timeout_timer.stop()
+        process = self._process
+        if process is not None:
+            self._stdout.extend(_bytes_from_qt(process.readAllStandardOutput()))
+            self._stderr.extend(_bytes_from_qt(process.readAllStandardError()))
         provider = self._active_provider
-        self.busy = False
-        self._process = None
-        self._active_provider = None
+        stopping = self._stopping
+        self._clear_active_state()
 
         stdout = self._stdout.decode("utf-8", errors="replace").strip()
         stderr = self._stderr.decode("utf-8", errors="replace").strip()
+        if stopping:
+            self.finished.emit(AiChatResult(False, "AI chat stopped."))
+            return
         if exit_code == 0:
             if provider is not None:
                 self._sessions[provider].mark_started()
@@ -253,6 +271,12 @@ class AiChatRunner(QObject):
             self.finished.emit(AiChatResult(True, text))
             return
         self.finished.emit(AiChatResult(False, stderr or stdout or "AI chat failed."))
+
+    def _clear_active_state(self) -> None:
+        self.busy = False
+        self._process = None
+        self._active_provider = None
+        self._stopping = False
 
 
 def _bytes_from_qt(data: object) -> bytes:
