@@ -553,11 +553,14 @@ class CodeBeatDjPanel(QWidget):
         if local_action is not None:
             self._execute_music_action(local_action)
             return
+        if text.startswith("/"):
+            self._submit_command_text(text[1:].strip())
+            return
         self._append_text(f"You: {text}")
         provider = self.provider_select.currentData() or AiProvider.CODEX
         mode = self.mode_select.currentData() or AiPermissionMode.READ_ONLY
         if not self.ai_runner.send(text, provider, mode):
-            self._append_text("AI 正在处理上一条请求，请稍后再试。")
+            self._append_text("AI 请求没有启动，请查看错误信息。")
 
     def handle_ai_result(self, result: AiChatResult) -> None:
         if not result.ok:
@@ -647,18 +650,36 @@ class CodeBeatDjPanel(QWidget):
         if action.kind in {
             MusicActionKind.PLAY_TRACK,
             MusicActionKind.SEARCH_MUSIC,
-            MusicActionKind.PLAYLIST,
         }:
             self._run(lambda: self.host.music_session.handle_prompt(action.query), "正在处理音乐请求...")
             return
+        if action.kind is MusicActionKind.PLAYLIST:
+            self._run(
+                lambda: self.host.music_session.handle_prompt(f"播放歌单 {action.query}"),
+                "正在处理音乐请求...",
+            )
+            return
         if action.kind is MusicActionKind.PLAY_NUMBER:
-            self._play_number(int(action.query))
+            try:
+                number = int(action.query)
+            except ValueError:
+                self._append_invalid_music_action(action)
+                return
+            self._play_number(number)
             return
         if action.kind is MusicActionKind.CONTROL:
             if action.query.startswith("set_volume:"):
-                self._run_cwb_command("set_volume", {"percent": int(action.query.split(":", 1)[1])})
+                try:
+                    percent = int(action.query.split(":", 1)[1])
+                except ValueError:
+                    self._append_invalid_music_action(action)
+                    return
+                self._run_cwb_command("set_volume", {"percent": percent})
                 return
             self._run_cwb_command(action.query, {})
+
+    def _append_invalid_music_action(self, action: MusicAction) -> None:
+        self._append_text(f"无法执行音乐动作：{action.label}")
 
     def _play_number(self, number: int) -> None:
         self._run(lambda: self.host.music_session.play_number(number), f"正在播放第 {number} 首...")

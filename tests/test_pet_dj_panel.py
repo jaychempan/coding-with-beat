@@ -267,6 +267,110 @@ def test_dj_panel_direct_local_command_from_main_prompt_skips_ai_runner():
     assert host.music_session.music.controls == [("next_track", {})]
 
 
+def test_dj_panel_slash_seek_command_from_main_prompt_skips_ai_runner():
+    app = QApplication.instance() or QApplication([])
+    host = FakeHost()
+    panel = CodeBeatDjPanel(host)
+    fake_runner = FakeAiRunner()
+    panel.ai_runner = fake_runner
+
+    panel.prompt_input.setText("/seek 1:30")
+    panel.submit_prompt()
+
+    assert app is not None
+    assert fake_runner.sent == []
+    assert host.music_session.music.controls == [("seek", {"seconds": 90.0})]
+
+
+def test_dj_panel_slash_mode_command_from_main_prompt_skips_ai_runner():
+    app = QApplication.instance() or QApplication([])
+    host = FakeHost()
+    panel = CodeBeatDjPanel(host)
+    fake_runner = FakeAiRunner()
+    panel.ai_runner = fake_runner
+
+    panel.prompt_input.setText("/mode shuffle")
+    panel.submit_prompt()
+
+    assert app is not None
+    assert fake_runner.sent == []
+    assert host.music_session.music.controls == [("set_play_mode", {"mode": "shuffle"})]
+
+
+def test_dj_panel_slash_like_command_from_main_prompt_skips_ai_runner():
+    app = QApplication.instance() or QApplication([])
+    host = FakeHost()
+    panel = CodeBeatDjPanel(host)
+    fake_runner = FakeAiRunner()
+    panel.ai_runner = fake_runner
+
+    panel.prompt_input.setText("/喜欢")
+    panel.submit_prompt()
+
+    assert app is not None
+    assert fake_runner.sent == []
+    assert host.music_session.music.controls == [("like_current", {})]
+
+
+def test_dj_panel_invalid_ai_play_number_action_appends_recoverable_message():
+    app = QApplication.instance() or QApplication([])
+    panel = CodeBeatDjPanel(FakeHost())
+
+    panel.handle_ai_result(
+        AiChatResult(
+            True,
+            '试试第一个。\n```json\n{"music_actions":[{"kind":"play_number","query":"first","label":"First"}]}\n```',
+        )
+    )
+    action_button = next(
+        button for button in panel.findChildren(QPushButton) if button.objectName() == "MusicActionButton"
+    )
+    action_button.click()
+
+    assert app is not None
+    assert "无法执行音乐动作" in panel.transcript_text()
+
+
+def test_dj_panel_invalid_ai_volume_action_appends_recoverable_message():
+    app = QApplication.instance() or QApplication([])
+    panel = CodeBeatDjPanel(FakeHost())
+
+    panel.handle_ai_result(
+        AiChatResult(
+            True,
+            '调大点。\n```json\n{"music_actions":[{"kind":"control","query":"set_volume:loud","label":"Loud"}]}\n```',
+        )
+    )
+    action_button = next(
+        button for button in panel.findChildren(QPushButton) if button.objectName() == "MusicActionButton"
+    )
+    action_button.click()
+
+    assert app is not None
+    assert "无法执行音乐动作" in panel.transcript_text()
+
+
+def test_dj_panel_playlist_ai_action_uses_play_playlist_prompt():
+    app = QApplication.instance() or QApplication([])
+    host = FakeHost()
+    panel = CodeBeatDjPanel(host)
+
+    panel.handle_ai_result(
+        AiChatResult(
+            True,
+            '打开这个歌单。\n```json\n{"music_actions":[{"kind":"playlist","query":"Coding Beats","label":"Coding Beats"}]}\n```',
+        )
+    )
+    action_button = next(
+        button for button in panel.findChildren(QPushButton) if button.objectName() == "MusicActionButton"
+    )
+    action_button.click()
+
+    assert app is not None
+    assert host.pending[-1] == "正在处理音乐请求..."
+    assert host.calls[-1].card.text == "handled:播放歌单 Coding Beats"
+
+
 def test_dj_panel_has_library_loved_and_playlist_buttons():
     app = QApplication.instance() or QApplication([])
     panel = CodeBeatDjPanel(FakeHost())
