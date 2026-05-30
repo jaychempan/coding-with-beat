@@ -252,6 +252,25 @@ def test_status_crashed_when_process_exited(tmp_path):
     assert status.returncode == 1
 
 
+def test_status_crashed_closes_logs_and_clears_process(tmp_path):
+    stdout = FakeLogHandle()
+    stderr = FakeLogHandle()
+    manager = ServiceManager(paths=_paths(tmp_path), python="python3")
+    manager._process = FakeProcess(returncode=7)
+    manager._stdout = stdout
+    manager._stderr = stderr
+
+    status = manager.status()
+
+    assert status.state == ServiceState.CRASHED
+    assert status.returncode == 7
+    assert stdout.closed is True
+    assert stderr.closed is True
+    assert manager._stdout is None
+    assert manager._stderr is None
+    assert manager._process is None
+
+
 def test_stop_terminates_running_process(tmp_path):
     process = FakeProcess()
     manager = ServiceManager(paths=_paths(tmp_path), python="python3")

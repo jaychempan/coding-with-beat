@@ -56,6 +56,8 @@ class ServiceManager:
             return ServiceStatus(ServiceState.STOPPED, self.mcp_url)
         returncode = self._process.poll()
         if returncode is not None:
+            self._process = None
+            self._close_logs()
             return ServiceStatus(
                 ServiceState.CRASHED, self.mcp_url, returncode=returncode, message="MCP process exited"
             )
