@@ -45,6 +45,9 @@ class PetMusicClient:
     def play_playlist(self, name: str) -> MusicResult:
         return self._call("play_playlist", {"name": name})
 
+    def play_song(self, query: str) -> MusicResult:
+        return self._call("play_song", {"query": query})
+
     def play_number(self, number: int) -> MusicResult:
         return self._call("play_number", {"number": number})
 

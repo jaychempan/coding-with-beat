@@ -55,6 +55,10 @@ class FakeMusic:
         self.calls.append(("play_number", number))
         return MusicResult(self.play_ok, self.play_text or f"playing {number}")
 
+    def play_song(self, query):
+        self.calls.append(("play_song", query))
+        return MusicResult(self.play_ok, self.play_text or f"playing {query}")
+
     def now_playing(self):
         self.calls.append(("now_playing",))
         return MusicResult(self.now_playing_ok, self.now_playing_text)
@@ -156,6 +160,32 @@ def test_play_number_uses_current_result_list():
     assert result.card.kind == "confirmation"
     assert result.card.text.startswith("已开播\nplaying 2")
     assert music.calls[-1] == ("play_number", 2)
+
+
+def test_play_track_uses_specific_play_song_tool():
+    music = FakeMusic()
+    session = PetMusicSession(music=music, load_state=lambda: state(vibe="debug"))
+
+    result = session.play_track("周杰伦 晴天")
+
+    assert result.ok is True
+    assert result.action == "dance"
+    assert result.card.kind == "confirmation"
+    assert result.card.text.startswith("已开播\nplaying 周杰伦 晴天")
+    assert music.calls == [("play_song", "周杰伦 晴天")]
+
+
+def test_play_track_failure_returns_error_card():
+    music = FakeMusic(play_ok=False, play_text="not found")
+    session = PetMusicSession(music=music, load_state=lambda: state(vibe="debug"))
+
+    result = session.play_track("周杰伦 晴天")
+
+    assert result.ok is False
+    assert result.action == "sad"
+    assert result.card.kind == "error"
+    assert result.card.text == "播放失败\nnot found"
+    assert music.calls == [("play_song", "周杰伦 晴天")]
 
 
 def test_play_number_treats_textual_no_match_as_failure_and_preserves_current_card():
