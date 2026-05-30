@@ -7,6 +7,7 @@ from coding_with_beat.app_settings import (
     PetAppSettings,
     ServiceSettings,
     load_settings,
+    mirror_mcp_url,
     save_settings,
 )
 
@@ -91,6 +92,18 @@ def test_save_settings_writes_camel_case_json(tmp_path):
     assert raw["service"]["mcpUrl"] == "http://127.0.0.1:9999/mcp"
     assert raw["service"]["startOnLaunch"] is False
     assert raw["integrations"]["claude"]["enabled"] is True
+
+
+def test_mirror_mcp_url_writes_legacy_mcp_url(tmp_path):
+    paths = _paths(tmp_path)
+    settings = AppSettings(
+        service=ServiceSettings(mcp_url="http://127.0.0.1:9999/mcp"),
+    )
+
+    mirror_mcp_url(settings, paths)
+
+    assert paths.legacy_data_dir.is_dir()
+    assert paths.legacy_mcp_url_file.read_text(encoding="utf-8") == "http://127.0.0.1:9999/mcp\n"
 
 
 def test_load_settings_preserves_existing_app_settings_over_legacy(tmp_path):
