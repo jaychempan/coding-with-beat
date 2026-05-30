@@ -57,7 +57,7 @@ def _write_launcher(path: Path) -> None:
     text = f"""#!/bin/zsh
 set -euo pipefail
 
-LOG_DIR="$HOME/.coding-with-beat/logs"
+LOG_DIR="$HOME/Library/Logs/CodeBeat"
 mkdir -p "$LOG_DIR"
 
 BUILT_REPO="{ROOT}"

@@ -41,6 +41,8 @@ def test_build_app_launcher_runs_codebeat_app_command(tmp_path):
     assert "BUILT_PY=" in text
     assert "~/.coding-with-beat/repo-path" not in text
     assert "$HOME/.coding-with-beat/repo-path" in text
+    assert 'LOG_DIR="$HOME/Library/Logs/CodeBeat"' in text
+    assert "$HOME/.coding-with-beat/logs" not in text
     assert launcher.stat().st_mode & 0o111
 
 
