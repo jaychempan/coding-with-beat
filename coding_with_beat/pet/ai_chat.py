@@ -37,6 +37,12 @@ class AiChatResult:
     text: str
 
 
+@dataclass(frozen=True)
+class _ExtractedAgentOutput:
+    text: str
+    thread_id: str | None = None
+
+
 MUSIC_ACTION_PROMPT_CONTRACT = """You are inside CodeBeat DJ, a desktop coding companion with music controls.
 Answer the user's prompt normally. When your answer should trigger or suggest music, also include one fenced JSON block.
 The JSON block must use this shape:
@@ -75,13 +81,17 @@ class AiChatSession:
         if self.provider is AiProvider.CLAUDE and not self.session_id:
             self.session_id = str(uuid.uuid4())
 
-    def mark_started(self) -> None:
+    def mark_started(self, session_id: str | None = None) -> None:
         self.started = True
+        if self.provider is AiProvider.CODEX and session_id:
+            self.session_id = session_id
 
     def reset(self) -> None:
         self.started = False
         if self.provider is AiProvider.CLAUDE:
             self.session_id = str(uuid.uuid4())
+        else:
+            self.session_id = None
 
     def build_command(self, prompt: str, mode: AiPermissionMode) -> AiChatCommand:
         stdin = _wrap_prompt(prompt)
@@ -91,11 +101,13 @@ class AiChatSession:
 
     def _build_codex_args(self, mode: AiPermissionMode) -> list[str]:
         if self.started:
+            if self.session_id:
+                return ["codex", "exec", "resume", "--json", self.session_id, "-"]
             return ["codex", "exec", "resume", "--json", "--last", "-"]
         args = ["codex", "exec", "--json", "--cd", str(self.cwd), "--color", "never"]
         if mode is AiPermissionMode.READ_ONLY:
             return [*args, "--sandbox", "read-only"]
-        return [*args, "--sandbox", "workspace-write", "--ask-for-approval", "on-request"]
+        return [*args, "--sandbox", "workspace-write"]
 
     def _build_claude_args(self, mode: AiPermissionMode) -> list[str]:
         permission_mode = "acceptEdits" if mode is AiPermissionMode.WORKSPACE_WRITE else "default"
@@ -267,10 +279,10 @@ class AiChatRunner(QObject):
             self.finished.emit(AiChatResult(False, "AI chat stopped."))
             return
         if exit_code == 0:
+            extracted = _extract_agent_text(provider, stdout)
             if provider is not None:
-                self._sessions[provider].mark_started()
-            text = _extract_agent_text(provider, stdout)
-            self.finished.emit(AiChatResult(True, text))
+                self._sessions[provider].mark_started(extracted.thread_id)
+            self.finished.emit(AiChatResult(True, extracted.text))
             return
         self.finished.emit(AiChatResult(False, stderr or stdout or "AI chat failed."))
 
@@ -287,14 +299,20 @@ def _bytes_from_qt(data: object) -> bytes:
     return bytes(data)
 
 
-def _extract_agent_text(provider: AiProvider | None, stdout: str) -> str:
+def _extract_agent_text(provider: AiProvider | None, stdout: str) -> _ExtractedAgentOutput:
     if provider is not AiProvider.CODEX:
-        return stdout
+        return _ExtractedAgentOutput(stdout)
     final_message = ""
+    thread_id = None
     for line in stdout.splitlines():
         try:
             payload = json.loads(line)
         except json.JSONDecodeError:
+            continue
+        if payload.get("type") == "thread.started":
+            value = payload.get("thread_id")
+            if isinstance(value, str) and value:
+                thread_id = value
             continue
         if payload.get("type") != "item.completed":
             continue
@@ -303,4 +321,4 @@ def _extract_agent_text(provider: AiProvider | None, stdout: str) -> str:
             text = item.get("text")
             if isinstance(text, str):
                 final_message = text
-    return final_message or stdout
+    return _ExtractedAgentOutput(final_message or stdout, thread_id)

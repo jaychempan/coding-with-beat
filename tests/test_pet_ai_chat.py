@@ -129,6 +129,17 @@ def test_codex_followup_command_resumes_last_non_interactive(tmp_path):
     assert "music_actions" in command.stdin
 
 
+def test_codex_workspace_write_command_omits_unsupported_approval_flag(tmp_path):
+    session = AiChatSession(provider=AiProvider.CODEX, cwd=tmp_path)
+
+    command = session.build_command("edit this", AiPermissionMode.WORKSPACE_WRITE)
+
+    assert "--sandbox" in command.args
+    assert "workspace-write" in command.args
+    assert "--ask-for-approval" not in command.args
+    assert "on-request" not in command.args
+
+
 def test_claude_command_uses_print_and_session_id(tmp_path):
     session = AiChatSession(
         provider=AiProvider.CLAUDE,
@@ -288,3 +299,27 @@ def test_runner_extracts_codex_jsonl_final_agent_message(tmp_path):
     _wait_for(lambda: bool(results), app)
 
     assert results == [AiChatResult(ok=True, text="real answer")]
+
+
+def test_runner_stores_codex_thread_id_from_jsonl_and_resumes_explicit_thread(tmp_path):
+    app = QApplication.instance() or QApplication([])
+    thread_id = "00000000-0000-4000-8000-000000000123"
+    stdout = (
+        f'{{"type":"thread.started","thread_id":"{thread_id}"}}\n'
+        '{"type":"item.completed","item":{"type":"agent_message","text":"real answer"}}\n'
+    ).encode()
+    runner = AiChatRunner(
+        cwd=tmp_path,
+        process_factory=lambda: FakeProcess(stdout=stdout),
+        executable_resolver=lambda provider: provider.value,
+    )
+    results = []
+    runner.finished.connect(results.append)
+
+    assert runner.send("hello", AiProvider.CODEX, AiPermissionMode.READ_ONLY) is True
+    _wait_for(lambda: bool(results), app)
+    command = runner._sessions[AiProvider.CODEX].build_command("continue", AiPermissionMode.READ_ONLY)
+
+    assert results == [AiChatResult(ok=True, text="real answer")]
+    assert runner._sessions[AiProvider.CODEX].session_id == thread_id
+    assert command.args == ["codex", "exec", "resume", "--json", thread_id, "-"]

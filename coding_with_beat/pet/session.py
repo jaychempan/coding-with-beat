@@ -185,6 +185,14 @@ class PetMusicSession:
         card = self.bubble.confirmation("播放歌单", music_result.text, action="dance")
         return self._remember(PetSessionResult(True, "dance", card))
 
+    def play_track(self, query: str) -> PetSessionResult:
+        music_result = self.music.play_song(query)
+        if not _music_result_ok(music_result):
+            card = self.bubble.error("播放失败", music_result.text)
+            return self._remember(PetSessionResult(False, "sad", card))
+        card = self.bubble.confirmation("已开播", music_result.text, action="dance")
+        return self._remember(PetSessionResult(True, "dance", card))
+
     def reroll(self) -> PetSessionResult:
         if self.current_intent is None:
             self.current_intent = self.brain.intent_from_state(self.load_state())

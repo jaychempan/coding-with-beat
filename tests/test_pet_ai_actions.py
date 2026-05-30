@@ -97,7 +97,7 @@ def test_fallback_extracts_chinese_and_english_recommendation_lines():
 
 
 def test_fallback_stops_artists_before_continuation_prose():
-    raw = "Anti-Hero by Taylor Swift is good for coding\n《晴天》- 周杰伦 is a safe pick"
+    raw = "- Anti-Hero by Taylor Swift is good for coding\n《晴天》- 周杰伦 is a safe pick"
 
     reply = parse_ai_music_reply(raw)
 
@@ -108,11 +108,23 @@ def test_fallback_stops_artists_before_continuation_prose():
 
 
 def test_fallback_stops_artists_before_common_ai_prose():
-    assert parse_ai_music_reply("Anti-Hero by Taylor Swift for coding tonight").actions == [
-        MusicAction(MusicActionKind.PLAY_TRACK, "Anti-Hero - Taylor Swift", "Anti-Hero Taylor Swift")
-    ]
+    assert parse_ai_music_reply("Anti-Hero by Taylor Swift for coding tonight").actions == []
     assert parse_ai_music_reply("《晴天》- 周杰伦很适合写代码").actions == [
         MusicAction(MusicActionKind.PLAY_TRACK, "晴天 - 周杰伦", "晴天 周杰伦")
+    ]
+
+
+def test_fallback_ignores_ordinary_english_prose_with_by_phrase():
+    reply = parse_ai_music_reply("This code was written by Alice.")
+
+    assert reply.actions == []
+
+
+def test_fallback_keeps_numbered_english_recommendation():
+    reply = parse_ai_music_reply("2. Anti-Hero by Taylor Swift")
+
+    assert reply.actions == [
+        MusicAction(MusicActionKind.PLAY_TRACK, "Anti-Hero - Taylor Swift", "Anti-Hero Taylor Swift")
     ]
 
 

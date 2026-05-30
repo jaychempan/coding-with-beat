@@ -47,6 +47,9 @@ class FakeSession:
     def play_number(self, number):
         return PetSessionResult(True, "dance", PetBubbleCard("confirmation", f"play {number}"))
 
+    def play_track(self, query):
+        return PetSessionResult(True, "dance", PetBubbleCard("confirmation", f"play track:{query}"))
+
 
 class FakeHost:
     def __init__(self):
@@ -248,8 +251,8 @@ def test_dj_panel_ai_result_renders_playable_music_actions():
     assert "Agent: 可以，先试试这个。" in panel.transcript_text()
     assert "music_actions" not in panel.transcript_text()
     assert action_button.text() == "▶ 晴天 - 周杰伦"
-    assert host.pending[-1] == "正在处理音乐请求..."
-    assert host.calls[-1].card.text == "handled:周杰伦 晴天"
+    assert host.pending[-1] == "正在播放..."
+    assert host.calls[-1].card.text == "play track:周杰伦 晴天"
 
 
 def test_dj_panel_direct_local_command_from_main_prompt_skips_ai_runner():
@@ -348,6 +351,47 @@ def test_dj_panel_invalid_ai_volume_action_appends_recoverable_message():
 
     assert app is not None
     assert "无法执行音乐动作" in panel.transcript_text()
+    assert panel.host.music_session.music.controls == []
+
+
+def test_dj_panel_rejects_unallowlisted_ai_control_action():
+    app = QApplication.instance() or QApplication([])
+    panel = CodeBeatDjPanel(FakeHost())
+
+    panel.handle_ai_result(
+        AiChatResult(
+            True,
+            '别这样。\n```json\n{"music_actions":[{"kind":"control","query":"delete_everything","label":"Delete"}]}\n```',
+        )
+    )
+    action_button = next(
+        button for button in panel.findChildren(QPushButton) if button.objectName() == "MusicActionButton"
+    )
+    action_button.click()
+
+    assert app is not None
+    assert "无法执行音乐动作" in panel.transcript_text()
+    assert panel.host.music_session.music.controls == []
+
+
+def test_dj_panel_clamps_ai_volume_control_action():
+    app = QApplication.instance() or QApplication([])
+    host = FakeHost()
+    panel = CodeBeatDjPanel(host)
+
+    panel.handle_ai_result(
+        AiChatResult(
+            True,
+            '调到最大。\n```json\n{"music_actions":[{"kind":"control","query":"set_volume:1000","label":"Max"}]}\n```',
+        )
+    )
+    action_button = next(
+        button for button in panel.findChildren(QPushButton) if button.objectName() == "MusicActionButton"
+    )
+    action_button.click()
+
+    assert app is not None
+    assert host.music_session.music.controls == [("set_volume", {"percent": 100})]
 
 
 def test_dj_panel_playlist_ai_action_uses_play_playlist_prompt():

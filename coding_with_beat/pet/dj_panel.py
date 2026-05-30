@@ -647,10 +647,10 @@ class CodeBeatDjPanel(QWidget):
         self._transcript.append(button.text())
 
     def _execute_music_action(self, action: MusicAction) -> None:
-        if action.kind in {
-            MusicActionKind.PLAY_TRACK,
-            MusicActionKind.SEARCH_MUSIC,
-        }:
+        if action.kind is MusicActionKind.PLAY_TRACK:
+            self._run(lambda: self.host.music_session.play_track(action.query), "正在播放...")
+            return
+        if action.kind is MusicActionKind.SEARCH_MUSIC:
             self._run(lambda: self.host.music_session.handle_prompt(action.query), "正在处理音乐请求...")
             return
         if action.kind is MusicActionKind.PLAYLIST:
@@ -668,15 +668,12 @@ class CodeBeatDjPanel(QWidget):
             self._play_number(number)
             return
         if action.kind is MusicActionKind.CONTROL:
-            if action.query.startswith("set_volume:"):
-                try:
-                    percent = int(action.query.split(":", 1)[1])
-                except ValueError:
-                    self._append_invalid_music_action(action)
-                    return
-                self._run_cwb_command("set_volume", {"percent": percent})
+            parsed = _validated_ai_control(action.query)
+            if parsed is None:
+                self._append_invalid_music_action(action)
                 return
-            self._run_cwb_command(action.query, {})
+            tool, kwargs = parsed
+            self._run_cwb_command(tool, kwargs)
 
     def _append_invalid_music_action(self, action: MusicAction) -> None:
         self._append_text(f"无法执行音乐动作：{action.label}")
@@ -879,6 +876,19 @@ def _music_action_button_text(action: MusicAction) -> str:
     if action.kind is MusicActionKind.SEARCH_MUSIC:
         return f"🔍 {action.label}"
     return f"▶ {action.label}"
+
+
+def _validated_ai_control(query: str) -> tuple[str, dict] | None:
+    clean = (query or "").strip()
+    if clean in {"like_current", "prev_track", "toggle", "next_track"}:
+        return clean, {}
+    if clean.startswith("set_volume:"):
+        try:
+            percent = int(clean.split(":", 1)[1])
+        except ValueError:
+            return None
+        return "set_volume", {"percent": max(0, min(100, percent))}
+    return None
 
 
 def _parse_cwb_command(text: str) -> tuple[str, dict] | None:

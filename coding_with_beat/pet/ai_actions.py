@@ -35,7 +35,7 @@ _CHINESE_TRACK_RE = re.compile(
     re.MULTILINE,
 )
 _ENGLISH_BY_RE = re.compile(
-    r"(?:^\s*\d+[.)]?\s*)?([A-Z][^\n]+?)\s+by\s+([A-Z][^\n,.;:，。；：]+?)(?=\s+(?:is|for|while|when|to|if|because)\b|[\n,.;:，。；：]|$)",
+    r"^\s*(?:\d+[.)]?|[-*•])\s+([A-Z][^\n]+?)\s+by\s+([A-Z][^\n,.;:，。；：]+?)(?=\s+(?:is|for|while|when|to|if|because)\b|[\n,.;:，。；：]|$)",
     re.MULTILINE,
 )
 

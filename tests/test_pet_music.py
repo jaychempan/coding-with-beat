@@ -22,6 +22,21 @@ def test_calls_mcp_with_explicit_timeout():
     assert calls == [("play_number", {"number": 1}, 12.5)]
 
 
+def test_play_song_calls_specific_play_song_tool():
+    calls = []
+
+    def call_tool(name, kwargs, *, timeout):
+        calls.append((name, kwargs, timeout))
+        return "playing"
+
+    client = PetMusicClient(call_tool=call_tool, timeout=9.0)
+    result = client.play_song("周杰伦 晴天")
+
+    assert result.ok is True
+    assert result.text == "playing"
+    assert calls == [("play_song", {"query": "周杰伦 晴天"}, 9.0)]
+
+
 def test_snapshot_uses_short_timeout_and_known_lyrics_key():
     calls = []
 
