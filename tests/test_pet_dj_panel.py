@@ -8,8 +8,9 @@ import pytest
 pytest.importorskip("PySide6")
 
 from PySide6.QtCore import Qt
-from PySide6.QtWidgets import QApplication, QLabel, QPushButton
+from PySide6.QtWidgets import QApplication, QComboBox, QLabel, QLineEdit, QPushButton
 
+from coding_with_beat.pet.ai_chat import AiChatResult, AiPermissionMode, AiProvider
 from coding_with_beat.pet.bubble import PetBubbleCard, PetResultItem
 from coding_with_beat.pet.dj_panel import CockpitSignalRail, CodeBeatDjPanel, LiquidNowPlayingBand, QueueTrackRow
 from coding_with_beat.pet.session import PetSessionResult
@@ -56,6 +57,15 @@ class FakeHost:
     def _run_pet_command(self, command, pending_text="思考中..."):
         self.pending.append(pending_text)
         self.calls.append(command())
+
+
+class FakeAiRunner:
+    def __init__(self):
+        self.sent = []
+
+    def send(self, text, provider, mode):
+        self.sent.append((text, provider, mode))
+        return True
 
 
 class FakePanelMusic:
@@ -165,30 +175,96 @@ def test_dj_panel_play_button_runs_play_number_without_manual_number_dialog():
     assert host.calls[-1].card.text == "play 2"
 
 
-def test_dj_panel_text_prompt_runs_text_recommendation():
+def test_dj_panel_text_prompt_goes_to_ai_first():
     app = QApplication.instance() or QApplication([])
-    host = FakeHost()
-    panel = CodeBeatDjPanel(host)
+    panel = CodeBeatDjPanel(FakeHost())
+    fake_runner = FakeAiRunner()
+    panel.ai_runner = fake_runner
 
     panel.prompt_input.setText("来点爵士")
     panel.submit_prompt()
 
     assert app is not None
-    assert host.pending[-1] == "正在处理音乐请求..."
-    assert host.calls[-1].card.text == "handled:来点爵士"
+    assert fake_runner.sent == [("来点爵士", AiProvider.CODEX, AiPermissionMode.READ_ONLY)]
 
 
-def test_dj_panel_plain_artist_prompt_uses_shared_music_router():
+def test_dj_panel_plain_artist_prompt_goes_to_ai_first():
     app = QApplication.instance() or QApplication([])
-    host = FakeHost()
-    panel = CodeBeatDjPanel(host)
+    panel = CodeBeatDjPanel(FakeHost())
+    fake_runner = FakeAiRunner()
+    panel.ai_runner = fake_runner
 
     panel.prompt_input.setText("周杰伦")
     panel.submit_prompt()
 
     assert app is not None
+    assert fake_runner.sent == [("周杰伦", AiProvider.CODEX, AiPermissionMode.READ_ONLY)]
+
+
+def test_dj_panel_uses_unified_ai_prompt_without_standalone_ai_panel():
+    app = QApplication.instance() or QApplication([])
+    panel = CodeBeatDjPanel(FakeHost())
+
+    assert app is not None
+    assert panel.findChild(QLineEdit, "DjPromptInput") is panel.prompt_input
+    assert panel.findChild(QLabel, "AiChatTitle") is None
+    assert panel.findChild(QPushButton, "AiSendButton") is None
+    assert panel.findChild(QComboBox, "AiProviderSelect") is not None
+    assert panel.findChild(QComboBox, "AiModeSelect") is not None
+
+
+def test_dj_panel_ai_prompt_uses_main_timeline_and_runner():
+    app = QApplication.instance() or QApplication([])
+    panel = CodeBeatDjPanel(FakeHost())
+    fake_runner = FakeAiRunner()
+    panel.ai_runner = fake_runner
+
+    panel.prompt_input.setText("推荐几首适合写代码的歌")
+    panel.submit_prompt()
+
+    assert app is not None
+    assert fake_runner.sent == [("推荐几首适合写代码的歌", AiProvider.CODEX, AiPermissionMode.READ_ONLY)]
+    assert "You: 推荐几首适合写代码的歌" in panel.transcript_text()
+    assert panel.prompt_input.text() == ""
+
+
+def test_dj_panel_ai_result_renders_playable_music_actions():
+    app = QApplication.instance() or QApplication([])
+    host = FakeHost()
+    panel = CodeBeatDjPanel(host)
+
+    panel.handle_ai_result(
+        AiChatResult(
+            True,
+            '可以，先试试这个。\n```json\n{"music_actions":[{"kind":"play_track","query":"周杰伦 晴天","label":"晴天 - 周杰伦"}]}\n```',
+        )
+    )
+    action_button = next(
+        button for button in panel.findChildren(QPushButton) if button.objectName() == "MusicActionButton"
+    )
+    action_button.click()
+
+    assert app is not None
+    assert "Agent: 可以，先试试这个。" in panel.transcript_text()
+    assert "music_actions" not in panel.transcript_text()
+    assert action_button.text() == "▶ 晴天 - 周杰伦"
     assert host.pending[-1] == "正在处理音乐请求..."
-    assert host.calls[-1].card.text == "handled:周杰伦"
+    assert host.calls[-1].card.text == "handled:周杰伦 晴天"
+
+
+def test_dj_panel_direct_local_command_from_main_prompt_skips_ai_runner():
+    app = QApplication.instance() or QApplication([])
+    host = FakeHost()
+    panel = CodeBeatDjPanel(host)
+    fake_runner = FakeAiRunner()
+    panel.ai_runner = fake_runner
+
+    panel.prompt_input.setText("下一首")
+    panel.submit_prompt()
+
+    assert app is not None
+    assert fake_runner.sent == []
+    assert host.music_session.music.controls == [("next_track", {})]
 
 
 def test_dj_panel_has_library_loved_and_playlist_buttons():

@@ -9,6 +9,7 @@ import shlex
 from PySide6.QtCore import QRectF, Qt, QTimer
 from PySide6.QtGui import QColor, QLinearGradient, QPainter, QPen, QRadialGradient
 from PySide6.QtWidgets import (
+    QComboBox,
     QFrame,
     QGridLayout,
     QHBoxLayout,
@@ -21,6 +22,8 @@ from PySide6.QtWidgets import (
 )
 
 from ..lyrics_snapshot import line_from_text
+from .ai_actions import MusicAction, MusicActionKind, detect_local_command_action, parse_ai_music_reply
+from .ai_chat import AiChatResult, AiChatRunner, AiPermissionMode, AiProvider
 from .bubble import PetBubbleCard, PetResultItem
 from .macos import keep_window_above_apps
 from .session import PetSessionResult
@@ -141,6 +144,26 @@ QPushButton#ActionChip {
 QPushButton#ActionChip:hover {
   color: #67e8f9;
   border-color: rgba(103, 232, 249, 220);
+}
+QComboBox#AiProviderSelect,
+QComboBox#AiModeSelect {
+  color: #f8fafc;
+  background: rgba(15, 23, 42, 108);
+  border: 1px solid rgba(148, 163, 184, 54);
+  border-radius: 10px;
+  padding: 6px 8px;
+  font-size: 11px;
+  font-weight: 700;
+}
+QPushButton#MusicActionButton {
+  color: #04131b;
+  background: rgba(94, 234, 212, 230);
+  border: 1px solid rgba(236, 254, 255, 130);
+  border-radius: 10px;
+  padding: 7px 10px;
+  font-size: 11px;
+  font-weight: 800;
+  text-align: left;
 }
 QPushButton#PlayerControlButton {
   color: #ecfeff;
@@ -335,6 +358,8 @@ class CodeBeatDjPanel(QWidget):
         self._live_playing = False
         self._motion_phase = 0
         self.signal_rail = CockpitSignalRail()
+        self.ai_runner = AiChatRunner(self)
+        self.ai_runner.finished.connect(self.handle_ai_result)
         self.setObjectName("CodeBeatDjPanel")
         self.setWindowTitle("CodeBeat DJ")
         self.setWindowFlags(Qt.WindowType.Window | Qt.WindowType.WindowStaysOnTopHint)
@@ -371,9 +396,17 @@ class CodeBeatDjPanel(QWidget):
 
         self.prompt_input = QLineEdit()
         self.prompt_input.setObjectName("DjPromptInput")
-        self.prompt_input.setPlaceholderText("搜歌手、歌名、歌单，或输入：来点爵士")
+        self.prompt_input.setPlaceholderText("问 DJ 找歌、聊状态，或输入：下一首")
         self.prompt_input.returnPressed.connect(self.submit_prompt)
-        send_button = QPushButton("搜索")
+        self.provider_select = QComboBox()
+        self.provider_select.setObjectName("AiProviderSelect")
+        self.provider_select.addItem("Codex", AiProvider.CODEX)
+        self.provider_select.addItem("Claude", AiProvider.CLAUDE)
+        self.mode_select = QComboBox()
+        self.mode_select.setObjectName("AiModeSelect")
+        self.mode_select.addItem("只读", AiPermissionMode.READ_ONLY)
+        self.mode_select.addItem("可写", AiPermissionMode.WORKSPACE_WRITE)
+        send_button = QPushButton("发送")
         send_button.setObjectName("ActionChip")
         send_button.clicked.connect(self.submit_prompt)
 
@@ -381,6 +414,8 @@ class CodeBeatDjPanel(QWidget):
         input_row.setContentsMargins(0, 0, 0, 0)
         input_row.setSpacing(6)
         input_row.addWidget(self.prompt_input, 1)
+        input_row.addWidget(self.provider_select)
+        input_row.addWidget(self.mode_select)
         input_row.addWidget(send_button)
 
         recommend_button = QPushButton("推荐")
@@ -514,10 +549,24 @@ class CodeBeatDjPanel(QWidget):
         if not text:
             return
         self.prompt_input.clear()
-        if text.startswith("/"):
-            self._submit_command_text(text[1:].strip())
+        local_action = detect_local_command_action(text)
+        if local_action is not None:
+            self._execute_music_action(local_action)
             return
-        self.recommend_from_text(text)
+        self._append_text(f"You: {text}")
+        provider = self.provider_select.currentData() or AiProvider.CODEX
+        mode = self.mode_select.currentData() or AiPermissionMode.READ_ONLY
+        if not self.ai_runner.send(text, provider, mode):
+            self._append_text("AI 正在处理上一条请求，请稍后再试。")
+
+    def handle_ai_result(self, result: AiChatResult) -> None:
+        if not result.ok:
+            self._append_text(f"Error: {result.text}")
+            return
+        reply = parse_ai_music_reply(result.text)
+        self._append_text(f"Agent: {reply.text}")
+        for action in reply.actions:
+            self._append_music_action(action)
 
     def refresh_live_snapshot(self) -> None:
         music = getattr(self.host.music_session, "music", None)
@@ -586,6 +635,30 @@ class CodeBeatDjPanel(QWidget):
         layout.addWidget(play_button)
         self._insert_widget(row)
         self._transcript.append(text)
+
+    def _append_music_action(self, action: MusicAction) -> None:
+        button = QPushButton(_music_action_button_text(action))
+        button.setObjectName("MusicActionButton")
+        button.clicked.connect(lambda _checked=False, selected=action: self._execute_music_action(selected))
+        self._insert_widget(button)
+        self._transcript.append(button.text())
+
+    def _execute_music_action(self, action: MusicAction) -> None:
+        if action.kind in {
+            MusicActionKind.PLAY_TRACK,
+            MusicActionKind.SEARCH_MUSIC,
+            MusicActionKind.PLAYLIST,
+        }:
+            self._run(lambda: self.host.music_session.handle_prompt(action.query), "正在处理音乐请求...")
+            return
+        if action.kind is MusicActionKind.PLAY_NUMBER:
+            self._play_number(int(action.query))
+            return
+        if action.kind is MusicActionKind.CONTROL:
+            if action.query.startswith("set_volume:"):
+                self._run_cwb_command("set_volume", {"percent": int(action.query.split(":", 1)[1])})
+                return
+            self._run_cwb_command(action.query, {})
 
     def _play_number(self, number: int) -> None:
         self._run(lambda: self.host.music_session.play_number(number), f"正在播放第 {number} 首...")
@@ -777,6 +850,14 @@ class CodeBeatDjPanel(QWidget):
 def _mmss(seconds: float) -> str:
     seconds = max(0, int(seconds or 0))
     return f"{seconds // 60}:{seconds % 60:02d}"
+
+
+def _music_action_button_text(action: MusicAction) -> str:
+    if action.kind is MusicActionKind.CONTROL:
+        return f"⚡ {action.label}"
+    if action.kind is MusicActionKind.SEARCH_MUSIC:
+        return f"🔍 {action.label}"
+    return f"▶ {action.label}"
 
 
 def _parse_cwb_command(text: str) -> tuple[str, dict] | None:
