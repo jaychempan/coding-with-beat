@@ -126,8 +126,9 @@ def _existing_pet_files(root: Path) -> list[str]:
         return []
     files: list[str] = []
     for path in sorted(root.rglob("*")):
-        if path.is_file():
-            files.append(path.relative_to(root).as_posix())
+        relative_path = path.relative_to(root)
+        if path.is_file() and not any(part.startswith(".") for part in relative_path.parts):
+            files.append(relative_path.as_posix())
     return [f"pets/{name}" for name in files]
 
 

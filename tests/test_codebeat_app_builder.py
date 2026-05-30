@@ -1,7 +1,7 @@
 import json
 import plistlib
 
-from scripts.build_macos_app import build_app
+from scripts.build_macos_app import _existing_pet_files, build_app
 
 
 def test_build_app_creates_codebeat_bundle(tmp_path):
@@ -56,3 +56,18 @@ def test_build_app_writes_resource_manifest(tmp_path):
     assert "assets/waveform_menu_bar.svg" in manifest["resources"]["assets"]
     assert "pets/codebeat-buddy/pet.json" in manifest["resources"]["pets"]
     assert "pets/codebeat-buddy/spritesheet.png" in manifest["resources"]["pets"]
+
+
+def test_existing_pet_files_excludes_hidden_system_files(tmp_path):
+    pet_root = tmp_path / "pets"
+    buddy = pet_root / "codebeat-buddy"
+    hidden_dir = buddy / ".generated"
+    buddy.mkdir(parents=True)
+    hidden_dir.mkdir()
+
+    (pet_root / ".DS_Store").write_text("metadata", encoding="utf-8")
+    (buddy / "pet.json").write_text("{}", encoding="utf-8")
+    (buddy / ".DS_Store").write_text("metadata", encoding="utf-8")
+    (hidden_dir / "sprite.png").write_text("hidden", encoding="utf-8")
+
+    assert _existing_pet_files(pet_root) == ["pets/codebeat-buddy/pet.json"]
