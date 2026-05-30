@@ -127,3 +127,34 @@ def test_load_settings_preserves_existing_app_settings_over_legacy(tmp_path):
     assert settings.source == "qq_music"
     assert settings.service.mcp_url == "http://127.0.0.1:8765/mcp"
     assert settings.service.start_on_launch is False
+
+
+def test_load_settings_defaults_malformed_integration_entries(tmp_path):
+    paths = _paths(tmp_path)
+    paths.support_dir.mkdir()
+    paths.settings_file.write_text(
+        json.dumps(
+            {
+                "integrations": {
+                    "claude": True,
+                    "codex": "enabled",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    settings = load_settings(paths)
+
+    assert settings.integrations["claude"].enabled is False
+    assert settings.integrations["codex"].enabled is False
+
+
+def test_load_settings_defaults_malformed_version(tmp_path):
+    paths = _paths(tmp_path)
+    paths.support_dir.mkdir()
+    paths.settings_file.write_text(json.dumps({"version": "bad"}), encoding="utf-8")
+
+    settings = load_settings(paths)
+
+    assert settings.version == 1

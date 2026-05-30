@@ -88,11 +88,11 @@ def _settings_from_json(raw: dict) -> AppSettings:
     service = raw.get("service") if isinstance(raw.get("service"), dict) else {}
     integrations_raw = raw.get("integrations") if isinstance(raw.get("integrations"), dict) else {}
     integrations = {
-        "claude": IntegrationSettings(enabled=bool((integrations_raw.get("claude") or {}).get("enabled", False))),
-        "codex": IntegrationSettings(enabled=bool((integrations_raw.get("codex") or {}).get("enabled", False))),
+        "claude": _integration_from_json(integrations_raw.get("claude")),
+        "codex": _integration_from_json(integrations_raw.get("codex")),
     }
     return AppSettings(
-        version=int(raw.get("version", 1) or 1),
+        version=_version_from_json(raw.get("version")),
         source=str(raw.get("source") or "apple_music"),
         pet=PetAppSettings(
             slug=str(pet.get("slug") or "codebeat-buddy"),
@@ -106,6 +106,19 @@ def _settings_from_json(raw: dict) -> AppSettings:
         ),
         integrations=integrations,
     )
+
+
+def _version_from_json(value: object) -> int:
+    try:
+        return int(value or 1)
+    except (TypeError, ValueError):
+        return 1
+
+
+def _integration_from_json(value: object) -> IntegrationSettings:
+    if not isinstance(value, dict):
+        return IntegrationSettings()
+    return IntegrationSettings(enabled=bool(value.get("enabled", False)))
 
 
 def _settings_to_json(settings: AppSettings) -> dict:
