@@ -1,5 +1,10 @@
+import subprocess
+from dataclasses import FrozenInstanceError
+
+import pytest
+
 from coding_with_beat.app_paths import CodeBeatPaths
-from coding_with_beat.service_manager import ServiceManager, ServiceState
+from coding_with_beat.service_manager import ServiceManager, ServiceState, ServiceStatus
 
 
 def _paths(tmp_path):
@@ -38,10 +43,52 @@ class FakeProcess:
         self.returncode = -9
 
 
+class TimeoutProcess(FakeProcess):
+    def __init__(self):
+        super().__init__()
+        self.wait_calls = 0
+
+    def terminate(self):
+        self.terminated = True
+
+    def wait(self, timeout=None):
+        self.wait_calls += 1
+        self.waited = True
+        if self.wait_calls == 1:
+            raise subprocess.TimeoutExpired(cmd="coding_with_beat server", timeout=timeout)
+        return self.returncode
+
+
+class FakeLogHandle:
+    def __init__(self):
+        self.closed = False
+
+    def close(self):
+        self.closed = True
+
+
 def test_status_stopped_when_no_process(tmp_path):
     manager = ServiceManager(paths=_paths(tmp_path), python="python3")
 
     assert manager.status().state == ServiceState.STOPPED
+
+
+def test_service_state_values_are_exact():
+    assert ServiceState.STOPPED.value == "stopped"
+    assert ServiceState.STARTING.value == "starting"
+    assert ServiceState.RUNNING.value == "running"
+    assert ServiceState.DEGRADED.value == "degraded"
+    assert ServiceState.CRASHED.value == "crashed"
+
+
+def test_service_status_defaults_and_frozen_behavior():
+    status = ServiceStatus(ServiceState.STOPPED, "http://127.0.0.1:8765/mcp")
+
+    assert status.pid is None
+    assert status.returncode is None
+    assert status.message == ""
+    with pytest.raises(FrozenInstanceError):
+        status.message = "changed"
 
 
 def test_start_launches_server_process_and_writes_logs(tmp_path):
@@ -114,6 +161,35 @@ def test_stop_terminates_running_process(tmp_path):
     assert manager._process is None
 
 
+def test_stop_kills_process_when_wait_times_out(tmp_path):
+    process = TimeoutProcess()
+    manager = ServiceManager(paths=_paths(tmp_path), python="python3")
+    manager._process = process
+
+    status = manager.stop()
+
+    assert status.state == ServiceState.STOPPED
+    assert process.terminated is True
+    assert process.killed is True
+    assert process.wait_calls == 2
+    assert manager._process is None
+
+
+def test_stop_closes_log_handles(tmp_path):
+    stdout = FakeLogHandle()
+    stderr = FakeLogHandle()
+    manager = ServiceManager(paths=_paths(tmp_path), python="python3")
+    manager._stdout = stdout
+    manager._stderr = stderr
+
+    manager.stop()
+
+    assert stdout.closed is True
+    assert stderr.closed is True
+    assert manager._stdout is None
+    assert manager._stderr is None
+
+
 def test_restart_stops_and_starts(tmp_path):
     first = FakeProcess()
     second = FakeProcess()
@@ -141,3 +217,27 @@ def test_open_logs_uses_macos_open(tmp_path):
     manager.open_logs()
 
     assert calls == [(["open", str(tmp_path / "logs")], False)]
+
+
+def test_default_health_check_calls_status_tool(monkeypatch, tmp_path):
+    calls = []
+
+    def fake_call_tool(name, *, url, timeout):
+        calls.append((name, url, timeout))
+        return {"ok": True}
+
+    monkeypatch.setattr("coding_with_beat.service_manager.call_tool", fake_call_tool)
+    manager = ServiceManager(paths=_paths(tmp_path), python="python3")
+
+    assert manager._default_health_check("http://example.test/mcp") is True
+    assert calls == [("status", "http://example.test/mcp", 1.0)]
+
+
+def test_default_health_check_returns_false_on_call_tool_exception(monkeypatch, tmp_path):
+    def fake_call_tool(name, *, url, timeout):
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr("coding_with_beat.service_manager.call_tool", fake_call_tool)
+    manager = ServiceManager(paths=_paths(tmp_path), python="python3")
+
+    assert manager._default_health_check("http://example.test/mcp") is False
