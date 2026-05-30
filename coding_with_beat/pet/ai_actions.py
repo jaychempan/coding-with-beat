@@ -31,11 +31,11 @@ class AiVisibleReply:
 
 _JSON_BLOCK_RE = re.compile(r"```(?:json)?\s*(\{.*?\})\s*```", re.DOTALL | re.IGNORECASE)
 _CHINESE_TRACK_RE = re.compile(
-    r"(?:^\s*\d+[.)、]?\s*)?《([^》]+)》\s*[-—–]\s*([^\n,.;:，。；：]+?)(?=\s+is\b|[\n,.;:，。；：]|$)",
+    r"(?:^\s*\d+[.)、]?\s*)?《([^》]+)》\s*[-—–]\s*([^\n,.;:，。；：]+?)(?=\s+is\b|很|适合|可以|能|是|[\n,.;:，。；：]|$)",
     re.MULTILINE,
 )
 _ENGLISH_BY_RE = re.compile(
-    r"(?:^\s*\d+[.)]?\s*)?([A-Z][^\n]+?)\s+by\s+([A-Z][^\n,.;:，。；：]+?)(?=\s+is\b|[\n,.;:，。；：]|$)",
+    r"(?:^\s*\d+[.)]?\s*)?([A-Z][^\n]+?)\s+by\s+([A-Z][^\n,.;:，。；：]+?)(?=\s+(?:is|for|while|when|to|if|because)\b|[\n,.;:，。；：]|$)",
     re.MULTILINE,
 )
 

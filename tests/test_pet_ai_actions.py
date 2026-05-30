@@ -95,6 +95,15 @@ def test_fallback_stops_artists_before_continuation_prose():
     ]
 
 
+def test_fallback_stops_artists_before_common_ai_prose():
+    assert parse_ai_music_reply("Anti-Hero by Taylor Swift for coding tonight").actions == [
+        MusicAction(MusicActionKind.PLAY_TRACK, "Anti-Hero - Taylor Swift", "Anti-Hero Taylor Swift")
+    ]
+    assert parse_ai_music_reply("《晴天》- 周杰伦很适合写代码").actions == [
+        MusicAction(MusicActionKind.PLAY_TRACK, "晴天 - 周杰伦", "晴天 周杰伦")
+    ]
+
+
 def test_local_command_detection_maps_fast_transport_controls():
     assert detect_local_command_action("/next") == MusicAction(MusicActionKind.CONTROL, "下一首", "next_track")
     assert detect_local_command_action("下一首") == MusicAction(MusicActionKind.CONTROL, "下一首", "next_track")
