@@ -548,19 +548,25 @@ class CodeBeatDjPanel(QWidget):
         text = self.prompt_input.text().strip()
         if not text:
             return
-        self.prompt_input.clear()
         local_action = detect_local_command_action(text)
         if local_action is not None:
+            self.prompt_input.clear()
             self._execute_music_action(local_action)
             return
         if text.startswith("/"):
+            self.prompt_input.clear()
             self._submit_command_text(text[1:].strip())
             return
-        self._append_text(f"You: {text}")
+        if getattr(self.ai_runner, "busy", False):
+            self._append_text("AI 正在处理上一条请求，请稍后再试。")
+            return
         provider = self.provider_select.currentData() or AiProvider.CODEX
         mode = self.mode_select.currentData() or AiPermissionMode.READ_ONLY
         if not self.ai_runner.send(text, provider, mode):
             self._append_text("AI 请求没有启动，请查看错误信息。")
+            return
+        self.prompt_input.clear()
+        self._append_text(f"You: {text}")
 
     def handle_ai_result(self, result: AiChatResult) -> None:
         if not result.ok:

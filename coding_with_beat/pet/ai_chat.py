@@ -4,12 +4,15 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
+import subprocess
+import sys
 import uuid
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Callable
+from typing import Callable, Mapping
 
 from PySide6.QtCore import QObject, QProcess, QProcessEnvironment, QTimer, Signal
 
@@ -145,6 +148,13 @@ def resolve_ai_executable(provider: AiProvider) -> str | None:
 ProcessFactory = Callable[[], object]
 ExecutableResolver = Callable[[AiProvider], str | None]
 
+_LOCAL_NO_PROXY = ("127.0.0.1", "localhost", "::1")
+_PROXY_KEY_PAIRS = (
+    ("HTTP_PROXY", "http_proxy"),
+    ("HTTPS_PROXY", "https_proxy"),
+    ("ALL_PROXY", "all_proxy"),
+)
+
 
 class AiChatRunner(QObject):
     finished = Signal(object)
@@ -238,6 +248,8 @@ class AiChatRunner(QObject):
             environment.value("PATH"),
         ]
         environment.insert("PATH", os.pathsep.join(part for part in path_parts if part))
+        for key, value in _collect_proxy_environment().items():
+            environment.insert(key, value)
         process.setProcessEnvironment(environment)
 
     def _read_stdout(self) -> None:
@@ -297,6 +309,71 @@ def _bytes_from_qt(data: object) -> bytes:
     if isinstance(data, bytes):
         return data
     return bytes(data)
+
+
+def _merge_local_no_proxy(value: str | None) -> str:
+    entries = [entry.strip() for entry in (value or "").split(",") if entry.strip()]
+    seen = set(entries)
+    for entry in _LOCAL_NO_PROXY:
+        if entry not in seen:
+            entries.append(entry)
+            seen.add(entry)
+    return ",".join(entries)
+
+
+def _proxy_env_from_mapping(mapping: Mapping[str, str]) -> dict[str, str]:
+    proxy_env: dict[str, str] = {}
+    for upper_key, lower_key in _PROXY_KEY_PAIRS:
+        value = mapping.get(upper_key) or mapping.get(lower_key)
+        if value:
+            proxy_env[upper_key] = value
+            proxy_env[lower_key] = value
+    if proxy_env:
+        no_proxy = _merge_local_no_proxy(mapping.get("NO_PROXY") or mapping.get("no_proxy"))
+        proxy_env["NO_PROXY"] = no_proxy
+        proxy_env["no_proxy"] = no_proxy
+    return proxy_env
+
+
+def _proxy_env_from_scutil_output(output: str) -> dict[str, str]:
+    values = dict(re.findall(r"^\s*([A-Z]+(?:Proxy|Port|Enable))\s*:\s*(.+?)\s*$", output, re.MULTILINE))
+    proxy_env: dict[str, str] = {}
+    if values.get("HTTPEnable") == "1" and values.get("HTTPProxy") and values.get("HTTPPort"):
+        proxy_env["HTTP_PROXY"] = f"http://{values['HTTPProxy']}:{values['HTTPPort']}"
+        proxy_env["http_proxy"] = proxy_env["HTTP_PROXY"]
+    if values.get("HTTPSEnable") == "1" and values.get("HTTPSProxy") and values.get("HTTPSPort"):
+        proxy_env["HTTPS_PROXY"] = f"http://{values['HTTPSProxy']}:{values['HTTPSPort']}"
+        proxy_env["https_proxy"] = proxy_env["HTTPS_PROXY"]
+    if values.get("SOCKSEnable") == "1" and values.get("SOCKSProxy") and values.get("SOCKSPort"):
+        proxy_env["ALL_PROXY"] = f"socks5://{values['SOCKSProxy']}:{values['SOCKSPort']}"
+        proxy_env["all_proxy"] = proxy_env["ALL_PROXY"]
+    if proxy_env:
+        no_proxy = _merge_local_no_proxy(None)
+        proxy_env["NO_PROXY"] = no_proxy
+        proxy_env["no_proxy"] = no_proxy
+    return proxy_env
+
+
+def _scutil_proxy_environment() -> dict[str, str]:
+    if sys.platform != "darwin":
+        return {}
+    try:
+        result = subprocess.run(
+            ["scutil", "--proxy"],
+            check=False,
+            capture_output=True,
+            text=True,
+            timeout=1,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return {}
+    if result.returncode != 0:
+        return {}
+    return _proxy_env_from_scutil_output(result.stdout)
+
+
+def _collect_proxy_environment() -> dict[str, str]:
+    return _proxy_env_from_mapping(os.environ) or _scutil_proxy_environment()
 
 
 def _extract_agent_text(provider: AiProvider | None, stdout: str) -> _ExtractedAgentOutput:

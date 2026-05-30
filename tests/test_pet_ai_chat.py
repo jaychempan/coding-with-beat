@@ -15,6 +15,9 @@ from coding_with_beat.pet.ai_chat import (
     AiChatSession,
     AiPermissionMode,
     AiProvider,
+    _merge_local_no_proxy,
+    _proxy_env_from_mapping,
+    _proxy_env_from_scutil_output,
 )
 
 
@@ -43,12 +46,13 @@ class FakeProcess:
         self.cwd = None
         self.stdin = b""
         self.killed = False
+        self.environment = None
 
     def setWorkingDirectory(self, cwd):
         self.cwd = cwd
 
-    def setProcessEnvironment(self, _environment):
-        pass
+    def setProcessEnvironment(self, environment):
+        self.environment = environment
 
     def start(self, program, args):
         self.args = [program, *args]
@@ -323,3 +327,46 @@ def test_runner_stores_codex_thread_id_from_jsonl_and_resumes_explicit_thread(tm
     assert results == [AiChatResult(ok=True, text="real answer")]
     assert runner._sessions[AiProvider.CODEX].session_id == thread_id
     assert command.args == ["codex", "exec", "resume", "--json", thread_id, "-"]
+
+
+def test_proxy_env_from_mapping_copies_upper_and_lowercase_proxy_values():
+    proxy_env = _proxy_env_from_mapping(
+        {
+            "HTTPS_PROXY": "http://127.0.0.1:7890",
+            "NO_PROXY": "example.com",
+        }
+    )
+
+    assert proxy_env["HTTPS_PROXY"] == "http://127.0.0.1:7890"
+    assert proxy_env["https_proxy"] == "http://127.0.0.1:7890"
+    assert proxy_env["NO_PROXY"] == "example.com,127.0.0.1,localhost,::1"
+    assert proxy_env["no_proxy"] == "example.com,127.0.0.1,localhost,::1"
+
+
+def test_proxy_env_from_scutil_output_uses_enabled_http_and_https_proxy():
+    proxy_env = _proxy_env_from_scutil_output(
+        """
+<dictionary> {
+  HTTPEnable : 1
+  HTTPPort : 7890
+  HTTPProxy : 127.0.0.1
+  HTTPSEnable : 1
+  HTTPSPort : 7890
+  HTTPSProxy : 127.0.0.1
+  SOCKSEnable : 1
+  SOCKSPort : 7890
+  SOCKSProxy : 127.0.0.1
+}
+"""
+    )
+
+    assert proxy_env["HTTP_PROXY"] == "http://127.0.0.1:7890"
+    assert proxy_env["HTTPS_PROXY"] == "http://127.0.0.1:7890"
+    assert proxy_env["http_proxy"] == "http://127.0.0.1:7890"
+    assert proxy_env["https_proxy"] == "http://127.0.0.1:7890"
+    assert proxy_env["ALL_PROXY"] == "socks5://127.0.0.1:7890"
+    assert proxy_env["NO_PROXY"] == "127.0.0.1,localhost,::1"
+
+
+def test_merge_local_no_proxy_preserves_existing_entries_without_duplicates():
+    assert _merge_local_no_proxy("localhost,example.com") == "localhost,example.com,127.0.0.1,::1"

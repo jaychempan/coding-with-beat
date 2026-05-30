@@ -65,8 +65,12 @@ class FakeHost:
 class FakeAiRunner:
     def __init__(self):
         self.sent = []
+        self.busy = False
+        self.accepts_send = True
 
     def send(self, text, provider, mode):
+        if not self.accepts_send:
+            return False
         self.sent.append((text, provider, mode))
         return True
 
@@ -229,6 +233,23 @@ def test_dj_panel_ai_prompt_uses_main_timeline_and_runner():
     assert fake_runner.sent == [("推荐几首适合写代码的歌", AiProvider.CODEX, AiPermissionMode.READ_ONLY)]
     assert "You: 推荐几首适合写代码的歌" in panel.transcript_text()
     assert panel.prompt_input.text() == ""
+
+
+def test_dj_panel_busy_ai_runner_keeps_prompt_and_does_not_duplicate_user_message():
+    app = QApplication.instance() or QApplication([])
+    panel = CodeBeatDjPanel(FakeHost())
+    fake_runner = FakeAiRunner()
+    fake_runner.busy = True
+    panel.ai_runner = fake_runner
+
+    panel.prompt_input.setText("你好")
+    panel.submit_prompt()
+
+    assert app is not None
+    assert fake_runner.sent == []
+    assert panel.prompt_input.text() == "你好"
+    assert "You: 你好" not in panel.transcript_text()
+    assert "AI 正在处理上一条请求" in panel.transcript_text()
 
 
 def test_dj_panel_ai_result_renders_playable_music_actions():
