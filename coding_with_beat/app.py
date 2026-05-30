@@ -2,17 +2,30 @@
 
 from __future__ import annotations
 
+from .app_paths import CodeBeatPaths
+from .app_settings import load_settings as load_app_settings
+from .app_settings import mirror_mcp_url
+from .app_settings import save_settings as save_app_settings
 from .pet.app import run as run_pet_app
 from .pet.petdex import default_petdex_slug
-from .pet.settings import load_settings
+from .service_manager import ServiceManager
 
 
 def run() -> int:
-    settings = load_settings()
-    petdex_slug = default_petdex_slug(settings.petdex_slug)
+    paths = CodeBeatPaths.default()
+    paths.ensure()
+
+    settings = load_app_settings(paths)
+    save_app_settings(settings, paths)
+    mirror_mcp_url(settings, paths)
+
+    if settings.service.start_on_launch:
+        ServiceManager(paths=paths, mcp_url=settings.service.mcp_url).start()
+
+    petdex_slug = default_petdex_slug(settings.pet.slug)
     return run_pet_app(
         petdex_slug=petdex_slug,
-        hide_dock=not settings.show_dock_icon,
+        hide_dock=not settings.pet.show_dock_icon,
         show_control=False,
-        show_menu_bar=settings.show_menu_bar_icon,
+        show_menu_bar=settings.pet.show_menu_bar_icon,
     )
