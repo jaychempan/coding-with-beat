@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import json
 import plistlib
 import shutil
 import sys
@@ -30,6 +31,7 @@ def build_app(output_dir: Path | None = None) -> Path:
     _write_info_plist(contents / "Info.plist")
     _write_launcher(macos / APP_NAME)
     _copy_icons(resources)
+    _write_resource_manifest(resources)
     return app_path
 
 
@@ -90,6 +92,43 @@ def _copy_icons(resources: Path) -> None:
     for name in ("waveform_app_icon.svg", "waveform_menu_bar.svg"):
         shutil.copy2(ROOT / "assets" / name, resources / name)
     _write_icns(resources / "CodeBeat.icns")
+
+
+def _write_resource_manifest(resources: Path) -> None:
+    manifest = {
+        "version": 1,
+        "appVersion": "0.1.0",
+        "resources": {
+            "assets": _existing_relative_files(ROOT / "assets", ["waveform_app_icon.svg", "waveform_menu_bar.svg"]),
+            "pets": _existing_pet_files(ROOT / "assets" / "pets"),
+            "claude": [],
+            "codex": [],
+            "commands": [],
+            "skills": [],
+        },
+    }
+    (resources / "manifest.json").write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+
+def _existing_relative_files(root: Path, names: list[str]) -> list[str]:
+    files: list[str] = []
+    for name in names:
+        if (root / name).exists():
+            files.append(f"{root.name}/{name}")
+    return files
+
+
+def _existing_pet_files(root: Path) -> list[str]:
+    if not root.exists():
+        return []
+    files: list[str] = []
+    for path in sorted(root.rglob("*")):
+        if path.is_file():
+            files.append(path.relative_to(root).as_posix())
+    return [f"pets/{name}" for name in files]
 
 
 def _write_icns(path: Path) -> None:

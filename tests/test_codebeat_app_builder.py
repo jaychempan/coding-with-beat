@@ -1,3 +1,4 @@
+import json
 import plistlib
 
 from scripts.build_macos_app import build_app
@@ -41,3 +42,17 @@ def test_build_app_launcher_runs_codebeat_app_command(tmp_path):
     assert "~/.coding-with-beat/repo-path" not in text
     assert "$HOME/.coding-with-beat/repo-path" in text
     assert launcher.stat().st_mode & 0o111
+
+
+def test_build_app_writes_resource_manifest(tmp_path):
+    app_path = build_app(tmp_path)
+    manifest_path = app_path / "Contents" / "Resources" / "manifest.json"
+
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+
+    assert manifest["version"] == 1
+    assert manifest["appVersion"] == "0.1.0"
+    assert "assets/waveform_app_icon.svg" in manifest["resources"]["assets"]
+    assert "assets/waveform_menu_bar.svg" in manifest["resources"]["assets"]
+    assert "pets/codebeat-buddy/pet.json" in manifest["resources"]["pets"]
+    assert "pets/codebeat-buddy/spritesheet.png" in manifest["resources"]["pets"]
